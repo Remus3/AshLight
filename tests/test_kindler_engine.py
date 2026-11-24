@@ -300,6 +300,16 @@ def test_engine_writes_the_summary_and_caches_a_final_result(tmp_path):
     assert state == "done" and doc == eng.last(tab) and len(calc.xmls) == n
 
 
+def test_engine_cache_is_not_shown_with_the_calc_off(tmp_path):
+    calc = FakeCalc()
+    eng, store, tab = _engine(tmp_path, calc)
+    eng.generate(tab, wait=True)
+    assert eng._cache
+    eng._calc = lambda: None
+    assert eng.generate(tab, wait=True)[0] == "done"
+    assert store.tab(tab)["result"]["scored"] is False
+
+
 def test_engine_never_caches_a_partial(tmp_path):
     ticks = iter([0.0, 0.0, 61.0] + [100.0] * 50)
     eng, store, tab = _engine(tmp_path, FakeCalc(), clock=lambda: next(ticks))

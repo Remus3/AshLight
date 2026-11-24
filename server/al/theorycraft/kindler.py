@@ -450,10 +450,15 @@ class Engine:
         when the tab is gone. wait=True runs it on the caller's thread."""
         tab = self.store.tab(tab_id)
         inputs, key = self._key_of(tab)
+        try:
+            calc_on = self._calc() is not None
+        except Exception:  # noqa: BLE001 - a broken provider reads as off
+            calc_on = False
         with self._lock:
             if self._running is not None:
                 return "running", None
-            hit = self._cache.get(key)
+            # with the calc off a cached PoB result is not shown (point 5)
+            hit = self._cache.get(key) if calc_on else None
             if hit is not None:
                 self._last[tab_id] = hit
             else:
