@@ -1033,20 +1033,37 @@ def test_floor_leaves_scale_1_unchanged(scale_measures):
 
 # -- CP-1: the Characters card picker line keeps its select at narrow sizes ----
 #
-# The picker line (#char-pick-box: label, select, the pin chip web/chars.js
-# adds) used to stay on one line, so at 320 px the select shrank to 24 px
+# The picker line (#char-pick-box: label, the pin chip web/chars.js adds,
+# select) used to stay on one line, so at 320 px the select shrank to 24 px
 # wide and the pin's words broke over four lines. Now it wraps: the label
 # and the pin keep one line each, and the select keeps at least its widest
 # name or the whole line, so its shown choice reads in full and it stays a
-# 24 px target. Measured on a static page (the real stylesheets and the Run
-# panel of the assembled page) inside srcdoc iframes, so the viewport is the
-# exact size (a headless window cannot go below about 500 px wide), read
-# back by the browser's own --dump-dom run (no core, no network, no port).
+# 24 px target. At the two tightest cockpit sizes the picker at its tallest
+# (the pin's failure line showing) plus web/chars.js ROWS rows of 22 px and
+# the pager row fit the Characters card. Measured on a static page (the real
+# stylesheets and the Run panel of the assembled page) inside srcdoc
+# iframes, so the viewport is the exact size (a headless window cannot go
+# below about 500 px wide), read back by the browser's own --dump-dom run
+# (no core, no network, no port).
 
 PICK_SIZES = ((320, 640), (1024, 700), (1280, 760))
 PICK_OUT = "al-pick-out"
 PICK_NAMES = ("Rowdemo (playing now)", "Wanderingblademaster")  # web/chars.js PLAYING
 PIN_WORDS = "This is my character"  # web/chars.js PIN_LABEL
+# room under the Characters title (web/chars.js ROWS comment): size class, px
+CHARS_ROOM = {(1280, 760): ("full", 244), (1024, 700): ("compact", 204)}
+CHARS_ROW_PX, CHARS_GAP_PX, CHARS_PAGER_PX = 22, 4, 24
+SAID = " said"  # the measure key suffix of a frame whose failure line shows
+
+
+def chars_consts():
+    """(ROWS {size class: rows}, PIN_FAILED) read from web/chars.js, so a
+    stale constant fails the fit check."""
+    src = srcpaths.path("chars.js").read_text(encoding="utf-8")
+    m = re.search(r"var ROWS = \{ full: (\d+), compact: (\d+) \};", src)
+    f = re.search(r'var PIN_FAILED = "([^"]+)";', src)
+    assert m and f, "web/chars.js ROWS or PIN_FAILED moved"
+    return {"full": int(m.group(1)), "compact": int(m.group(2))}, f.group(1)
 
 _PICK_JS = r"""
 (function () {
@@ -1058,9 +1075,11 @@ _PICK_JS = r"""
   var pin = document.createElement("button");
   pin.type = "button"; pin.id = "char-pin"; pin.className = "chip";
   pin.setAttribute("data-label", __PIN__); pin.setAttribute("aria-pressed", "false");
-  pin.textContent = __PIN__; box.appendChild(pin);
+  pin.textContent = __PIN__; box.insertBefore(pin, sel);  // web/chars.js pinButton
   var said = document.createElement("span");
   said.id = "char-pin-said"; said.className = "muted"; box.appendChild(said);
+  var say = !!(window.frameElement && window.frameElement.getAttribute("data-say"));
+  if (say) { said.textContent = __SAID__; }
   var rect = function (e) { var r = e.getBoundingClientRect();
     return { l: r.left, r: r.right, w: r.width, h: r.height }; };
   var lines = function (e) { var g = document.createRange(); g.selectNodeContents(e);
@@ -1078,16 +1097,18 @@ _PICK_JS = r"""
   var out = { vw: innerWidth, box: rect(box), label: rect(lab), labelLines: lines(lab),
               labelClip: lab.scrollWidth - lab.clientWidth, select: rect(sel),
               shown: natural([sel.options[sel.selectedIndex].textContent]),
-              widest: natural(__NAMES__), pin: rect(pin), pinLines: lines(pin) };
+              widest: natural(__NAMES__), pin: rect(pin), pinLines: lines(pin),
+              say: say, said: rect(said) };
   parent.document.getElementById(__OUT__).textContent += JSON.stringify(out) + "\n";
 }());
 """
 
 
 def pick_page(sizes=PICK_SIZES):
-    """The outer page: one srcdoc iframe per size, each holding every
-    stylesheet of the assembled page and its Run panel, then the script
-    that fills the picker and measures it."""
+    """The outer page: two srcdoc iframes per size (the pin's failure line
+    empty, then showing), each holding every stylesheet of the assembled
+    page and its Run panel, then the script that fills the picker and
+    measures it."""
     html = srcpaths.index_html(encoding="utf-8")
     links = []
     for href in re.findall(r'<link rel="stylesheet" href="([^"]+)">', html):
@@ -1098,22 +1119,24 @@ def pick_page(sizes=PICK_SIZES):
     i = html.index('<div id="panel-run"')
     run = html[i:html.index('<div id="panel-settings"', i)].replace(" hidden>", ">", 1)
     js = (_PICK_JS.replace("__NAMES__", json.dumps(list(PICK_NAMES)))
-          .replace("__PIN__", json.dumps(PIN_WORDS)).replace("__OUT__", json.dumps(PICK_OUT)))
+          .replace("__PIN__", json.dumps(PIN_WORDS)).replace("__OUT__", json.dumps(PICK_OUT))
+          .replace("__SAID__", json.dumps(chars_consts()[1])))
     head = "".join(f'<link rel="stylesheet" href="{_file_url(p)}">\n' for p in links)
     inner = ("<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n"
              "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
              f"<title>picker</title>\n{head}</head>\n<body>\n<main>\n{run}</main>\n"
              f"<script>{js}</script>\n</body>\n</html>\n")
-    frames = "".join(f'<iframe width="{w}" height="{h}" style="border: 0; display: block" '
+    frames = "".join(f'<iframe{say} width="{w}" height="{h}" style="border: 0; display: block" '
                      f'srcdoc="{htmllib.escape(inner, quote=True)}"></iframe>\n'
-                     for w, h in sizes)
+                     for w, h in sizes for say in ("", ' data-say="1"'))
     return ("<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n"
             f"<title>picker sizes</title>\n</head>\n<body style=\"margin: 0\">\n"
             f"<pre id=\"{PICK_OUT}\"></pre>\n{frames}</body>\n</html>\n")
 
 
 def measure_pick(browser, folder):
-    """{"<w>x<h>": measures} for every PICK_SIZES frame."""
+    """{"<w>x<h>": measures, "<w>x<h> said": measures} for every PICK_SIZES
+    frame."""
     folder = Path(folder)
     folder.mkdir(parents=True, exist_ok=True)
     page = folder / "pick.html"
@@ -1128,7 +1151,8 @@ def measure_pick(browser, folder):
     assert m and m.group(1).strip(), f"no picker measures; stderr: {r.stderr[-1500:]}"
     rows = [json.loads(line) for line in htmllib.unescape(m.group(1)).splitlines() if line]
     heights = dict(PICK_SIZES)  # frames report in load order; match by width
-    return {size_key(row["vw"], heights[row["vw"]]): row for row in rows}
+    return {size_key(row["vw"], heights[row["vw"]]) + (SAID if row["say"] else ""): row
+            for row in rows}
 
 
 def pick_failures(measures):
@@ -1149,9 +1173,31 @@ def pick_failures(measures):
                          f"the select is {sel['w']:.1f}")
         if pin["h"] < TARGET_MIN - 0.01 or m["pinLines"] != 1:
             fails.append(f"{key}: the pin is {pin['h']:.1f} px tall on {m['pinLines']} lines")
-        for name, part in (("label", lab), ("select", sel), ("pin", pin)):
+        parts = [("label", lab), ("select", sel), ("pin", pin)]
+        if m.get("say"):
+            parts.append(("failure line", m["said"]))
+            if m["said"]["h"] <= 0:
+                fails.append(f"{key}: the failure line does not show")
+        for name, part in parts:
             if part["l"] < line["l"] - 0.5 or part["r"] > line["r"] + 0.5:
                 fails.append(f"{key}: the {name} runs out of its line")
+    return fails
+
+
+def room_failures(measures, rows):
+    """Every cockpit size where the picker, ROWS rows and the pager row do
+    not fit the room under the Characters title."""
+    fails = []
+    for size, (cls, room) in CHARS_ROOM.items():
+        for key in (size_key(*size), size_key(*size) + SAID):
+            if key not in measures:
+                fails.append(f"{key}: not measured")
+                continue
+            need = (measures[key]["box"]["h"] + CHARS_GAP_PX + rows[cls] * CHARS_ROW_PX
+                    + CHARS_PAGER_PX)
+            if need > room + 0.01:
+                fails.append(f"{key}: picker {measures[key]['box']['h']:.1f} + "
+                             f"{rows[cls]} rows needs {need:.1f} of {room} px ({cls})")
     return fails
 
 
@@ -1169,6 +1215,19 @@ def test_pick_failures_catch_a_squeezed_picker():
     m["pin"].update(r=300)
     fails = pick_failures(bad)
     assert len(fails) == 6, fails
+    said = json.loads(json.dumps(ok["320x640"]))
+    said.update(say=True, said={"l": 25, "r": 295, "w": 270, "h": 0})
+    assert pick_failures({"320x640 said": said}) == ["320x640 said: the failure line does not show"]
+
+
+def test_room_failures_catch_too_many_rows():
+    fit = {k: {"box": {"h": 85}} for k in ("1280x760", "1280x760 said",
+                                           "1024x700", "1024x700 said")}
+    assert room_failures(fit, {"full": 5, "compact": 4}) == []
+    fails = room_failures(fit, {"full": 8, "compact": 6})
+    assert len(fails) == 4, fails
+    del fit["1024x700 said"]
+    assert room_failures(fit, {"full": 5, "compact": 4}) == ["1024x700 said: not measured"]
 
 
 @pytest.fixture(scope="module")
@@ -1180,11 +1239,22 @@ def pick_measures(tmp_path_factory):
 
 
 def test_the_picker_keeps_its_select_and_labels_at_narrow_sizes(pick_measures):
-    assert set(pick_measures) == {size_key(*s) for s in PICK_SIZES}, pick_measures.keys()
+    assert set(pick_measures) == {size_key(*s) + say for s in PICK_SIZES for say in ("", SAID)}, \
+        pick_measures.keys()
     narrow = pick_measures["320x640"]
     # at 320 px the label and the select cannot share a line: the select wraps
     assert narrow["label"]["w"] + narrow["widest"] > narrow["box"]["w"], narrow
     fails = pick_failures(pick_measures)
+    assert not fails, "\n".join(fails)
+
+
+def test_the_characters_card_fits_its_rows_under_the_tallest_picker(pick_measures):
+    rows, _said = chars_consts()
+    for size in CHARS_ROOM:
+        m = pick_measures[size_key(*size) + SAID]
+        assert m["say"] and m["said"]["h"] > 0, m  # the failure line made it taller
+        assert m["box"]["h"] > pick_measures[size_key(*size)]["box"]["h"], m
+    fails = room_failures(pick_measures, rows)
     assert not fails, "\n".join(fails)
 
 
