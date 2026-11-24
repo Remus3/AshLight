@@ -80,7 +80,7 @@
      of 204 at 1024x700) */
   var ROWS = { full: 8, compact: 6 };
   var PIN_LABEL = "This is my character";
-  var PIN_FAILED = "AshLight couldn't save that.";
+  var PIN_FAILED = "AshLight couldn't save the pin. Try again.";
   var PIN_PATH = "/api/character";
   /* the last painted snapshot and pick, and the click's api (wire) */
   var pinState = { snap: null, picked: "", api: null, busy: false };
