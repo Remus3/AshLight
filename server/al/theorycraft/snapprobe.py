@@ -50,7 +50,10 @@ VERDICTS = (PASS, FAIL)
 # top level does); min: the fewest entries a real file has (about a
 # quarter of the 2026-11-21 cache, so a normal release never trips it);
 # fields: what the reader takes from an entry (each must be carried by at
-# least one entry); weights: count the DEFAULT_WEIGHTS keys it maps.
+# least one entry); weights: count the DEFAULT_WEIGHTS keys it maps;
+# names: the fewest entries that yield a gem name the way
+# archetypes.gem_index reads one (top level, base_item or active_skill
+# display_name), so a reshaped gems file is caught whatever key holds it.
 PROBES = {
     # basetypes.load_names (name, release_state), campaign.load_flasks
     # (item_class, name, drop_level, release_state)
@@ -70,6 +73,10 @@ PROBES = {
     "world_areas": {"kind": "object", "min": 100,
                     "fields": ("name", "area_level", "is_town", "has_waypoint",
                                "connections")},
+    # DATA-GEMS-SNAP: archetypes.gem_index (display_name, level); the name
+    # may sit at the top or under base_item / active_skill, so the probe
+    # counts readable names instead of naming one field
+    "gems": {"kind": "object", "min": 150, "fields": (), "names": 100},
 }
 
 # the Checks row's words for a source
@@ -80,6 +87,7 @@ SOURCE_WORDS = {
     "stat_translations": "stat text list",
     "skilltree": "passive tree",
     "world_areas": "zone list",
+    "gems": "skill gem list",
 }
 
 _SAFE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_ .-]{0,63}\Z")
@@ -135,6 +143,13 @@ def weight_coverage(doc):
     return {"keys": len(keys), "mapped": len(cover["mapped"])}
 
 
+def gem_names(doc):
+    """How many distinct gem names a gems document yields, read by
+    archetypes.gem_index itself (the reader's own rule, never a copy)."""
+    from . import archetypes  # lazy: only the gems probe needs it
+    return len(archetypes.gem_index(doc))
+
+
 def probe(name, doc, table=None):
     """The verdict for one fetched document, or None when `name` is not in
     the probe table. {"source", "verdict" (pass / fail), "reason",
@@ -155,9 +170,15 @@ def probe(name, doc, table=None):
     out["missing"] = [f for f in fields if not counts.get(f)]
     if spec.get("weights"):
         out["weights"] = weight_coverage(doc)
+    named = int(spec.get("names") or 0)
+    if named:
+        out["names"] = gem_names(doc)
     least = int(spec.get("min") or 0)
     if len(entries) < least:
         out.update(verdict=FAIL, reason=f"only {len(entries)} entries, at least {least} expected")
+    elif named and out["names"] < named:
+        out.update(verdict=FAIL,
+                   reason=f"only {out['names']} gem names, at least {named} expected")
     elif out["missing"]:
         out.update(verdict=FAIL, reason="no entry has " + ", ".join(out["missing"]))
     return out
