@@ -1229,16 +1229,31 @@ of the HALT check.
   ranked by percent of the best candidate under the 0024 blend, ties
   template id then variant; key over class, toggles, archetypes sha256,
   PoB commit, tree export sha256, 10-level band; final results cached in
-  memory (16 keys), never partial or calc-off. Reverses if: PoB drift
-  makes route XML unreliable, 12 candidates in 60 s breach the 0024 / 0028 budgets,
+  memory (16 keys), never partial or calc-off. KINDLER-PLAN:
+  theorycraft/kindlerplan.py builds the top-ranked template's plan (stages
+  with skills and support links, gem steps at the snapshot level else the
+  authored level marked unchecked, ordered passives with point count and
+  budget, ascendancy nodes by trial, per-slot focus); with the calc on,
+  non-weapon slots are ranked by PoB per-mod weights from one plain rare
+  amulet probe item (at most delta.MAX_PROBES calcs per result, one run at
+  a time on the planner's daemon worker, cached in memory per result key);
+  weapon slots, calc off and stats with no key or zero weight keep the
+  authored order; the stage resolver reads only published area_id,
+  area_level and level (zone, act, area level outside acts, level band,
+  nearest planned level) and never claims a step done; POST
+  /api/kindler-generate op plan answers {state, plan, focus, current},
+  current null while follow is off; support applies is null until the
+  bridge reports it. Reverses if: PoB drift makes route XML unreliable,
+  12 candidates in 60 s breach the 0024 / 0028 budgets,
   automatic regeneration is wanted and shown to cost no FPS, 6 tabs prove
   too few, a name collision or GGG use of the word is found, the operator
   rules generated builds out of scope, authored node lists prove too
   costly to keep, a real PoB output makes the repeat-run test
   non-identical, the follow default annoys players in play, PoB stops
   reporting support applicability through the bridge, attack scoring
-  needs items (KINDLER-WEAPON-BASE) or a review rules another rank
-  baseline.
+  needs items (KINDLER-WEAPON-BASE), a review rules another rank
+  baseline, per-slot local mods change the focus ranking in play, or the
+  stage priority misfires in play.
 - UI 0082: item names are link-like buttons opening one shared,
   fixed-position item info popover (web/iteminfo.js, one open, Escape
   returns focus, never resizes a card) over a cache-only token-gated GET

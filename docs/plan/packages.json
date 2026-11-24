@@ -22031,11 +22031,14 @@
     "web/index.html",
     "web/prices.js",
     "web/pricewatch.js",
-    "web/app.js"
+    "web/app.js",
+    "web/search.js",
+    "web/panels/pager.js",
+    "web/panels/rates.js"
    ],
    "new_files": [
     "web/iteminfo.js",
-    "web/iteminfo.css",
+    "web/panels/iteminfo.css",
     "tests/test_iteminfo_ui.py"
    ],
    "integrator_edits": [

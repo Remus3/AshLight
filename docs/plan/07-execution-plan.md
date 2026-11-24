@@ -2072,7 +2072,7 @@ ascendancy, item focus.
   python tools/plan_check.py check; the wave closes when every session row
   is flipped and main is clean.
 
-- ITEM-INFO-UI [session, M 60m, build, P2, DR] Item names as link-like buttons with the shared item info popover. Files: web/index.html, web/prices.js, web/pricewatch.js, web/app.js, web/iteminfo.js (+2 more). Deps: ITEM-INFO-CORE.
+- ITEM-INFO-UI [session, M 60m, build, P2, DR] Item names as link-like buttons with the shared item info popover. Files: web/index.html, web/prices.js, web/pricewatch.js, web/app.js, web/search.js (+5 more). Deps: ITEM-INFO-CORE.
 - KINDLER-PLAN [session, L 80m, build, P2] Kindler result plan: stages, links, gem timing, passives, ascendancy, item focus. Files: server/al/plug/kindler.py, server/al/theorycraft/kindlerplan.py, tests/test_kindler_plan.py. Deps: KINDLER-ENGINE.
 
 ### Wave 42: operator requests 2026-11-19, Kindler result card
