@@ -99,6 +99,30 @@ def test_a_registered_get_route_needs_no_dispatch_edit(srv, monkeypatch):
     assert "zzq" not in HTTP_PY.read_text(encoding="ascii")
 
 
+def test_a_plug_put_route_falls_through_after_the_guard(srv, monkeypatch):
+    """UI-CARD-COLLAPSE (adjudicator ruling 2026-11-23): a PUT path no
+    table holds reaches a plug PUT route, only after _guard; with no plug
+    route it stays 405 before the token check."""
+    calls = []
+
+    def zzq_put(handler, query, extra):
+        calls.append(handler.command)
+        return handler._json(200, {"zzq": True}, extra)
+
+    plug.all_routes()  # discovery first, so the planted entry stays
+    monkeypatch.setitem(plug._routes, ("PUT", "/api/zzq-plug-put"), zzq_put)
+    assert req(srv, "PUT", "/api/zzq-plug-put", json_body(auth()), b"{}")[0] == 200
+    assert req(srv, "PUT", "/api/zzq-plug-put", json_body(), b"{}")[0] == 401
+    assert req(srv, "PUT", "/api/zzq-plug-put",
+               {**json_body(auth()), "Sec-Fetch-Site": "cross-site"}, b"{}")[0] == 403
+    assert calls == ["PUT"]
+    # a GET of the same path is not the PUT route
+    assert req(srv, "GET", "/api/zzq-plug-put", auth())[0] == 404
+    # no plug route and no table entry: 405, token or not
+    assert req(srv, "PUT", "/api/zzq-plug-none", json_body(auth()), b"{}")[0] == 405
+    assert req(srv, "PUT", "/api/zzq-plug-none", json_body(), b"{}")[0] == 405
+
+
 def test_unknown_path_and_missing_token_answer_as_before(srv):
     not_found = (404, TEXT, b"not found\n")
     token_required = (401, JSON, b'{"error":"token required"}')

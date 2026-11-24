@@ -2099,8 +2099,9 @@ Leads: Default contact: the project's issues page once the repository is
 public.
 
 - Session 11; width 1 worktree + 0 main-checkout, 0 loop rows released.
-- Hotspots: web/index.html (UI-CARD-COLLAPSE); web/app.css
-  (UI-CARD-COLLAPSE).
+- Hotspots: web/index.html (UI-CARD-COLLAPSE); server/al/http.py
+  (UI-CARD-COLLAPSE); web/app.css (UI-CARD-COLLAPSE);
+  tests/test_security_surface.py (UI-CARD-COLLAPSE).
 - Integrator: ROADMAP.md rows of all 1 packages; docs/design/reviews.log:
   UI-CARD-COLLAPSE.
 - Gate: per package: its named tests as a file-named run; main-checkout acts
@@ -2111,7 +2112,7 @@ public.
   python tools/plan_check.py check; the wave closes when every session row
   is flipped and main is clean.
 
-- UI-CARD-COLLAPSE [session, L 80m, build, P2, DR] Collapsible cards on Build and items and Run in the desktop client; state in the core. Files: web/index.html, web/app.css, web/pager.js, server/al/plug/stores.py, web/collapse.js (+4 more). Deps: none.
+- UI-CARD-COLLAPSE [session, L 80m, build, P2, DR] Collapsible cards on Build and items and Run in the desktop client; state in the core. Files: web/index.html, web/app.css, web/pager.js, server/al/plug/stores.py, server/al/plug/__init__.py (+11 more). Deps: none.
 
 ### Wave 44: re-plan overflow
 

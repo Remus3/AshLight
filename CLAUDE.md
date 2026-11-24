@@ -1267,7 +1267,14 @@ of the HALT check.
   desktop client window (window.alClient), state in the core in
   ops/runtime/ui_layout.json behind token-gated GET / PUT /api/ui/layout,
   card-id allow-list, one .bak, Saver retry, no localStorage, not
-  exported, not cleared by Clear run history). Reverses if: the popover
+  exported, not cleared by Clear run history). Amended 2026-11-23
+  (UI-CARD-COLLAPSE): plug routes may be PUT (do_PUT falls through to the
+  plug after the guard, else 405); GET / PUT /api/ui/layout in
+  server/al/plug/uilayout.py; web/pager.js fitRows / refit give a card
+  whose column-mate is collapsed a fixed extra row count (264 px full, 236
+  px compact at s = 1), and web/search.js rowPager uses it; the Recent
+  card is keyed eventsbox by its class; alerts open their card until the
+  player's click. Reverses if: the popover
   covers Play regions in play or native popover misbehaves in Electron,
   item names stop being unique cache keys, plain-browser users miss a
   visible name or a screen-reader check fails the heading order, the
@@ -1275,7 +1282,8 @@ of the HALT check.
   alert or the fr sharing makes the pager flicker, decision 0075 rules
   otherwise, the operator rules the title text should stay, or the
   operator wants the browser to collapse cards, the layout exported or
-  cleared with run history.
+  cleared with run history, a plug PUT route bypasses the guard, or the
+  fixed extra rows show slack, overflow or flicker in play.
 - Item info data: the popover reads local caches only (repoe-fork
   base_items and uniques, the poe.ninja price book while web_data is on),
   unknown fields omitted, never guessed; no drop_level, drop rates,

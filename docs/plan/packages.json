@@ -21865,7 +21865,14 @@
     "web/index.html",
     "web/app.css",
     "web/pager.js",
-    "server/al/plug/stores.py"
+    "server/al/plug/stores.py",
+    "server/al/plug/__init__.py",
+    "server/al/http.py",
+    "web/search.js",
+    "tests/test_security_surface.py",
+    "tests/test_routes.py",
+    "tests/test_plug_seams.py",
+    "docs/decisions/0082-ui-item-popover-header-collapse.md"
    ],
    "new_files": [
     "web/collapse.js",

@@ -3,7 +3,8 @@ files, through the plug seam (decision 0056).
 
 - One row while a store has changes its Saver could not write yet (run
   history, map ladder, price watch, zone visits, session summaries, and
-  the Kindler tabs of plug/genbuilds.py, KINDLER-STORE); the
+  the Kindler tabs of plug/genbuilds.py, KINDLER-STORE, and the card
+  layout of plug/uilayout.py, UI-CARD-COLLAPSE); the
   core keeps retrying with back-off (1, 5, 30, then every 60 s), so the
   row clears by itself once a save lands.
 - One note once a damaged file was restored from its .bak (jsonfile
@@ -32,6 +33,7 @@ UNSAVED_WORDS = {
     "visits": "zone visits",
     "summary": "session summary",
     "genbuilds": "Kindler tabs",  # KINDLER-STORE (plug/genbuilds.py)
+    "uilayout": "card layout",  # UI-CARD-COLLAPSE (plug/uilayout.py)
 }
 
 # file name -> (noun phrase, plural) for the restore note; the config file
@@ -48,6 +50,7 @@ RESTORED_WORDS = {
     "verdicts.json": ("in-game check results", True),
     "worn_gear.json": ("worn gear", False),
     "gen_builds.json": ("Kindler tabs", True),  # KINDLER-STORE
+    "ui_layout.json": ("the card layout", False),  # UI-CARD-COLLAPSE
 }
 OTHER_FILE = ("a saved file", False)
 
