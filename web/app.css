@@ -933,9 +933,18 @@ button.chip::after { display: block; height: 0; overflow: hidden; visibility: hi
 .events .ev-tag { font-size: var(--al-fs-meta); line-height: 1; font-weight: 600;
   color: var(--fk-text-muted); }
 .events .ev-death .ev-tag { color: var(--fk-status-bad); }
-#charsbox .char-pick { flex-wrap: nowrap; margin: 0 0 var(--al-space-1); min-width: 0; }
-#charsbox .char-pick label { flex: none; }
-#charsbox .char-pick select { flex: 1 1 auto; min-width: 0; }
+/* CP-1: the picker line wraps instead of squeezing. The label and the pin
+   keep one line each; the select never shrinks below its widest name (its
+   auto basis) and is capped at the line, so at 320 px it takes a line of
+   its own with its full label and a 32 px target. The pin takes the 24 px
+   chip metrics of the Recent chips (button.btn-24), so the wrapped line is
+   no taller than the squeezed one was (tests/test_play_fit.py pins it at
+   320 px and the cockpit sizes). */
+#charsbox .char-pick { flex-wrap: wrap; margin: 0 0 var(--al-space-1); min-width: 0; }
+#charsbox .char-pick label { flex: none; white-space: nowrap; }
+#charsbox .char-pick select { flex: 1 0 auto; max-width: 100%; }
+#charsbox #char-pin { flex: none; white-space: nowrap; min-height: 1.5rem;
+  padding: 0 var(--al-space-2); font-size: var(--al-fs-meta); line-height: var(--al-lh-meta); }
 
 @media (min-width: 64em) and (min-height: 43.75em) {
   .panel-cards { align-items: stretch; grid-template-columns: repeat(3, minmax(0, 1fr));
