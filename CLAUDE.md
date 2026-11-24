@@ -1250,7 +1250,13 @@ of the HALT check.
   nearest planned level) and never claims a step done; POST
   /api/kindler-generate op plan answers {state, plan, focus, current},
   current null while follow is off; support applies is null until the
-  bridge reports it. Reverses if: PoB drift makes route XML unreliable,
+  bridge reports it. KINDLER-UI-RESULT: the plan card is built on first
+  show after the editor card; stages one at a time with Previous / Next
+  stage, three card pages (Skills and gems, Passives, Item focus) cut into
+  parts of at most 10 rows, gem and stat names open the shared item info
+  popover, a Follow Play guidance chip with a Now badge and a why line, no
+  weight or score number, plan read only via op plan.
+  Reverses if: PoB drift makes route XML unreliable,
   12 candidates in 60 s breach the 0024 / 0028 budgets,
   automatic regeneration is wanted and shown to cost no FPS, 6 tabs prove
   too few, a name collision or GGG use of the word is found, the operator
