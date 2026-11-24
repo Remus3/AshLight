@@ -573,3 +573,22 @@ def test_failed_saves_are_said_on_the_header_polite_line():
         assert len(words.split()) <= 12, words
     for name in ("updates.js", "autostart.js", "weights.js"):
         assert "aria-live" not in JS[name] and not re.search(r"""role["']?\s*,""", JS[name]), name
+
+
+def test_failed_character_pin_is_said_on_the_header_polite_line():
+    """CP-2 (RUN-CHARACTER-PIN design finding S3; design 0001 N6, as
+    SAVE-FAIL-SAY): a failed pin save keeps its muted #char-pin-said line
+    and is said through ALTabs.say on #tab-news, the page's one shared
+    polite region; web/chars.js adds no region of its own."""
+    ch = JS["chars.js"]
+    assert is_live(by_id()["tab-news"])
+    assert re.search(r"function say\(doc, text\) \{\s*var t = tabsLib\(\);\s*"
+                     r"if \(t && typeof t\.say === \"function\"\) \{ t\.say\(doc, text\); \}", ch)
+    assert 'require("./tabs.js")' in ch and "root.ALTabs" in ch
+    # the failure arm writes the muted line and says the same words
+    assert len(re.findall(r"if \(said\) \{ said\.textContent = PIN_FAILED; \}\s*"
+                          r"say\(doc, PIN_FAILED\);", ch)) == 1
+    assert ch.count("PIN_FAILED;") == 1 and ch.count("say(doc, PIN_FAILED)") == 1
+    words = re.search(r'var PIN_FAILED = "([^"]+)";', ch).group(1)
+    assert len(words.split()) <= 12, words
+    assert "aria-live" not in ch and not re.search(r"""role["']?\s*,""", ch)

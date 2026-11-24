@@ -411,19 +411,32 @@ test("release build block: honest words, no promise", () => {
   assert.equal(p.ratesView(with_({ blocked: "release build" })).pill.state, "idle");
 });
 
-test("contact field view: write-only, shown only until a contact is set", () => {
+test("contact field view: write-only, shown with or without a contact", () => {
   const c = p.contactView({ contact_set: false });
   assert.equal(c.show, true);
+  assert.equal(c.set, false);
+  assert.equal(c.clear, false);
   assert.equal(c.label, "Your contact for poe.ninja");
   // DATA-CONTACT-DEFAULT: an optional override of the project's issues page
   assert.match(c.note, /^Optional\. /);
   assert.match(c.note, /else its project issues page when this copy has one/);
   assert.match(c.note, /poe\.ninja/);
   assert.match(c.note, /only on this computer/);
-  assert.equal(p.contactView({ contact_set: true }).show, false);
+  // DATA-CONTACT-CLEAR (DCD-3): the field stays once a contact is set,
+  // with Clear and a note that says one is saved, never which
+  const set = p.contactView({ contact_set: true });
+  assert.equal(set.show, true);
+  assert.equal(set.set, true);
+  assert.equal(set.clear, true);
+  assert.equal(set.label, c.label);
+  assert.equal(set.note, "Your contact is saved on this computer and is not shown here. " +
+    "Type a new one and click Save to change it, or click Clear to remove it.");
+  assert.ok(!("value" in set));
   // a doc without contact_set (the /api/rates switch echo) leaves the field
-  assert.equal(p.contactView({ web_data: true }).show, null);
-  assert.equal(p.contactView(null).show, null);
+  for (const doc of [{ web_data: true }, null, { contact_set: "yes" }]) {
+    const v = p.contactView(doc);
+    assert.deepEqual([v.show, v.set, v.clear], [null, null, null]);
+  }
   assert.deepEqual(p.webDataView(BLOCKED_WEB).contact, c);
   // the view never carries a value: there is none to echo
   assert.ok(!("value" in c));
@@ -434,6 +447,31 @@ test("contact field view: write-only, shown only until a contact is set", () => 
   assert.equal(p.contactSavedText({ web_data: true, contact_set: false }), "Not saved. Try again.");
   assert.equal(p.CONTACT_REFUSED,
     "AshLight can't use that contact. Use up to 120 plain characters, without brackets or a backslash.");
+});
+
+test("contact Clear answer: honest per state, never a value", () => {
+  // a copy with the project's issues page: requests carry it again
+  assert.equal(p.contactClearedText({ web_data: true, contact_set: false, blocked: null }),
+    "Contact removed. AshLight now sends its project issues page to poe.ninja.");
+  // a fork with no default: the one step comes back
+  assert.equal(p.contactClearedText(BLOCKED_WEB),
+    "Contact removed. No default contact here, so add your own below.");
+  // design DCC-2: every Clear answer fits the one-line status
+  for (const doc of [BLOCKED_WEB, { web_data: true, contact_set: false, blocked: null }]) {
+    assert.ok(p.contactClearedText(doc).length <= 80, p.contactClearedText(doc));
+  }
+  // web data off, or a release build: nothing is promised
+  assert.equal(p.contactClearedText({ web_data: false, contact_set: false, blocked: "web data off" }),
+    "Contact removed from this computer.");
+  assert.equal(p.contactClearedText({ web_data: true, contact_set: false, blocked: "release build" }),
+    "Contact removed from this computer.");
+  // still set, or no answer: it did not go
+  for (const doc of [{ web_data: true, contact_set: true }, {}, null]) {
+    assert.equal(p.contactClearedText(doc), "Not cleared. Try again.");
+  }
+  for (const doc of [BLOCKED_WEB, { web_data: true, contact_set: false, blocked: null }]) {
+    assert.ok(!ARRIVE.test(p.contactClearedText(doc)));
+  }
 });
 
 test("contact field markup: labelled, never prefilled, answer in #webdata-status", () => {
@@ -450,6 +488,17 @@ test("contact field markup: labelled, never prefilled, answer in #webdata-status
   assert.match(input, /aria-describedby="webdata-contact-note webdata-status"/);
   assert.match(form, /<button id="webdata-contact-save" type="submit"[^>]*>Save<\/button>/);
   assert.match(form, /<span id="webdata-contact-row" class="set-row" hidden>/);
+  // DATA-CONTACT-CLEAR: a plain button (never a submit), hidden until a
+  // contact is set, described like the field
+  const clear = form.match(/<button id="webdata-contact-clear"[^>]*>Clear<\/button>/)[0];
+  assert.match(clear, /type="button"/);
+  assert.match(clear, /\bhidden\b/);
+  assert.match(clear, /aria-describedby="webdata-contact-note webdata-status"/);
+  assert.ok(form.indexOf('id="webdata-contact-save"') < form.indexOf('id="webdata-contact-clear"'));
+  // the static note is the live unset note, word for word (design F1 of
+  // DATA-CONTACT-FORK-COPY)
+  const note = form.match(/<span id="webdata-contact-note"[^>]*>([^<]*)<\/span>/)[1];
+  assert.equal(note.replace(/\s+/g, " ").trim(), p.contactView({ contact_set: false }).note);
   assert.match(form, /<label for="webdata-league">League for prices<\/label>/);
   assert.match(form, /<select id="webdata-league"/);
   assert.ok(!/aria-live|role="status"|role="alert"/.test(form), "no new live region");
@@ -500,4 +549,97 @@ test("league view: a mapped solo league says 'prices from' its trade league", ()
   assert.equal(p.ratesView(RATES, LEAGUES).leagueLine, "league Dawn");
   assert.equal(p.ratesView(RATES).leagueLine, "league Dawn");
   assert.equal(p.ratesView(with_({ league: null })).leagueLine, "");
+});
+
+/* DATA-CONTACT-CLEAR (DCD-3): the panel's Clear click posts contact ""
+   only, keeps the row, words the answer and moves focus to the field once
+   Clear hides itself. A tiny DOM: elements by id, listeners, focus. */
+test("Clear posts contact \"\" only, keeps the row and never echoes a value", async () => {
+  const vm = require("node:vm");
+  const R = web.load("registry.js");
+  const TC = web.load("tc.js");
+  const nodes = {};
+  let focused = null;
+  const node = (id) => {
+    const n = { id, hidden: false, textContent: "", value: "", checked: false, on: {} };
+    n.addEventListener = (ev, f) => { (n.on[ev] = n.on[ev] || []).push(f); };
+    n.fire = (ev, target) => (n.on[ev] || []).forEach((f) => f({ target: target || n, preventDefault() {} }));
+    n.focus = () => { focused = id; };
+    return n;
+  };
+  ["webdata-sentence", "webdata-form", "webdata-on", "webdata-status", "webdata-contact-row",
+   "webdata-contact", "webdata-contact-save", "webdata-contact-clear", "webdata-contact-note",
+   "webdata-league", "webdata-league-row", "webdata-league-note"].forEach((id) => { nodes[id] = node(id); });
+  nodes["webdata-contact-row"].hidden = true;
+  nodes["webdata-contact-clear"].hidden = true;
+  const SET = { web_data: true, contact_set: true, blocked: null };
+  const CLEARED = { web_data: true, contact_set: false, blocked: null };
+  const calls = [];
+  const reads = [];
+  const answers = { "GET /api/web-data": SET, "POST /api/web-data": CLEARED };
+  let fail = false;
+  const host = {
+    $: (id) => nodes[id] || null,
+    api: (method, path, body) => {
+      calls.push([method, path, body]);
+      if (fail) { return Promise.reject(new Error(fail === "refused" ? "HTTP 400" : "HTTP 500")); }
+      return Promise.resolve(answers[method + " " + path]);
+    },
+    getSnap: () => null, getRatesDoc: () => null, renderRates() {}, renderPrice() {},
+    loadRates() {}, webLink: {}, onConnect: (f) => reads.push(f)
+  };
+  const reg = R.create({ warn: (t) => { throw new Error(t); } });
+  reg.host = host;
+  const polite = [];
+  const page = {};
+  const sandbox = { ALApp: reg, ALTc: TC, ALPrices: p, console, document: page,
+    ALTabs: { say: (d, text) => { assert.equal(d, page); polite.push(text); } } };
+  sandbox.window = sandbox;
+  vm.runInNewContext(web.source("webdata.js"), sandbox, { filename: "webdata.js" });
+  reg.start();
+  reads.forEach((f) => f());
+  const tick = () => new Promise((r) => setImmediate(r));
+  await tick();
+  // a contact is set: the row and Clear show, the note says saved
+  assert.equal(nodes["webdata-contact-row"].hidden, false);
+  assert.equal(nodes["webdata-contact-clear"].hidden, false);
+  assert.equal(nodes["webdata-contact-note"].textContent, p.contactView(SET).note);
+  assert.equal(nodes["webdata-contact"].value, "", "never prefilled");
+  // a click elsewhere in the form posts nothing
+  nodes["webdata-form"].fire("click", nodes["webdata-status"]);
+  assert.equal(calls.length, 1);
+  // the Clear click: one POST {contact: ""}, a second click while busy adds nothing
+  nodes["webdata-contact"].value = "half typed";
+  nodes["webdata-form"].fire("click", nodes["webdata-contact-clear"]);
+  nodes["webdata-form"].fire("click", nodes["webdata-contact-clear"]);
+  assert.equal(nodes["webdata-status"].textContent, "Saving...");
+  await tick();
+  assert.deepEqual(JSON.parse(JSON.stringify(calls.slice(1))), [["POST", "/api/web-data", { contact: "" }]]);
+  assert.equal(nodes["webdata-contact-row"].hidden, false, "the row stays");
+  assert.equal(nodes["webdata-contact-clear"].hidden, true);
+  assert.equal(nodes["webdata-contact"].value, "");
+  assert.equal(nodes["webdata-contact-note"].textContent, p.contactView(CLEARED).note);
+  assert.equal(nodes["webdata-status"].textContent, p.contactClearedText(CLEARED));
+  assert.equal(focused, "webdata-contact");
+  assert.deepEqual(polite, [], "a clear that worked is not said on the polite line");
+  // a failed clear says so, on the polite line too (design DCC-1)
+  fail = true;
+  nodes["webdata-form"].fire("click", nodes["webdata-contact-clear"]);
+  await tick();
+  assert.equal(calls.length, 3);
+  assert.equal(nodes["webdata-status"].textContent, "Not cleared. Try again.");
+  assert.deepEqual(polite, ["Not cleared. Try again."]);
+  assert.equal(nodes["webdata-contact-row"].hidden, false);
+  // a failed Save says "Not saved" on both lines; a refused value only in the status
+  nodes["webdata-contact"].value = "someone";
+  nodes["webdata-form"].fire("submit");
+  await tick();
+  assert.equal(nodes["webdata-status"].textContent, "Not saved. Try again.");
+  assert.deepEqual(polite, ["Not cleared. Try again.", "Not saved. Try again."]);
+  assert.equal(nodes["webdata-contact"].value, "someone", "kept for another try");
+  fail = "refused";
+  nodes["webdata-form"].fire("submit");
+  await tick();
+  assert.equal(nodes["webdata-status"].textContent, p.CONTACT_REFUSED);
+  assert.equal(polite.length, 2);
 });

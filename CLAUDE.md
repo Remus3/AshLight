@@ -1256,6 +1256,22 @@ of the HALT check.
   parts of at most 10 rows, gem and stat names open the shared item info
   popover, a Follow Play guidance chip with a Now badge and a why line, no
   weight or score number, plan read only via op plan.
+  KINDLER-WEAPON-BASE: an attack template (toggle melee or bow) names one
+  authored weapon base, the optional template field "weapon" in
+  archetypes.json (schema 1, key allow-list widened); archetypes.base_index
+  reads only released bases of attack weapon classes from the cached
+  repoe-fork base_items snapshot; a weapon is checked only when that index
+  names it, else checked=False with a note and nothing is composed (never
+  guessed); kindler.compose_xml puts a checked weapon in "Weapon 1" as a
+  plain item ("Rarity: NORMAL" plus the base name), and with no weapon the
+  empty item set stays byte-identical; check() refuses an attack template
+  with no weapon and, with the snapshot, a base it does not name, a class
+  that does not fit the toggle, or a base needing a higher level than the
+  first stage; the result key keeps decision 0081's inputs; the Kindler
+  server words (hot reload names, weapon item class names, the resolve
+  weapon note, which never reaches a player) live in
+  server/al/text/kindler.py, listed in docs/design/copy/kindler.md under
+  "Server words".
   Reverses if: PoB drift makes route XML unreliable,
   12 candidates in 60 s breach the 0024 / 0028 budgets,
   automatic regeneration is wanted and shown to cost no FPS, 6 tabs prove
@@ -1265,8 +1281,10 @@ of the HALT check.
   non-identical, the follow default annoys players in play, PoB stops
   reporting support applicability through the bridge, attack scoring
   needs items (KINDLER-WEAPON-BASE), a review rules another rank
-  baseline, per-slot local mods change the focus ranking in play, or the
-  stage priority misfires in play.
+  baseline, per-slot local mods change the focus ranking in play, the
+  stage priority misfires in play, PoB stops reading a normal item's name
+  line as its base, a template needs a weapon per stage, or a stale
+  cached result is seen after a base_items refresh.
 - DATA-GEMS-SNAP: snapshot.SOURCES adds repoe-fork's poe2 gems.json, cached
   as the gems.json that theorycraft/archetypes.py reads (GEMS_FILE), with
   the same web_data opt-in, cache, User-Agent and attribution as base_items
@@ -1322,8 +1340,9 @@ of the HALT check.
   0009's opt-in sidecar route with any community figure labelled
   "community estimate"). GET /api/iteminfo (ITEM-INFO-CORE) is a
   token-gated plug route: an exact name (at most 120 characters) over
-  cached base_items, the cached uniques snapshot (snapshot.ITEM_SOURCES,
-  same opt-in) and the price book while web_data is on; an unknown name is
+  cached base_items, the cached uniques snapshot (in snapshot.SOURCES
+  since ITEM-INFO-UNIQUES-PROBE, same opt-in) and the price book while
+  web_data is on; an unknown name is
   200 with empty fields; price entries keep only https poecdn.com icons;
   its words live in server/al/text/iteminfo.py (copy sheet
   docs/design/copy/iteminfo.md). ITEM-INFO-POB-TEXT: where_found rows come

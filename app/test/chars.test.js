@@ -275,3 +275,51 @@ test("chars pin: shows with one character, says a failed save, no picker with no
   assert.equal(ch.shownName(SNAP, "Nobody"), "Sable");
   assert.equal(ch.pinPressed(Object.assign({}, SNAP, { character_pinned: true }), "Quill"), false);
 });
+
+/* CP-2 (RUN-CHARACTER-PIN design finding S3): a failed pin save keeps its
+   muted line and is also said in the header's polite #tab-news through
+   ALTabs.say (web/tabs.js, the page's one shared polite line). */
+test("chars pin: a failed save is said on the header's polite line, a good one is not", async () => {
+  const d = charsCard();
+  const news = mk(d, "p", { id: "tab-news", role: "status", "aria-live": "polite" });
+  let fail = true;
+  ch.wire(d, () => {}, () => (fail ? Promise.reject(new Error("down"))
+    : Promise.resolve({ character: "Sable", pinned: true })));
+  ch.paint(d, SNAP, "");
+  const pin = d.getElementById("char-pin");
+  pin.click();
+  assert.equal(news.textContent, "", "saving says nothing");
+  await new Promise((r) => setImmediate(r));
+  assert.equal(d.getElementById("char-pin-said").textContent, ch.PIN_FAILED);
+  assert.equal(news.textContent, ch.PIN_FAILED);
+  assert.equal(news.getAttribute("aria-live"), "polite");
+  // the same failure again is said again (cleared, then written)
+  pin.click();
+  await new Promise((r) => setImmediate(r));
+  assert.equal(news.textContent, ch.PIN_FAILED);
+  // a save that works clears the muted line and says nothing new
+  news.textContent = "";
+  fail = false;
+  pin.click();
+  await new Promise((r) => setImmediate(r));
+  assert.equal(d.getElementById("char-pin-said").textContent, "");
+  assert.equal(news.textContent, "");
+  assert.equal(pin.getAttribute("aria-pressed"), "true");
+  // the throw arm (api() itself throws) is said too
+  const d2 = charsCard();
+  const n2 = mk(d2, "p", { id: "tab-news" });
+  ch.wire(d2, () => {}, () => { throw new Error("x"); });
+  ch.paint(d2, SNAP, "");
+  d2.getElementById("char-pin").click();
+  await new Promise((r) => setImmediate(r));
+  assert.equal(n2.textContent, ch.PIN_FAILED);
+  // a page with no header line: only the muted line, no error
+  const d3 = charsCard();
+  ch.wire(d3, () => {}, () => Promise.reject(new Error("down")));
+  ch.paint(d3, SNAP, "");
+  d3.getElementById("char-pin").click();
+  await new Promise((r) => setImmediate(r));
+  assert.equal(d3.getElementById("char-pin-said").textContent, ch.PIN_FAILED);
+  // the words fit N6's 12-word cap
+  assert.ok(ch.PIN_FAILED.split(/\s+/).length <= 12);
+});

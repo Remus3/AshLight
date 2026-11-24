@@ -10,7 +10,8 @@
     "melee"
    ],
    "defence": "life",
-   "src": "AshLight-authored. Node ids from snapshot:skilltree (GGG tree export), gem names from snapshot:base_items, support fit from PoB-PoE2 gem data at the pinned commit.",
+   "weapon": "Wooden Club",
+   "src": "AshLight-authored. Node ids from snapshot:skilltree (GGG tree export), gem names and the weapon base from snapshot:base_items, support fit from PoB-PoE2 gem data at the pinned commit.",
    "checked": "2026-11-23",
    "stages": [
     {
@@ -2129,7 +2130,8 @@
     "bow"
    ],
    "defence": "life",
-   "src": "AshLight-authored. Node ids from snapshot:skilltree (GGG tree export), gem names from snapshot:base_items, support fit from PoB-PoE2 gem data at the pinned commit.",
+   "weapon": "Crude Bow",
+   "src": "AshLight-authored. Node ids from snapshot:skilltree (GGG tree export), gem names and the weapon base from snapshot:base_items, support fit from PoB-PoE2 gem data at the pinned commit.",
    "checked": "2026-11-23",
    "stages": [
     {

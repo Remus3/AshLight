@@ -411,7 +411,7 @@ def test_view_reads_caches_and_tracked_table(tmp_path, monkeypatch):
     assert view["templates"][0]["stages"][0]["skills"][0]["gem"]["checked"] is True
     empty = ar.Sources(tmp_path / "none.json", cache / "x.json", cache / "y.json").view()
     assert empty == {"schema": 1, "templates": [], "notes": [], "tree": False,
-                     "gems": False}
+                     "gems": False, "bases": False}
 
 
 # --- DATA-GEMS-SNAP: the snapshot tool fills the gems file ----------------
@@ -435,3 +435,187 @@ def test_snapshot_fetches_the_gems_file_resolve_checks(tmp_path):
     assert view["gems"] is True
     pick = view["templates"][0]["stages"][0]["gems"][0]
     assert pick["checked"] is True
+
+
+# --- KINDLER-WEAPON-BASE: one authored weapon base per attack template ------
+
+def _bases():
+    return ar.base_index(kf.bases_doc())
+
+
+def test_weapon_field_is_an_optional_base_name():
+    table = ar.validate(kf.table_doc())
+    assert table["templates"][0]["weapon"] == "Oak Mallet"
+    t = kf.template()
+    del t["weapon"]
+    assert ar.validate(kf.table_doc(t))["templates"][0]["weapon"] is None
+    assert ar.validate(kf.table_doc(kf.template(weapon="  Oak   Mallet ")))[
+        "templates"][0]["weapon"] == "Oak Mallet"
+    for bad in ("", 7, ["Oak Mallet"], {"base": "Oak Mallet"}, "Oak\u00e9", "x" * 61):
+        _bad(kf.table_doc(kf.template(weapon=bad)), "weapon is not a base name")
+
+
+def test_base_index_keeps_released_weapon_bases_only():
+    idx = _bases()
+    assert sorted(idx) == ["iron maul", "oak mallet", "twig bow"]
+    assert idx["oak mallet"] == {"name": "Oak Mallet", "item_class": "Two Hand Mace",
+                                 "level": 1}
+    assert idx["twig bow"]["item_class"] == "Bow"
+    # an unreleased base, an amulet and a caster wand are no attack weapon
+    assert not {"glass mallet", "bead amulet", "ash wand"} & set(idx)
+    assert ar.base_index([]) == {} and ar.base_index({"x": 1}) == {}
+
+
+def test_base_index_repeat_name_keeps_lowest_level():
+    doc = kf.bases_doc()
+    doc["Metadata/Items/Weapons/Again"] = dict(
+        doc["Metadata/Items/Weapons/TwoHandMaceB"], requirements={"level": 12})
+    doc["Metadata/Items/Weapons/NoReq"] = {"name": "Bare Maul", "release_state": "released",
+                                           "item_class": "Two Hand Mace"}
+    idx = ar.base_index(doc)
+    assert idx["iron maul"]["level"] == 12
+    assert idx["bare maul"]["level"] is None
+
+
+def test_load_bases_missing_or_broken_is_none(tmp_path):
+    assert ar.load_bases(tmp_path / "none.json") is None
+    bad = tmp_path / "base_items.json"
+    bad.write_text("{not json", encoding="ascii")
+    assert ar.load_bases(bad) is None
+    bad.write_text(json.dumps(kf.bases_doc()), encoding="ascii")
+    assert ar.load_bases(bad) == _bases()
+    assert ar.bases_path({"AL_SIDECAR_ROOT": str(tmp_path)}).name == ar.BASES_FILE
+    assert ar.default_bases(tmp_path / "c" / "gems.json") == tmp_path / "c" / ar.BASES_FILE
+
+
+def test_resolve_checks_the_weapon_against_the_snapshot():
+    table = ar.validate(kf.table_doc())
+    view = ar.resolve(table, bases=_bases())
+    assert view["bases"] is True
+    assert view["templates"][0]["weapon"] == {
+        "name": "Oak Mallet", "item_class": "Two Hand Mace", "level": 1, "checked": True}
+    assert not [n for n in view["notes"] if "weapon" in n]
+
+
+def test_resolve_never_guesses_a_weapon():
+    unknown = ar.validate(kf.table_doc(kf.template(weapon="Glass Mallet")))
+    view = ar.resolve(unknown, bases=_bases())
+    assert view["templates"][0]["weapon"] == {
+        "name": "Glass Mallet", "item_class": None, "level": None, "checked": False}
+    assert any("weapon Glass Mallet" in n and "not composed" in n for n in view["notes"])
+    plain = ar.resolve(ar.validate(kf.table_doc()))
+    assert plain["bases"] is False
+    assert plain["templates"][0]["weapon"]["checked"] is False
+    assert not [n for n in plain["notes"] if "weapon" in n]
+    t = kf.template()
+    del t["weapon"]
+    assert ar.resolve(ar.validate(kf.table_doc(t)), bases=_bases())[
+        "templates"][0]["weapon"] is None
+
+
+def test_check_attack_template_needs_a_weapon():
+    t = kf.template()
+    del t["weapon"]
+    report = ar.check(ar.validate(kf.table_doc(t)))
+    assert "warrior_hammer: attack template has no weapon base" in report["problems"]
+    spell = dict(kf.template(id="witch_spell", toggles=["spell"]))
+    del spell["weapon"]
+    assert ar.check(ar.validate(kf.table_doc(spell)))["ok"]
+    assert any("weapon bases not checked" in n
+               for n in ar.check(ar.validate(kf.table_doc()))["notes"])
+
+
+@pytest.mark.parametrize("over, needle", [
+    ({"weapon": "Glass Mallet"}, "is not a weapon base in base_items"),
+    ({"weapon": "Ash Wand"}, "is not a weapon base in base_items"),
+    ({"weapon": "Twig Bow"}, "(Bow) does not fit toggle melee"),
+    ({"weapon": "Oak Mallet", "toggles": ["bow"]}, "(Two Hand Mace) does not fit toggle bow"),
+    ({"weapon": "Iron Maul"}, "needs level 30, past the first stage's level 6"),
+])
+def test_check_weapon_against_the_snapshot(over, needle):
+    report = ar.check(ar.validate(kf.table_doc(kf.template(**over))), bases=_bases())
+    assert any(needle in p for p in report["problems"]), report["problems"]
+
+
+def test_check_weapon_passes_the_fixture_with_the_snapshot():
+    report = ar.check(ar.validate(kf.table_doc()), tree=_tree(), gems=_gems(),
+                      bases=_bases())
+    assert report["ok"], report["problems"]
+    bow = kf.template(id="ranger_bow", toggles=["bow"], weapon="Twig Bow")
+    assert ar.check(ar.validate(kf.table_doc(bow)), bases=_bases())["ok"]
+
+
+def test_view_reads_the_bases_beside_the_gems_file(tmp_path):
+    cache = tmp_path / "gamedata"
+    cache.mkdir()
+    (cache / "gems.json").write_text(json.dumps(kf.gems_doc()), encoding="utf-8")
+    (cache / ar.BASES_FILE).write_text(json.dumps(kf.bases_doc()), encoding="utf-8")
+    p = tmp_path / "archetypes.json"
+    _write(p, kf.table_doc())
+    view = ar.Sources(p, cache / "none.json", cache / "gems.json").view()
+    assert view["bases"] is True
+    assert view["templates"][0]["weapon"]["checked"] is True
+    other = tmp_path / "elsewhere.json"
+    other.write_text(json.dumps({}), encoding="utf-8")
+    view = ar.Sources(p, cache / "none.json", cache / "gems.json",
+                      bases_file=other).view()
+    assert view["templates"][0]["weapon"]["checked"] is False
+
+
+def test_server_words_are_pinned_exactly():
+    """KINDLER-WEAPON-BASE: the server words live in server/al/text/kindler.py
+    (docs/design/copy/kindler.md, Server words) and both modules use them."""
+    from server.al.text import kindler as words
+    from server.al.theorycraft import kindler as engine
+    assert (words.TABLE_NAME, words.TREE_NAME, words.GEMS_NAME, words.BASES_NAME) == (
+        "Kindler templates", "Passive tree (Kindler)", "Gems snapshot",
+        "Weapon bases (Kindler)")
+    assert (words.ENGINE_TABLE_NAME, words.ENGINE_TREE_NAME, words.ENGINE_GEMS_NAME,
+            words.ENGINE_BASES_NAME) == (
+        "Kindler templates (engine)", "Passive tree (Kindler engine)",
+        "Gems snapshot (Kindler engine)", "Weapon bases (Kindler engine)")
+    assert words.MELEE_CLASSES == (
+        "One Hand Mace", "Two Hand Mace", "One Hand Sword", "Two Hand Sword",
+        "One Hand Axe", "Two Hand Axe", "Dagger", "Claw", "Spear", "Flail", "Warstaff")
+    assert words.RANGED_CLASSES == ("Bow", "Crossbow") and words.BOW_CLASS == "Bow"
+    assert words.weapon_unknown("t1", "Glass Mallet") == (
+        "t1: weapon Glass Mallet is not a weapon base in the base_items snapshot; "
+        "not composed")
+    assert ar.MELEE_CLASSES is words.MELEE_CLASSES
+    assert ar.TOGGLE_CLASSES["bow"] == (words.BOW_CLASS,)
+    sheet = (ROOT / "docs" / "design" / "copy" / "kindler.md").read_text(encoding="ascii")
+    flat = " ".join(sheet.split())
+    for word in (words.TABLE_NAME, words.TREE_NAME, words.GEMS_NAME, words.BASES_NAME,
+                 words.ENGINE_TABLE_NAME, words.ENGINE_TREE_NAME, words.ENGINE_GEMS_NAME,
+                 words.ENGINE_BASES_NAME) + words.MELEE_CLASSES + words.RANGED_CLASSES:
+        assert f"`{word}`" in flat, word
+    for path in ("server/al/theorycraft/archetypes.py", "server/al/theorycraft/kindler.py"):
+        src = (ROOT / path).read_text(encoding="ascii")
+        assert "from ..text import kindler as words" in src, path
+    assert engine.words is words
+
+
+def test_weapon_note_never_reaches_a_player():
+    """KW-1 (design review): resolve()'s weapon note is author and test
+    output only. The engine's result and the plan of a template whose base
+    the snapshot lacks carry no note, the Generate route and the planner
+    never read the view's notes, and no web file holds the words."""
+    from server.al.theorycraft import kindler as engine, kindlerplan, treedata
+    table = ar.validate(kf.table_doc(kf.template(weapon="Glass Mallet")))
+    view = ar.resolve(table, tree=_tree(), bases=_bases())
+    assert any("not composed" in n for n in view["notes"])
+    inputs = {"view": view, "table_sha": "t" * 64, "tree": treedata.parse(kf.tree_doc()),
+              "tree_version": "v" * 64, "pin": "a" * 40}
+    tab = {"class": "Warrior", "toggles": {}}
+    calc = lambda build, swaps: {"dps": 1.0, "ehp": 2.0}  # noqa: E731
+    for doc in (engine.generate(inputs, tab, 5, calc), engine.generate(inputs, tab, 5, None),
+                kindlerplan.build_plan(view["templates"][0])):
+        raw = json.dumps(doc)
+        assert "not composed" not in raw and "base_items" not in raw
+    for path in ("server/al/plug/kindler.py", "server/al/theorycraft/kindlerplan.py",
+                 "server/al/theorycraft/kindler.py"):
+        assert '["notes"]' not in (ROOT / path).read_text(encoding="ascii"), path
+    for path in (ROOT / "web").rglob("*"):
+        if path.suffix in (".js", ".html"):
+            text = path.read_text(encoding="utf-8")
+            assert "not composed" not in text and "weapon_unknown" not in text, path

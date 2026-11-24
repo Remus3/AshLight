@@ -1,7 +1,8 @@
 # Copy sheet: Kindler
 
 Words of the Kindler build generator card and plan card, word for word as
-`web/kindler.js` (and the sub-tab row of `web/index.html`) has them.
+`web/kindler.js` (and the sub-tab row of `web/index.html`) has them, and
+the server words of `server/al/text/kindler.py` (last section).
 Decision 0081 (KINDLER-UI-TABS, KINDLER-UI-RESULT; design finding KT-8,
 wave 42). Rules that bind every template (one event, one sentence; a
 refusal gives a next step; text through textContent only) stay in design
@@ -98,3 +99,35 @@ change. Tests: tests/test_kindler_tabs_ui.py, tests/test_ux_review.py.
   Building could not rank these stats.`, `AshLight's own order. The item
   data is still loading.`, `AshLight's own order. The passive tree data is
   still loading.`
+
+## Server words (server/al/text/kindler.py)
+
+KINDLER-WEAPON-BASE. Imported by server/al/theorycraft/archetypes.py and
+server/al/theorycraft/kindler.py; pinned by tests/test_kindler_data.py
+(test_server_words_are_pinned_exactly).
+
+- Hot reload names (decision 0042): `Kindler templates`, `Passive tree
+  (Kindler)`, `Gems snapshot`, `Weapon bases (Kindler)`; the engine's own
+  copies `Kindler templates (engine)`, `Passive tree (Kindler engine)`,
+  `Gems snapshot (Kindler engine)`, `Weapon bases (Kindler engine)`. Only
+  `Kindler templates` is in the core's Checks registry, so it is the one
+  a player can see (a Checks note when the table fails to load). Every
+  other watch is made with registry=False and its name is never shown;
+  the suffixes only tell the copies apart in a log or a test.
+- Weapon kinds an attack template's base may be, the item class names of
+  the base_items snapshot word for word (so a base matches its entry):
+  melee `One Hand Mace`, `Two Hand Mace`, `One Hand Sword`, `Two Hand
+  Sword`, `One Hand Axe`, `Two Hand Axe`, `Dagger`, `Claw`, `Spear`,
+  `Flail`, `Warstaff`; ranged `Bow`, `Crossbow`; the bow toggle takes
+  `Bow` only.
+- Resolve note for a weapon base the snapshot does not name: `<template
+  id>: weapon <base> is not a weapon base in the base_items snapshot; not
+  composed`. It shows only in author and test output and never reaches a
+  card, Checks or an API answer. resolve() notes stay in the resolved view;
+  the engine's result, the plan and the Generate route never carry them.
+  tests/test_kindler_data.py (test_weapon_note_never_reaches_a_player)
+  pins this.
+- The validator check() (archetypes.py) writes its problems and notes
+  inline. They are for tests and the template package only, because
+  check() is never called at run time, so they are not player words and
+  are not listed here.
