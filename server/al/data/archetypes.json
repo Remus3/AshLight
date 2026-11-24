@@ -1,0 +1,2821 @@
+{
+ "schema": 1,
+ "templates": [
+  {
+   "id": "warrior_mace_slam",
+   "label": "Mace slams, life and armour",
+   "class": "Warrior",
+   "ascendancy": "Titan",
+   "toggles": [
+    "melee"
+   ],
+   "defence": "life",
+   "src": "AshLight-authored. Node ids from snapshot:skilltree (GGG tree export), gem names from snapshot:base_items, support fit from PoB-PoE2 gem data at the pinned commit.",
+   "checked": "2026-11-23",
+   "stages": [
+    {
+     "id": "first_zone",
+     "label": "First zone",
+     "trigger": {
+      "kind": "zone",
+      "zone": "G1_1"
+     },
+     "level": 3,
+     "skills": [
+      {
+       "name": "Mace Strike",
+       "sockets": 0,
+       "supports": []
+      }
+     ],
+     "gems": [
+      {
+       "name": "Mace Strike",
+       "action": "pick"
+      }
+     ],
+     "passives": [
+      3936,
+      13397
+     ],
+     "ascendancy": null,
+     "focus": {
+      "Weapon 1": [
+       "physical damage",
+       "attack speed",
+       "added physical damage"
+      ]
+     },
+     "src": "AshLight-authored. Zone id G1_1 from snapshot:world_areas; the plan level is an AshLight pick.",
+     "checked": "2026-11-23"
+    },
+    {
+     "id": "act1",
+     "label": "Act 1",
+     "trigger": {
+      "kind": "act",
+      "act": 1
+     },
+     "level": 15,
+     "skills": [
+      {
+       "name": "Mace Strike",
+       "sockets": 1,
+       "supports": [
+        "Brutality I"
+       ]
+      },
+      {
+       "name": "Rolling Slam",
+       "sockets": 1,
+       "supports": [
+        "Stun I"
+       ]
+      }
+     ],
+     "gems": [
+      {
+       "name": "Rolling Slam",
+       "action": "pick"
+      },
+      {
+       "name": "Brutality I",
+       "action": "pick"
+      },
+      {
+       "name": "Stun I",
+       "action": "pick"
+      }
+     ],
+     "passives": [
+      1207,
+      38323,
+      5710,
+      58528,
+      45363,
+      6529,
+      32416,
+      27726,
+      7721,
+      54232,
+      44659,
+      36629
+     ],
+     "ascendancy": null,
+     "focus": {
+      "Weapon 1": [
+       "physical damage",
+       "attack speed",
+       "added physical damage"
+      ],
+      "Body Armour": [
+       "maximum life",
+       "armour"
+      ],
+      "Helmet": [
+       "maximum life",
+       "armour",
+       "resistances"
+      ],
+      "Gloves": [
+       "attack speed",
+       "maximum life",
+       "resistances"
+      ],
+      "Boots": [
+       "movement speed",
+       "maximum life",
+       "resistances"
+      ],
+      "Amulet": [
+       "strength",
+       "maximum life",
+       "physical damage"
+      ],
+      "Ring 1": [
+       "maximum life",
+       "resistances",
+       "accuracy"
+      ],
+      "Ring 2": [
+       "maximum life",
+       "resistances",
+       "accuracy"
+      ],
+      "Belt": [
+       "maximum life",
+       "armour",
+       "resistances"
+      ]
+     },
+     "src": "AshLight-authored. Plan level 15 is the top Act 1 area level in snapshot:world_areas.",
+     "checked": "2026-11-23"
+    },
+    {
+     "id": "act2",
+     "label": "Act 2",
+     "trigger": {
+      "kind": "act",
+      "act": 2
+     },
+     "level": 31,
+     "skills": [
+      {
+       "name": "Boneshatter",
+       "sockets": 2,
+       "supports": [
+        "Brutality I",
+        "Stun I"
+       ]
+      },
+      {
+       "name": "Rolling Slam",
+       "sockets": 1,
+       "supports": [
+        "Concentrated Area"
+       ]
+      }
+     ],
+     "gems": [
+      {
+       "name": "Boneshatter",
+       "action": "swap",
+       "for": "Mace Strike"
+      },
+      {
+       "name": "Concentrated Area",
+       "action": "pick"
+      }
+     ],
+     "passives": [
+      26532,
+      46023,
+      26324,
+      27950,
+      16725,
+      54811,
+      34210,
+      64939,
+      30123,
+      6923,
+      1087,
+      51921,
+      13241,
+      48670,
+      41646,
+      14091
+     ],
+     "ascendancy": null,
+     "focus": {
+      "Weapon 1": [
+       "physical damage",
+       "attack speed",
+       "added physical damage"
+      ],
+      "Body Armour": [
+       "maximum life",
+       "armour"
+      ],
+      "Helmet": [
+       "maximum life",
+       "armour",
+       "resistances"
+      ],
+      "Gloves": [
+       "attack speed",
+       "maximum life",
+       "resistances"
+      ],
+      "Boots": [
+       "movement speed",
+       "maximum life",
+       "resistances"
+      ],
+      "Amulet": [
+       "strength",
+       "maximum life",
+       "physical damage"
+      ],
+      "Ring 1": [
+       "maximum life",
+       "resistances",
+       "accuracy"
+      ],
+      "Ring 2": [
+       "maximum life",
+       "resistances",
+       "accuracy"
+      ],
+      "Belt": [
+       "maximum life",
+       "armour",
+       "resistances"
+      ]
+     },
+     "src": "AshLight-authored. Plan level 31 is the top Act 2 area level in snapshot:world_areas.",
+     "checked": "2026-11-23"
+    },
+    {
+     "id": "act3",
+     "label": "Act 3",
+     "trigger": {
+      "kind": "act",
+      "act": 3
+     },
+     "level": 45,
+     "skills": [
+      {
+       "name": "Boneshatter",
+       "sockets": 3,
+       "supports": [
+        "Brutality I",
+        "Stun I",
+        "Close Combat I"
+       ]
+      },
+      {
+       "name": "Earthquake",
+       "sockets": 2,
+       "supports": [
+        "Concentrated Area",
+        "Aftershock I"
+       ]
+      }
+     ],
+     "gems": [
+      {
+       "name": "Earthquake",
+       "action": "swap",
+       "for": "Rolling Slam"
+      },
+      {
+       "name": "Close Combat I",
+       "action": "pick"
+      },
+      {
+       "name": "Aftershock I",
+       "action": "pick"
+      }
+     ],
+     "passives": [
+      23993,
+      42981,
+      7628,
+      28370,
+      10247,
+      28510,
+      56910,
+      47150,
+      44836,
+      52684,
+      38779,
+      44605,
+      59881,
+      28556
+     ],
+     "ascendancy": {
+      "trial": 1,
+      "nodes": [
+       51690,
+       12000
+      ]
+     },
+     "focus": {
+      "Weapon 1": [
+       "physical damage",
+       "attack speed",
+       "added physical damage"
+      ],
+      "Body Armour": [
+       "maximum life",
+       "armour"
+      ],
+      "Helmet": [
+       "maximum life",
+       "armour",
+       "resistances"
+      ],
+      "Gloves": [
+       "attack speed",
+       "maximum life",
+       "resistances"
+      ],
+      "Boots": [
+       "movement speed",
+       "maximum life",
+       "resistances"
+      ],
+      "Amulet": [
+       "strength",
+       "maximum life",
+       "physical damage"
+      ],
+      "Ring 1": [
+       "maximum life",
+       "resistances",
+       "accuracy"
+      ],
+      "Ring 2": [
+       "maximum life",
+       "resistances",
+       "accuracy"
+      ],
+      "Belt": [
+       "maximum life",
+       "armour",
+       "resistances"
+      ]
+     },
+     "src": "AshLight-authored. Plan level 45 is the top Act 3 area level in snapshot:world_areas.",
+     "checked": "2026-11-23"
+    },
+    {
+     "id": "act4",
+     "label": "Act 4",
+     "trigger": {
+      "kind": "act",
+      "act": 4
+     },
+     "level": 53,
+     "skills": [
+      {
+       "name": "Boneshatter",
+       "sockets": 3,
+       "supports": [
+        "Brutality I",
+        "Stun I",
+        "Close Combat I"
+       ]
+      },
+      {
+       "name": "Earthquake",
+       "sockets": 3,
+       "supports": [
+        "Concentrated Area",
+        "Aftershock I",
+        "Enduring Impact I"
+       ]
+      }
+     ],
+     "gems": [
+      {
+       "name": "Enduring Impact I",
+       "action": "pick"
+      }
+     ],
+     "passives": [
+      53996,
+      17686,
+      43575,
+      41512,
+      9941,
+      38888,
+      37450,
+      43383
+     ],
+     "ascendancy": {
+      "trial": 2,
+      "nodes": [
+       29323,
+       24807
+      ]
+     },
+     "focus": {
+      "Weapon 1": [
+       "physical damage",
+       "attack speed",
+       "added physical damage"
+      ],
+      "Body Armour": [
+       "maximum life",
+       "armour"
+      ],
+      "Helmet": [
+       "maximum life",
+       "armour",
+       "resistances"
+      ],
+      "Gloves": [
+       "attack speed",
+       "maximum life",
+       "resistances"
+      ],
+      "Boots": [
+       "movement speed",
+       "maximum life",
+       "resistances"
+      ],
+      "Amulet": [
+       "strength",
+       "maximum life",
+       "physical damage"
+      ],
+      "Ring 1": [
+       "maximum life",
+       "resistances",
+       "accuracy"
+      ],
+      "Ring 2": [
+       "maximum life",
+       "resistances",
+       "accuracy"
+      ],
+      "Belt": [
+       "maximum life",
+       "armour",
+       "resistances"
+      ]
+     },
+     "src": "AshLight-authored. Plan level 53 is the top Act 4 area level in snapshot:world_areas.",
+     "checked": "2026-11-23"
+    },
+    {
+     "id": "interludes",
+     "label": "Interludes",
+     "trigger": {
+      "kind": "area_level",
+      "min": 54,
+      "max": 64
+     },
+     "level": 56,
+     "skills": [
+      {
+       "name": "Boneshatter",
+       "sockets": 4,
+       "supports": [
+        "Brutality I",
+        "Stun I",
+        "Close Combat I",
+        "Execute I"
+       ]
+      },
+      {
+       "name": "Earthquake",
+       "sockets": 3,
+       "supports": [
+        "Concentrated Area",
+        "Aftershock I",
+        "Enduring Impact I"
+       ]
+      }
+     ],
+     "gems": [
+      {
+       "name": "Execute I",
+       "action": "pick"
+      }
+     ],
+     "passives": [
+      11916,
+      50609,
+      26092
+     ],
+     "ascendancy": {
+      "trial": 3,
+      "nodes": [
+       35453,
+       42275
+      ]
+     },
+     "focus": {
+      "Weapon 1": [
+       "physical damage",
+       "attack speed",
+       "added physical damage"
+      ],
+      "Body Armour": [
+       "maximum life",
+       "armour"
+      ],
+      "Helmet": [
+       "maximum life",
+       "armour",
+       "resistances"
+      ],
+      "Gloves": [
+       "attack speed",
+       "maximum life",
+       "resistances"
+      ],
+      "Boots": [
+       "movement speed",
+       "maximum life",
+       "resistances"
+      ],
+      "Amulet": [
+       "strength",
+       "maximum life",
+       "physical damage"
+      ],
+      "Ring 1": [
+       "maximum life",
+       "resistances",
+       "accuracy"
+      ],
+      "Ring 2": [
+       "maximum life",
+       "resistances",
+       "accuracy"
+      ],
+      "Belt": [
+       "maximum life",
+       "armour",
+       "resistances"
+      ]
+     },
+     "src": "AshLight-authored. Interlude zones are area level 54 to 56 in snapshot:world_areas; the band runs to 64.",
+     "checked": "2026-11-23"
+    },
+    {
+     "id": "maps",
+     "label": "Early maps",
+     "trigger": {
+      "kind": "area_level",
+      "min": 65,
+      "max": 100
+     },
+     "level": 70,
+     "skills": [
+      {
+       "name": "Boneshatter",
+       "sockets": 4,
+       "supports": [
+        "Brutality I",
+        "Stun I",
+        "Close Combat I",
+        "Execute I"
+       ]
+      },
+      {
+       "name": "Earthquake",
+       "sockets": 4,
+       "supports": [
+        "Concentrated Area",
+        "Aftershock I",
+        "Enduring Impact I",
+        "Fist of War I"
+       ]
+      }
+     ],
+     "gems": [
+      {
+       "name": "Fist of War I",
+       "action": "pick"
+      }
+     ],
+     "passives": [
+      52392,
+      36170,
+      53853,
+      53443,
+      59767,
+      18742,
+      62732,
+      18629,
+      64327,
+      41657,
+      45992,
+      17029,
+      6015,
+      35426
+     ],
+     "ascendancy": {
+      "trial": 4,
+      "nodes": [
+       38014,
+       3762
+      ]
+     },
+     "focus": {
+      "Weapon 1": [
+       "physical damage",
+       "attack speed",
+       "added physical damage"
+      ],
+      "Body Armour": [
+       "maximum life",
+       "armour"
+      ],
+      "Helmet": [
+       "maximum life",
+       "armour",
+       "resistances"
+      ],
+      "Gloves": [
+       "attack speed",
+       "maximum life",
+       "resistances"
+      ],
+      "Boots": [
+       "movement speed",
+       "maximum life",
+       "resistances"
+      ],
+      "Amulet": [
+       "strength",
+       "maximum life",
+       "physical damage"
+      ],
+      "Ring 1": [
+       "maximum life",
+       "resistances",
+       "accuracy"
+      ],
+      "Ring 2": [
+       "maximum life",
+       "resistances",
+       "accuracy"
+      ],
+      "Belt": [
+       "maximum life",
+       "armour",
+       "resistances"
+      ]
+     },
+     "src": "AshLight-authored. Area level 65 is the lowest common map area level in snapshot:world_areas.",
+     "checked": "2026-11-23"
+    }
+   ]
+  },
+  {
+   "id": "sorceress_spark",
+   "label": "Spark and Arc, energy shield",
+   "class": "Sorceress",
+   "ascendancy": "Stormweaver",
+   "toggles": [
+    "spell"
+   ],
+   "defence": "es",
+   "src": "AshLight-authored. Node ids from snapshot:skilltree (GGG tree export), gem names from snapshot:base_items, support fit from PoB-PoE2 gem data at the pinned commit.",
+   "checked": "2026-11-23",
+   "stages": [
+    {
+     "id": "first_zone",
+     "label": "First zone",
+     "trigger": {
+      "kind": "zone",
+      "zone": "G1_1"
+     },
+     "level": 3,
+     "skills": [
+      {
+       "name": "Spark",
+       "sockets": 0,
+       "supports": []
+      }
+     ],
+     "gems": [
+      {
+       "name": "Spark",
+       "action": "pick"
+      }
+     ],
+     "passives": [
+      44871,
+      56216
+     ],
+     "ascendancy": null,
+     "focus": {
+      "Weapon 1": [
+       "spell damage",
+       "lightning damage",
+       "cast speed",
+       "level of lightning spell skills"
+      ]
+     },
+     "src": "AshLight-authored. Zone id G1_1 from snapshot:world_areas; the plan level is an AshLight pick.",
+     "checked": "2026-11-23"
+    },
+    {
+     "id": "act1",
+     "label": "Act 1",
+     "trigger": {
+      "kind": "act",
+      "act": 1
+     },
+     "level": 15,
+     "skills": [
+      {
+       "name": "Spark",
+       "sockets": 1,
+       "supports": [
+        "Pierce I"
+       ]
+      },
+      {
+       "name": "Arc",
+       "sockets": 1,
+       "supports": [
+        "Chain I"
+       ]
+      }
+     ],
+     "gems": [
+      {
+       "name": "Arc",
+       "action": "pick"
+      },
+      {
+       "name": "Pierce I",
+       "action": "pick"
+      },
+      {
+       "name": "Chain I",
+       "action": "pick"
+      }
+     ],
+     "passives": [
+      9485,
+      60685,
+      42736,
+      4203,
+      42076,
+      17706,
+      46972,
+      30555,
+      53960,
+      49220,
+      36778,
+      36479
+     ],
+     "ascendancy": null,
+     "focus": {
+      "Weapon 1": [
+       "spell damage",
+       "lightning damage",
+       "cast speed",
+       "level of lightning spell skills"
+      ],
+      "Weapon 2": [
+       "energy shield",
+       "spell damage",
+       "resistances"
+      ],
+      "Body Armour": [
+       "energy shield",
+       "maximum life"
+      ],
+      "Helmet": [
+       "energy shield",
+       "resistances"
+      ],
+      "Gloves": [
+       "energy shield",
+       "resistances"
+      ],
+      "Boots": [
+       "movement speed",
+       "energy shield",
+       "resistances"
+      ],
+      "Amulet": [
+       "level of lightning spell skills",
+       "intelligence",
+       "energy shield"
+      ],
+      "Ring 1": [
+       "resistances",
+       "maximum mana",
+       "cast speed"
+      ],
+      "Ring 2": [
+       "resistances",
+       "maximum mana",
+       "cast speed"
+      ],
+      "Belt": [
+       "maximum life",
+       "resistances"
+      ]
+     },
+     "src": "AshLight-authored. Plan level 15 is the top Act 1 area level in snapshot:world_areas.",
+     "checked": "2026-11-23"
+    },
+    {
+     "id": "act2",
+     "label": "Act 2",
+     "trigger": {
+      "kind": "act",
+      "act": 2
+     },
+     "level": 31,
+     "skills": [
+      {
+       "name": "Spark",
+       "sockets": 2,
+       "supports": [
+        "Pierce I",
+        "Lightning Penetration"
+       ]
+      },
+      {
+       "name": "Arc",
+       "sockets": 2,
+       "supports": [
+        "Chain I",
+        "Rapid Casting I"
+       ]
+      }
+     ],
+     "gems": [
+      {
+       "name": "Lightning Penetration",
+       "action": "pick"
+      },
+      {
+       "name": "Rapid Casting I",
+       "action": "pick"
+      }
+     ],
+     "passives": [
+      12925,
+      61196,
+      56045,
+      24647,
+      43691,
+      21746,
+      32701,
+      26598,
+      54176,
+      55463,
+      27875,
+      11604,
+      17088,
+      51416,
+      26596,
+      17254
+     ],
+     "ascendancy": null,
+     "focus": {
+      "Weapon 1": [
+       "spell damage",
+       "lightning damage",
+       "cast speed",
+       "level of lightning spell skills"
+      ],
+      "Weapon 2": [
+       "energy shield",
+       "spell damage",
+       "resistances"
+      ],
+      "Body Armour": [
+       "energy shield",
+       "maximum life"
+      ],
+      "Helmet": [
+       "energy shield",
+       "resistances"
+      ],
+      "Gloves": [
+       "energy shield",
+       "resistances"
+      ],
+      "Boots": [
+       "movement speed",
+       "energy shield",
+       "resistances"
+      ],
+      "Amulet": [
+       "level of lightning spell skills",
+       "intelligence",
+       "energy shield"
+      ],
+      "Ring 1": [
+       "resistances",
+       "maximum mana",
+       "cast speed"
+      ],
+      "Ring 2": [
+       "resistances",
+       "maximum mana",
+       "cast speed"
+      ],
+      "Belt": [
+       "maximum life",
+       "resistances"
+      ]
+     },
+     "src": "AshLight-authored. Plan level 31 is the top Act 2 area level in snapshot:world_areas.",
+     "checked": "2026-11-23"
+    },
+    {
+     "id": "act3",
+     "label": "Act 3",
+     "trigger": {
+      "kind": "act",
+      "act": 3
+     },
+     "level": 45,
+     "skills": [
+      {
+       "name": "Spark",
+       "sockets": 3,
+       "supports": [
+        "Pierce I",
+        "Lightning Penetration",
+        "Lightning Mastery"
+       ]
+      },
+      {
+       "name": "Arc",
+       "sockets": 2,
+       "supports": [
+        "Chain I",
+        "Rapid Casting I"
+       ]
+      },
+      {
+       "name": "Orb of Storms",
+       "sockets": 1,
+       "supports": [
+        "Controlled Destruction"
+       ]
+      }
+     ],
+     "gems": [
+      {
+       "name": "Orb of Storms",
+       "action": "pick"
+      },
+      {
+       "name": "Lightning Mastery",
+       "action": "pick"
+      },
+      {
+       "name": "Controlled Destruction",
+       "action": "pick"
+      }
+     ],
+     "passives": [
+      1826,
+      39037,
+      11672,
+      48030,
+      62436,
+      3215,
+      41372,
+      6715,
+      116,
+      57710,
+      53975,
+      33254,
+      55104,
+      19125
+     ],
+     "ascendancy": {
+      "trial": 1,
+      "nodes": [
+       49759,
+       2857
+      ]
+     },
+     "focus": {
+      "Weapon 1": [
+       "spell damage",
+       "lightning damage",
+       "cast speed",
+       "level of lightning spell skills"
+      ],
+      "Weapon 2": [
+       "energy shield",
+       "spell damage",
+       "resistances"
+      ],
+      "Body Armour": [
+       "energy shield",
+       "maximum life"
+      ],
+      "Helmet": [
+       "energy shield",
+       "resistances"
+      ],
+      "Gloves": [
+       "energy shield",
+       "resistances"
+      ],
+      "Boots": [
+       "movement speed",
+       "energy shield",
+       "resistances"
+      ],
+      "Amulet": [
+       "level of lightning spell skills",
+       "intelligence",
+       "energy shield"
+      ],
+      "Ring 1": [
+       "resistances",
+       "maximum mana",
+       "cast speed"
+      ],
+      "Ring 2": [
+       "resistances",
+       "maximum mana",
+       "cast speed"
+      ],
+      "Belt": [
+       "maximum life",
+       "resistances"
+      ]
+     },
+     "src": "AshLight-authored. Plan level 45 is the top Act 3 area level in snapshot:world_areas.",
+     "checked": "2026-11-23"
+    },
+    {
+     "id": "act4",
+     "label": "Act 4",
+     "trigger": {
+      "kind": "act",
+      "act": 4
+     },
+     "level": 53,
+     "skills": [
+      {
+       "name": "Spark",
+       "sockets": 3,
+       "supports": [
+        "Pierce I",
+        "Lightning Penetration",
+        "Lightning Mastery"
+       ]
+      },
+      {
+       "name": "Arc",
+       "sockets": 3,
+       "supports": [
+        "Chain I",
+        "Rapid Casting I",
+        "Arcane Surge"
+       ]
+      },
+      {
+       "name": "Orb of Storms",
+       "sockets": 1,
+       "supports": [
+        "Controlled Destruction"
+       ]
+      }
+     ],
+     "gems": [
+      {
+       "name": "Arcane Surge",
+       "action": "pick"
+      }
+     ],
+     "passives": [
+      8616,
+      46819,
+      3472,
+      26682,
+      10398,
+      21560,
+      44405,
+      60878
+     ],
+     "ascendancy": {
+      "trial": 2,
+      "nodes": [
+       65413,
+       12882
+      ]
+     },
+     "focus": {
+      "Weapon 1": [
+       "spell damage",
+       "lightning damage",
+       "cast speed",
+       "level of lightning spell skills"
+      ],
+      "Weapon 2": [
+       "energy shield",
+       "spell damage",
+       "resistances"
+      ],
+      "Body Armour": [
+       "energy shield",
+       "maximum life"
+      ],
+      "Helmet": [
+       "energy shield",
+       "resistances"
+      ],
+      "Gloves": [
+       "energy shield",
+       "resistances"
+      ],
+      "Boots": [
+       "movement speed",
+       "energy shield",
+       "resistances"
+      ],
+      "Amulet": [
+       "level of lightning spell skills",
+       "intelligence",
+       "energy shield"
+      ],
+      "Ring 1": [
+       "resistances",
+       "maximum mana",
+       "cast speed"
+      ],
+      "Ring 2": [
+       "resistances",
+       "maximum mana",
+       "cast speed"
+      ],
+      "Belt": [
+       "maximum life",
+       "resistances"
+      ]
+     },
+     "src": "AshLight-authored. Plan level 53 is the top Act 4 area level in snapshot:world_areas.",
+     "checked": "2026-11-23"
+    },
+    {
+     "id": "interludes",
+     "label": "Interludes",
+     "trigger": {
+      "kind": "area_level",
+      "min": 54,
+      "max": 64
+     },
+     "level": 56,
+     "skills": [
+      {
+       "name": "Spark",
+       "sockets": 4,
+       "supports": [
+        "Pierce I",
+        "Lightning Penetration",
+        "Lightning Mastery",
+        "Multishot I"
+       ]
+      },
+      {
+       "name": "Arc",
+       "sockets": 3,
+       "supports": [
+        "Chain I",
+        "Rapid Casting I",
+        "Arcane Surge"
+       ]
+      },
+      {
+       "name": "Orb of Storms",
+       "sockets": 1,
+       "supports": [
+        "Controlled Destruction"
+       ]
+      }
+     ],
+     "gems": [
+      {
+       "name": "Multishot I",
+       "action": "pick"
+      }
+     ],
+     "passives": [
+      58329,
+      31950,
+      7405
+     ],
+     "ascendancy": {
+      "trial": 3,
+      "nodes": [
+       7998,
+       39640
+      ]
+     },
+     "focus": {
+      "Weapon 1": [
+       "spell damage",
+       "lightning damage",
+       "cast speed",
+       "level of lightning spell skills"
+      ],
+      "Weapon 2": [
+       "energy shield",
+       "spell damage",
+       "resistances"
+      ],
+      "Body Armour": [
+       "energy shield",
+       "maximum life"
+      ],
+      "Helmet": [
+       "energy shield",
+       "resistances"
+      ],
+      "Gloves": [
+       "energy shield",
+       "resistances"
+      ],
+      "Boots": [
+       "movement speed",
+       "energy shield",
+       "resistances"
+      ],
+      "Amulet": [
+       "level of lightning spell skills",
+       "intelligence",
+       "energy shield"
+      ],
+      "Ring 1": [
+       "resistances",
+       "maximum mana",
+       "cast speed"
+      ],
+      "Ring 2": [
+       "resistances",
+       "maximum mana",
+       "cast speed"
+      ],
+      "Belt": [
+       "maximum life",
+       "resistances"
+      ]
+     },
+     "src": "AshLight-authored. Interlude zones are area level 54 to 56 in snapshot:world_areas; the band runs to 64.",
+     "checked": "2026-11-23"
+    },
+    {
+     "id": "maps",
+     "label": "Early maps",
+     "trigger": {
+      "kind": "area_level",
+      "min": 65,
+      "max": 100
+     },
+     "level": 70,
+     "skills": [
+      {
+       "name": "Spark",
+       "sockets": 4,
+       "supports": [
+        "Pierce I",
+        "Lightning Penetration",
+        "Lightning Mastery",
+        "Multishot I"
+       ]
+      },
+      {
+       "name": "Arc",
+       "sockets": 4,
+       "supports": [
+        "Chain I",
+        "Rapid Casting I",
+        "Arcane Surge",
+        "Overcharge"
+       ]
+      },
+      {
+       "name": "Orb of Storms",
+       "sockets": 1,
+       "supports": [
+        "Controlled Destruction"
+       ]
+      }
+     ],
+     "gems": [
+      {
+       "name": "Overcharge",
+       "action": "pick"
+      }
+     ],
+     "passives": [
+      4850,
+      35503,
+      23764,
+      42750,
+      9050,
+      24958,
+      52464,
+      8045,
+      51871,
+      41877,
+      33463,
+      58593,
+      18314,
+      60239
+     ],
+     "ascendancy": {
+      "trial": 4,
+      "nodes": [
+       64789,
+       8867
+      ]
+     },
+     "focus": {
+      "Weapon 1": [
+       "spell damage",
+       "lightning damage",
+       "cast speed",
+       "level of lightning spell skills"
+      ],
+      "Weapon 2": [
+       "energy shield",
+       "spell damage",
+       "resistances"
+      ],
+      "Body Armour": [
+       "energy shield",
+       "maximum life"
+      ],
+      "Helmet": [
+       "energy shield",
+       "resistances"
+      ],
+      "Gloves": [
+       "energy shield",
+       "resistances"
+      ],
+      "Boots": [
+       "movement speed",
+       "energy shield",
+       "resistances"
+      ],
+      "Amulet": [
+       "level of lightning spell skills",
+       "intelligence",
+       "energy shield"
+      ],
+      "Ring 1": [
+       "resistances",
+       "maximum mana",
+       "cast speed"
+      ],
+      "Ring 2": [
+       "resistances",
+       "maximum mana",
+       "cast speed"
+      ],
+      "Belt": [
+       "maximum life",
+       "resistances"
+      ]
+     },
+     "src": "AshLight-authored. Area level 65 is the lowest common map area level in snapshot:world_areas.",
+     "checked": "2026-11-23"
+    }
+   ]
+  },
+  {
+   "id": "witch_skeletons",
+   "label": "Skeleton army, hybrid defence",
+   "class": "Witch",
+   "ascendancy": "Infernalist",
+   "toggles": [
+    "minion"
+   ],
+   "defence": "hybrid",
+   "src": "AshLight-authored. Node ids from snapshot:skilltree (GGG tree export), gem names from snapshot:base_items, support fit from PoB-PoE2 gem data at the pinned commit.",
+   "checked": "2026-11-23",
+   "stages": [
+    {
+     "id": "first_zone",
+     "label": "First zone",
+     "trigger": {
+      "kind": "zone",
+      "zone": "G1_1"
+     },
+     "level": 3,
+     "skills": [
+      {
+       "name": "Skeletal Warrior",
+       "sockets": 0,
+       "supports": []
+      }
+     ],
+     "gems": [
+      {
+       "name": "Skeletal Warrior",
+       "action": "pick"
+      }
+     ],
+     "passives": [
+      44871,
+      30346
+     ],
+     "ascendancy": null,
+     "focus": {
+      "Weapon 1": [
+       "level of minion skills",
+       "spirit",
+       "minion damage"
+      ]
+     },
+     "src": "AshLight-authored. Zone id G1_1 from snapshot:world_areas; the plan level is an AshLight pick.",
+     "checked": "2026-11-23"
+    },
+    {
+     "id": "act1",
+     "label": "Act 1",
+     "trigger": {
+      "kind": "act",
+      "act": 1
+     },
+     "level": 15,
+     "skills": [
+      {
+       "name": "Skeletal Warrior",
+       "sockets": 1,
+       "supports": [
+        "Minion Mastery"
+       ]
+      },
+      {
+       "name": "Skeletal Arsonist",
+       "sockets": 1,
+       "supports": [
+        "Meat Shield I"
+       ]
+      }
+     ],
+     "gems": [
+      {
+       "name": "Skeletal Arsonist",
+       "action": "pick"
+      },
+      {
+       "name": "Minion Mastery",
+       "action": "pick"
+      },
+      {
+       "name": "Meat Shield I",
+       "action": "pick"
+      }
+     ],
+     "passives": [
+      29695,
+      43736,
+      2254,
+      14666,
+      9642,
+      517,
+      39037,
+      11672,
+      40783,
+      15358,
+      44255,
+      41905
+     ],
+     "ascendancy": null,
+     "focus": {
+      "Weapon 1": [
+       "level of minion skills",
+       "spirit",
+       "minion damage"
+      ],
+      "Weapon 2": [
+       "energy shield",
+       "maximum life",
+       "resistances"
+      ],
+      "Body Armour": [
+       "maximum life",
+       "energy shield",
+       "spirit"
+      ],
+      "Helmet": [
+       "maximum life",
+       "energy shield",
+       "resistances"
+      ],
+      "Gloves": [
+       "maximum life",
+       "energy shield",
+       "resistances"
+      ],
+      "Boots": [
+       "movement speed",
+       "maximum life",
+       "resistances"
+      ],
+      "Amulet": [
+       "spirit",
+       "level of minion skills",
+       "maximum life"
+      ],
+      "Ring 1": [
+       "maximum life",
+       "resistances"
+      ],
+      "Ring 2": [
+       "maximum life",
+       "resistances"
+      ],
+      "Belt": [
+       "maximum life",
+       "resistances"
+      ]
+     },
+     "src": "AshLight-authored. Plan level 15 is the top Act 1 area level in snapshot:world_areas.",
+     "checked": "2026-11-23"
+    },
+    {
+     "id": "act2",
+     "label": "Act 2",
+     "trigger": {
+      "kind": "act",
+      "act": 2
+     },
+     "level": 31,
+     "skills": [
+      {
+       "name": "Skeletal Warrior",
+       "sockets": 2,
+       "supports": [
+        "Minion Mastery",
+        "Feeding Frenzy I"
+       ]
+      },
+      {
+       "name": "Skeletal Arsonist",
+       "sockets": 2,
+       "supports": [
+        "Meat Shield I",
+        "Elemental Army"
+       ]
+      }
+     ],
+     "gems": [
+      {
+       "name": "Feeding Frenzy I",
+       "action": "pick"
+      },
+      {
+       "name": "Elemental Army",
+       "action": "pick"
+      }
+     ],
+     "passives": [
+      28573,
+      59541,
+      4748,
+      17973,
+      48030,
+      62436,
+      3215,
+      41372,
+      6715,
+      116,
+      14548,
+      3443,
+      55180,
+      45530,
+      17394,
+      49088
+     ],
+     "ascendancy": null,
+     "focus": {
+      "Weapon 1": [
+       "level of minion skills",
+       "spirit",
+       "minion damage"
+      ],
+      "Weapon 2": [
+       "energy shield",
+       "maximum life",
+       "resistances"
+      ],
+      "Body Armour": [
+       "maximum life",
+       "energy shield",
+       "spirit"
+      ],
+      "Helmet": [
+       "maximum life",
+       "energy shield",
+       "resistances"
+      ],
+      "Gloves": [
+       "maximum life",
+       "energy shield",
+       "resistances"
+      ],
+      "Boots": [
+       "movement speed",
+       "maximum life",
+       "resistances"
+      ],
+      "Amulet": [
+       "spirit",
+       "level of minion skills",
+       "maximum life"
+      ],
+      "Ring 1": [
+       "maximum life",
+       "resistances"
+      ],
+      "Ring 2": [
+       "maximum life",
+       "resistances"
+      ],
+      "Belt": [
+       "maximum life",
+       "resistances"
+      ]
+     },
+     "src": "AshLight-authored. Plan level 31 is the top Act 2 area level in snapshot:world_areas.",
+     "checked": "2026-11-23"
+    },
+    {
+     "id": "act3",
+     "label": "Act 3",
+     "trigger": {
+      "kind": "act",
+      "act": 3
+     },
+     "level": 45,
+     "skills": [
+      {
+       "name": "Skeletal Warrior",
+       "sockets": 3,
+       "supports": [
+        "Minion Mastery",
+        "Feeding Frenzy I",
+        "Hulking Minions"
+       ]
+      },
+      {
+       "name": "Skeletal Arsonist",
+       "sockets": 2,
+       "supports": [
+        "Meat Shield I",
+        "Elemental Army"
+       ]
+      },
+      {
+       "name": "Skeletal Frost Mage",
+       "sockets": 1,
+       "supports": [
+        "Muster"
+       ]
+      }
+     ],
+     "gems": [
+      {
+       "name": "Skeletal Frost Mage",
+       "action": "pick"
+      },
+      {
+       "name": "Hulking Minions",
+       "action": "pick"
+      },
+      {
+       "name": "Muster",
+       "action": "pick"
+      }
+     ],
+     "passives": [
+      63009,
+      37593,
+      63739,
+      47155,
+      35896,
+      55668,
+      25557,
+      24165,
+      4328,
+      3463,
+      26885,
+      59775,
+      20782,
+      52191
+     ],
+     "ascendancy": {
+      "trial": 1,
+      "nodes": [
+       23880,
+       13174
+      ]
+     },
+     "focus": {
+      "Weapon 1": [
+       "level of minion skills",
+       "spirit",
+       "minion damage"
+      ],
+      "Weapon 2": [
+       "energy shield",
+       "maximum life",
+       "resistances"
+      ],
+      "Body Armour": [
+       "maximum life",
+       "energy shield",
+       "spirit"
+      ],
+      "Helmet": [
+       "maximum life",
+       "energy shield",
+       "resistances"
+      ],
+      "Gloves": [
+       "maximum life",
+       "energy shield",
+       "resistances"
+      ],
+      "Boots": [
+       "movement speed",
+       "maximum life",
+       "resistances"
+      ],
+      "Amulet": [
+       "spirit",
+       "level of minion skills",
+       "maximum life"
+      ],
+      "Ring 1": [
+       "maximum life",
+       "resistances"
+      ],
+      "Ring 2": [
+       "maximum life",
+       "resistances"
+      ],
+      "Belt": [
+       "maximum life",
+       "resistances"
+      ]
+     },
+     "src": "AshLight-authored. Plan level 45 is the top Act 3 area level in snapshot:world_areas.",
+     "checked": "2026-11-23"
+    },
+    {
+     "id": "act4",
+     "label": "Act 4",
+     "trigger": {
+      "kind": "act",
+      "act": 4
+     },
+     "level": 53,
+     "skills": [
+      {
+       "name": "Skeletal Warrior",
+       "sockets": 3,
+       "supports": [
+        "Minion Mastery",
+        "Feeding Frenzy I",
+        "Hulking Minions"
+       ]
+      },
+      {
+       "name": "Skeletal Arsonist",
+       "sockets": 3,
+       "supports": [
+        "Meat Shield I",
+        "Elemental Army",
+        "Infernal Legion I"
+       ]
+      },
+      {
+       "name": "Skeletal Frost Mage",
+       "sockets": 1,
+       "supports": [
+        "Muster"
+       ]
+      }
+     ],
+     "gems": [
+      {
+       "name": "Infernal Legion I",
+       "action": "pick"
+      }
+     ],
+     "passives": [
+      44628,
+      20820,
+      40166,
+      32399,
+      46857,
+      52971,
+      8908,
+      13711
+     ],
+     "ascendancy": {
+      "trial": 2,
+      "nodes": [
+       7793,
+       18348
+      ]
+     },
+     "focus": {
+      "Weapon 1": [
+       "level of minion skills",
+       "spirit",
+       "minion damage"
+      ],
+      "Weapon 2": [
+       "energy shield",
+       "maximum life",
+       "resistances"
+      ],
+      "Body Armour": [
+       "maximum life",
+       "energy shield",
+       "spirit"
+      ],
+      "Helmet": [
+       "maximum life",
+       "energy shield",
+       "resistances"
+      ],
+      "Gloves": [
+       "maximum life",
+       "energy shield",
+       "resistances"
+      ],
+      "Boots": [
+       "movement speed",
+       "maximum life",
+       "resistances"
+      ],
+      "Amulet": [
+       "spirit",
+       "level of minion skills",
+       "maximum life"
+      ],
+      "Ring 1": [
+       "maximum life",
+       "resistances"
+      ],
+      "Ring 2": [
+       "maximum life",
+       "resistances"
+      ],
+      "Belt": [
+       "maximum life",
+       "resistances"
+      ]
+     },
+     "src": "AshLight-authored. Plan level 53 is the top Act 4 area level in snapshot:world_areas.",
+     "checked": "2026-11-23"
+    },
+    {
+     "id": "interludes",
+     "label": "Interludes",
+     "trigger": {
+      "kind": "area_level",
+      "min": 54,
+      "max": 64
+     },
+     "level": 56,
+     "skills": [
+      {
+       "name": "Skeletal Warrior",
+       "sockets": 3,
+       "supports": [
+        "Minion Mastery",
+        "Feeding Frenzy I",
+        "Hulking Minions"
+       ]
+      },
+      {
+       "name": "Skeletal Arsonist",
+       "sockets": 3,
+       "supports": [
+        "Meat Shield I",
+        "Elemental Army",
+        "Infernal Legion I"
+       ]
+      },
+      {
+       "name": "Skeletal Frost Mage",
+       "sockets": 2,
+       "supports": [
+        "Muster",
+        "Bidding I"
+       ]
+      }
+     ],
+     "gems": [
+      {
+       "name": "Bidding I",
+       "action": "pick"
+      }
+     ],
+     "passives": [
+      30562,
+      29240,
+      10881
+     ],
+     "ascendancy": {
+      "trial": 3,
+      "nodes": [
+       8854,
+       46644
+      ]
+     },
+     "focus": {
+      "Weapon 1": [
+       "level of minion skills",
+       "spirit",
+       "minion damage"
+      ],
+      "Weapon 2": [
+       "energy shield",
+       "maximum life",
+       "resistances"
+      ],
+      "Body Armour": [
+       "maximum life",
+       "energy shield",
+       "spirit"
+      ],
+      "Helmet": [
+       "maximum life",
+       "energy shield",
+       "resistances"
+      ],
+      "Gloves": [
+       "maximum life",
+       "energy shield",
+       "resistances"
+      ],
+      "Boots": [
+       "movement speed",
+       "maximum life",
+       "resistances"
+      ],
+      "Amulet": [
+       "spirit",
+       "level of minion skills",
+       "maximum life"
+      ],
+      "Ring 1": [
+       "maximum life",
+       "resistances"
+      ],
+      "Ring 2": [
+       "maximum life",
+       "resistances"
+      ],
+      "Belt": [
+       "maximum life",
+       "resistances"
+      ]
+     },
+     "src": "AshLight-authored. Interlude zones are area level 54 to 56 in snapshot:world_areas; the band runs to 64.",
+     "checked": "2026-11-23"
+    },
+    {
+     "id": "maps",
+     "label": "Early maps",
+     "trigger": {
+      "kind": "area_level",
+      "min": 65,
+      "max": 100
+     },
+     "level": 70,
+     "skills": [
+      {
+       "name": "Skeletal Warrior",
+       "sockets": 4,
+       "supports": [
+        "Minion Mastery",
+        "Feeding Frenzy I",
+        "Hulking Minions",
+        "Crazed Minions"
+       ]
+      },
+      {
+       "name": "Skeletal Arsonist",
+       "sockets": 3,
+       "supports": [
+        "Meat Shield I",
+        "Elemental Army",
+        "Infernal Legion I"
+       ]
+      },
+      {
+       "name": "Skeletal Frost Mage",
+       "sockets": 2,
+       "supports": [
+        "Muster",
+        "Bidding I"
+       ]
+      }
+     ],
+     "gems": [
+      {
+       "name": "Crazed Minions",
+       "action": "pick"
+      }
+     ],
+     "passives": [
+      33112,
+      11838,
+      31977,
+      10159,
+      3567,
+      25026,
+      36379,
+      46554,
+      62677,
+      59362,
+      50720,
+      30523,
+      45885,
+      54521
+     ],
+     "ascendancy": {
+      "trial": 4,
+      "nodes": [
+       46016,
+       24039
+      ]
+     },
+     "focus": {
+      "Weapon 1": [
+       "level of minion skills",
+       "spirit",
+       "minion damage"
+      ],
+      "Weapon 2": [
+       "energy shield",
+       "maximum life",
+       "resistances"
+      ],
+      "Body Armour": [
+       "maximum life",
+       "energy shield",
+       "spirit"
+      ],
+      "Helmet": [
+       "maximum life",
+       "energy shield",
+       "resistances"
+      ],
+      "Gloves": [
+       "maximum life",
+       "energy shield",
+       "resistances"
+      ],
+      "Boots": [
+       "movement speed",
+       "maximum life",
+       "resistances"
+      ],
+      "Amulet": [
+       "spirit",
+       "level of minion skills",
+       "maximum life"
+      ],
+      "Ring 1": [
+       "maximum life",
+       "resistances"
+      ],
+      "Ring 2": [
+       "maximum life",
+       "resistances"
+      ],
+      "Belt": [
+       "maximum life",
+       "resistances"
+      ]
+     },
+     "src": "AshLight-authored. Area level 65 is the lowest common map area level in snapshot:world_areas.",
+     "checked": "2026-11-23"
+    }
+   ]
+  },
+  {
+   "id": "ranger_lightning_arrow",
+   "label": "Lightning Arrow bow, life",
+   "class": "Ranger",
+   "ascendancy": "Deadeye",
+   "toggles": [
+    "bow"
+   ],
+   "defence": "life",
+   "src": "AshLight-authored. Node ids from snapshot:skilltree (GGG tree export), gem names from snapshot:base_items, support fit from PoB-PoE2 gem data at the pinned commit.",
+   "checked": "2026-11-23",
+   "stages": [
+    {
+     "id": "first_zone",
+     "label": "First zone",
+     "trigger": {
+      "kind": "zone",
+      "zone": "G1_1"
+     },
+     "level": 3,
+     "skills": [
+      {
+       "name": "Lightning Arrow",
+       "sockets": 0,
+       "supports": []
+      }
+     ],
+     "gems": [
+      {
+       "name": "Lightning Arrow",
+       "action": "pick"
+      }
+     ],
+     "passives": [
+      56651,
+      35234
+     ],
+     "ascendancy": null,
+     "focus": {
+      "Weapon 1": [
+       "added lightning damage",
+       "attack speed",
+       "level of projectile skills",
+       "physical damage"
+      ]
+     },
+     "src": "AshLight-authored. Zone id G1_1 from snapshot:world_areas; the plan level is an AshLight pick.",
+     "checked": "2026-11-23"
+    },
+    {
+     "id": "act1",
+     "label": "Act 1",
+     "trigger": {
+      "kind": "act",
+      "act": 1
+     },
+     "level": 15,
+     "skills": [
+      {
+       "name": "Lightning Arrow",
+       "sockets": 1,
+       "supports": [
+        "Pierce I"
+       ]
+      },
+      {
+       "name": "Rain of Arrows",
+       "sockets": 1,
+       "supports": [
+        "Concentrated Area"
+       ]
+      }
+     ],
+     "gems": [
+      {
+       "name": "Rain of Arrows",
+       "action": "pick"
+      },
+      {
+       "name": "Pierce I",
+       "action": "pick"
+      },
+      {
+       "name": "Concentrated Area",
+       "action": "pick"
+      }
+     ],
+     "passives": [
+      6789,
+      4313,
+      28992,
+      22795,
+      42781,
+      43923,
+      19104,
+      29582,
+      35987,
+      29843,
+      20831,
+      48401
+     ],
+     "ascendancy": null,
+     "focus": {
+      "Weapon 1": [
+       "added lightning damage",
+       "attack speed",
+       "level of projectile skills",
+       "physical damage"
+      ],
+      "Weapon 2": [
+       "number of arrows",
+       "maximum life"
+      ],
+      "Body Armour": [
+       "maximum life",
+       "evasion"
+      ],
+      "Helmet": [
+       "maximum life",
+       "evasion",
+       "resistances"
+      ],
+      "Gloves": [
+       "attack speed",
+       "added lightning damage",
+       "resistances"
+      ],
+      "Boots": [
+       "movement speed",
+       "maximum life",
+       "resistances"
+      ],
+      "Amulet": [
+       "level of projectile skills",
+       "dexterity",
+       "maximum life"
+      ],
+      "Ring 1": [
+       "added lightning damage",
+       "resistances",
+       "accuracy"
+      ],
+      "Ring 2": [
+       "added lightning damage",
+       "resistances",
+       "accuracy"
+      ],
+      "Belt": [
+       "maximum life",
+       "resistances"
+      ]
+     },
+     "src": "AshLight-authored. Plan level 15 is the top Act 1 area level in snapshot:world_areas.",
+     "checked": "2026-11-23"
+    },
+    {
+     "id": "act2",
+     "label": "Act 2",
+     "trigger": {
+      "kind": "act",
+      "act": 2
+     },
+     "level": 31,
+     "skills": [
+      {
+       "name": "Lightning Arrow",
+       "sockets": 2,
+       "supports": [
+        "Pierce I",
+        "Lightning Penetration"
+       ]
+      },
+      {
+       "name": "Rain of Arrows",
+       "sockets": 2,
+       "supports": [
+        "Concentrated Area",
+        "Rapid Attacks I"
+       ]
+      }
+     ],
+     "gems": [
+      {
+       "name": "Lightning Penetration",
+       "action": "pick"
+      },
+      {
+       "name": "Rapid Attacks I",
+       "action": "pick"
+      }
+     ],
+     "passives": [
+      10909,
+      16489,
+      48568,
+      26786,
+      14340,
+      58109,
+      59281,
+      1221,
+      35743,
+      62237,
+      33053,
+      17726,
+      11826,
+      26520,
+      37190,
+      35855
+     ],
+     "ascendancy": null,
+     "focus": {
+      "Weapon 1": [
+       "added lightning damage",
+       "attack speed",
+       "level of projectile skills",
+       "physical damage"
+      ],
+      "Weapon 2": [
+       "number of arrows",
+       "maximum life"
+      ],
+      "Body Armour": [
+       "maximum life",
+       "evasion"
+      ],
+      "Helmet": [
+       "maximum life",
+       "evasion",
+       "resistances"
+      ],
+      "Gloves": [
+       "attack speed",
+       "added lightning damage",
+       "resistances"
+      ],
+      "Boots": [
+       "movement speed",
+       "maximum life",
+       "resistances"
+      ],
+      "Amulet": [
+       "level of projectile skills",
+       "dexterity",
+       "maximum life"
+      ],
+      "Ring 1": [
+       "added lightning damage",
+       "resistances",
+       "accuracy"
+      ],
+      "Ring 2": [
+       "added lightning damage",
+       "resistances",
+       "accuracy"
+      ],
+      "Belt": [
+       "maximum life",
+       "resistances"
+      ]
+     },
+     "src": "AshLight-authored. Plan level 31 is the top Act 2 area level in snapshot:world_areas.",
+     "checked": "2026-11-23"
+    },
+    {
+     "id": "act3",
+     "label": "Act 3",
+     "trigger": {
+      "kind": "act",
+      "act": 3
+     },
+     "level": 45,
+     "skills": [
+      {
+       "name": "Lightning Arrow",
+       "sockets": 3,
+       "supports": [
+        "Pierce I",
+        "Lightning Penetration",
+        "Lightning Mastery"
+       ]
+      },
+      {
+       "name": "Tornado Shot",
+       "sockets": 2,
+       "supports": [
+        "Concentrated Area",
+        "Rapid Attacks I"
+       ]
+      }
+     ],
+     "gems": [
+      {
+       "name": "Tornado Shot",
+       "action": "swap",
+       "for": "Rain of Arrows"
+      },
+      {
+       "name": "Lightning Mastery",
+       "action": "pick"
+      }
+     ],
+     "passives": [
+      49657,
+      43578,
+      41210,
+      28556,
+      59881,
+      44605,
+      38779,
+      44836,
+      47150,
+      56910,
+      4844,
+      58013,
+      50795,
+      42250
+     ],
+     "ascendancy": {
+      "trial": 1,
+      "nodes": [
+       24295,
+       37336
+      ]
+     },
+     "focus": {
+      "Weapon 1": [
+       "added lightning damage",
+       "attack speed",
+       "level of projectile skills",
+       "physical damage"
+      ],
+      "Weapon 2": [
+       "number of arrows",
+       "maximum life"
+      ],
+      "Body Armour": [
+       "maximum life",
+       "evasion"
+      ],
+      "Helmet": [
+       "maximum life",
+       "evasion",
+       "resistances"
+      ],
+      "Gloves": [
+       "attack speed",
+       "added lightning damage",
+       "resistances"
+      ],
+      "Boots": [
+       "movement speed",
+       "maximum life",
+       "resistances"
+      ],
+      "Amulet": [
+       "level of projectile skills",
+       "dexterity",
+       "maximum life"
+      ],
+      "Ring 1": [
+       "added lightning damage",
+       "resistances",
+       "accuracy"
+      ],
+      "Ring 2": [
+       "added lightning damage",
+       "resistances",
+       "accuracy"
+      ],
+      "Belt": [
+       "maximum life",
+       "resistances"
+      ]
+     },
+     "src": "AshLight-authored. Plan level 45 is the top Act 3 area level in snapshot:world_areas.",
+     "checked": "2026-11-23"
+    },
+    {
+     "id": "act4",
+     "label": "Act 4",
+     "trigger": {
+      "kind": "act",
+      "act": 4
+     },
+     "level": 53,
+     "skills": [
+      {
+       "name": "Lightning Arrow",
+       "sockets": 3,
+       "supports": [
+        "Pierce I",
+        "Lightning Penetration",
+        "Lightning Mastery"
+       ]
+      },
+      {
+       "name": "Tornado Shot",
+       "sockets": 3,
+       "supports": [
+        "Concentrated Area",
+        "Rapid Attacks I",
+        "Projectile Acceleration I"
+       ]
+      }
+     ],
+     "gems": [
+      {
+       "name": "Projectile Acceleration I",
+       "action": "pick"
+      }
+     ],
+     "passives": [
+      10927,
+      9272,
+      12906,
+      61312,
+      56841,
+      13341,
+      63255,
+      16484
+     ],
+     "ascendancy": {
+      "trial": 2,
+      "nodes": [
+       35801,
+       23508
+      ]
+     },
+     "focus": {
+      "Weapon 1": [
+       "added lightning damage",
+       "attack speed",
+       "level of projectile skills",
+       "physical damage"
+      ],
+      "Weapon 2": [
+       "number of arrows",
+       "maximum life"
+      ],
+      "Body Armour": [
+       "maximum life",
+       "evasion"
+      ],
+      "Helmet": [
+       "maximum life",
+       "evasion",
+       "resistances"
+      ],
+      "Gloves": [
+       "attack speed",
+       "added lightning damage",
+       "resistances"
+      ],
+      "Boots": [
+       "movement speed",
+       "maximum life",
+       "resistances"
+      ],
+      "Amulet": [
+       "level of projectile skills",
+       "dexterity",
+       "maximum life"
+      ],
+      "Ring 1": [
+       "added lightning damage",
+       "resistances",
+       "accuracy"
+      ],
+      "Ring 2": [
+       "added lightning damage",
+       "resistances",
+       "accuracy"
+      ],
+      "Belt": [
+       "maximum life",
+       "resistances"
+      ]
+     },
+     "src": "AshLight-authored. Plan level 53 is the top Act 4 area level in snapshot:world_areas.",
+     "checked": "2026-11-23"
+    },
+    {
+     "id": "interludes",
+     "label": "Interludes",
+     "trigger": {
+      "kind": "area_level",
+      "min": 54,
+      "max": 64
+     },
+     "level": 56,
+     "skills": [
+      {
+       "name": "Lightning Arrow",
+       "sockets": 4,
+       "supports": [
+        "Pierce I",
+        "Lightning Penetration",
+        "Lightning Mastery",
+        "Multishot I"
+       ]
+      },
+      {
+       "name": "Tornado Shot",
+       "sockets": 3,
+       "supports": [
+        "Concentrated Area",
+        "Rapid Attacks I",
+        "Projectile Acceleration I"
+       ]
+      }
+     ],
+     "gems": [
+      {
+       "name": "Multishot I",
+       "action": "pick"
+      }
+     ],
+     "passives": [
+      18923,
+      46402,
+      50342
+     ],
+     "ascendancy": {
+      "trial": 3,
+      "nodes": [
+       49165,
+       59913
+      ]
+     },
+     "focus": {
+      "Weapon 1": [
+       "added lightning damage",
+       "attack speed",
+       "level of projectile skills",
+       "physical damage"
+      ],
+      "Weapon 2": [
+       "number of arrows",
+       "maximum life"
+      ],
+      "Body Armour": [
+       "maximum life",
+       "evasion"
+      ],
+      "Helmet": [
+       "maximum life",
+       "evasion",
+       "resistances"
+      ],
+      "Gloves": [
+       "attack speed",
+       "added lightning damage",
+       "resistances"
+      ],
+      "Boots": [
+       "movement speed",
+       "maximum life",
+       "resistances"
+      ],
+      "Amulet": [
+       "level of projectile skills",
+       "dexterity",
+       "maximum life"
+      ],
+      "Ring 1": [
+       "added lightning damage",
+       "resistances",
+       "accuracy"
+      ],
+      "Ring 2": [
+       "added lightning damage",
+       "resistances",
+       "accuracy"
+      ],
+      "Belt": [
+       "maximum life",
+       "resistances"
+      ]
+     },
+     "src": "AshLight-authored. Interlude zones are area level 54 to 56 in snapshot:world_areas; the band runs to 64.",
+     "checked": "2026-11-23"
+    },
+    {
+     "id": "maps",
+     "label": "Early maps",
+     "trigger": {
+      "kind": "area_level",
+      "min": 65,
+      "max": 100
+     },
+     "level": 70,
+     "skills": [
+      {
+       "name": "Lightning Arrow",
+       "sockets": 4,
+       "supports": [
+        "Pierce I",
+        "Lightning Penetration",
+        "Lightning Mastery",
+        "Multishot I"
+       ]
+      },
+      {
+       "name": "Tornado Shot",
+       "sockets": 4,
+       "supports": [
+        "Concentrated Area",
+        "Rapid Attacks I",
+        "Projectile Acceleration I",
+        "Elemental Focus"
+       ]
+      }
+     ],
+     "gems": [
+      {
+       "name": "Elemental Focus",
+       "action": "pick"
+      }
+     ],
+     "passives": [
+      5227,
+      37220,
+      17955,
+      24922,
+      64345,
+      49968,
+      20008,
+      34201,
+      30143,
+      22057,
+      36808,
+      17118,
+      27493,
+      19342
+     ],
+     "ascendancy": {
+      "trial": 4,
+      "nodes": [
+       29871,
+       24226
+      ]
+     },
+     "focus": {
+      "Weapon 1": [
+       "added lightning damage",
+       "attack speed",
+       "level of projectile skills",
+       "physical damage"
+      ],
+      "Weapon 2": [
+       "number of arrows",
+       "maximum life"
+      ],
+      "Body Armour": [
+       "maximum life",
+       "evasion"
+      ],
+      "Helmet": [
+       "maximum life",
+       "evasion",
+       "resistances"
+      ],
+      "Gloves": [
+       "attack speed",
+       "added lightning damage",
+       "resistances"
+      ],
+      "Boots": [
+       "movement speed",
+       "maximum life",
+       "resistances"
+      ],
+      "Amulet": [
+       "level of projectile skills",
+       "dexterity",
+       "maximum life"
+      ],
+      "Ring 1": [
+       "added lightning damage",
+       "resistances",
+       "accuracy"
+      ],
+      "Ring 2": [
+       "added lightning damage",
+       "resistances",
+       "accuracy"
+      ],
+      "Belt": [
+       "maximum life",
+       "resistances"
+      ]
+     },
+     "src": "AshLight-authored. Area level 65 is the lowest common map area level in snapshot:world_areas.",
+     "checked": "2026-11-23"
+    }
+   ]
+  }
+ ]
+}
