@@ -2246,7 +2246,7 @@ Session-tagged ROADMAP follow-ups of sessions 22 and 23 (disjoint files).
   python tools/plan_check.py check; the wave closes when every session row
   is flipped and main is clean.
 
-- CP-1 [session, S 25m, build, DR] Character picker select keeps its width at narrow sizes. Files: web/app.css, tests/test_play_fit.py, tests/test_a11y.py. Deps: RUN-CHARACTER-PIN, WEB-PLAY-FIT-SETTINGS, CP-2.
+- CP-1 [session, S 25m, build, DR] Character picker select keeps its width at narrow sizes. Files: web/app.css, tests/test_play_fit.py, tests/test_a11y.py, web/chars.js, app/test/chars.test.js. Deps: RUN-CHARACTER-PIN, WEB-PLAY-FIT-SETTINGS, CP-2.
 - KINDLER-PLAN-LIVE [session, S 30m, build] Live calc test for the Kindler plan's PoB item focus. Files: tests/test_marks.py, tests/tc_live_util.py, tests/test_kindler_plan_live.py. Deps: KINDLER-PLAN, KINDLER-SUPPORT-FIT.
 
 ### Wave 50: panel file names, Kindler card fit
