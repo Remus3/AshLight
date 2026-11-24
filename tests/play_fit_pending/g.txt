@@ -1,1 +1,1 @@
-Region G passes G9 (idle word fixed); this marker now holds only the page-wide budgets (G1 page overflow, G5 element totals) until their row lands, then git rm it.
+Region G passes and page overflow (G1) is enforced since WEB-PLAY-FOOT-ONE-ROW; this marker holds only the G5 word and element totals until their row lands, then git rm it.

@@ -164,14 +164,24 @@ test("main.js: one /api/version read feeds the About text and the tray tooltip",
 
 /* The dashboard's own copy of the words: versionText, run alone
    (web/panels/version.js since TEST-WEB-PANELS-C2). */
-function webVersionText() {
+function webVersionText(name) {
   const src = web.source("version.js");
   const m = /\/\* BUILD-STAMP:begin[\s\S]*?\*\/([\s\S]*?)\/\* BUILD-STAMP:end \*\//.exec(src);
   assert.ok(m, "BUILD-STAMP markers in web/panels/version.js");
   const box = {};
-  vm.runInNewContext(m[1] + "\nout.f = versionText;", { out: box });
+  vm.runInNewContext(m[1] + "\nout.f = " + (name || "versionText") + ";", { out: box });
   return box.f;
 }
+
+/* WEB-PLAY-FOOT-ONE-ROW: the footer's short form, the same line with the
+   build cut to 7 hex so the footer keeps one row at 1024 px. */
+test("dashboard footerText: the version line with the build cut to 7 hex", () => {
+  const short = webVersionText("footerText");
+  for (const [doc, want] of LINES) {
+    assert.equal(short(doc), want.replace(SHA, SHA.slice(0, 7)), JSON.stringify(doc));
+  }
+  assert.equal(short({ build: "0.1.0+" + SHA + ".dev" }), "Version 0.1.0, build 0123456, dev");
+});
 
 test("dashboard versionText says exactly what the About text says", () => {
   const f = webVersionText();
@@ -189,7 +199,7 @@ test("dashboard footer: one muted build line, hidden until the core answers", ()
   assert.equal((html.match(/id="build-line"/g) || []).length, 1);
 });
 
-test("Settings > About and data carries the same string as the footer", () => {
+test("Settings > About and data carries the full line of the footer's short form", () => {
   // PLAY-TD-21B-SETTINGS-ABOUT: the About fold became the rail's About and
   // data section, open, with the version as its last line
   const html = web.source("index.html");
@@ -201,7 +211,7 @@ test("Settings > About and data carries the same string as the footer", () => {
   assert.ok(!settings.includes('id="about-fold"'), "no About fold left");
   assert.match(about, /<p id="about-version" class="muted">/);
   const js = web.source("version.js");
-  assert.match(js, /var ver = versionText\(doc\);\s*if \(ver\) \{\s*\$\("build-line"\)\.textContent = ver;\s*\$\("build-line"\)\.hidden = false;\s*\$\("about-version"\)\.textContent = ver;/);
+  assert.match(js, /var ver = versionText\(doc\);\s*if \(ver\) \{\s*\$\("build-line"\)\.textContent = footerText\(doc\);\s*\$\("build-line"\)\.hidden = false;\s*\$\("about-version"\)\.textContent = ver;/);
 });
 
 /* PUB-GUIDE-DOWNLOAD-PLACE (F-126): the one download place, the releases

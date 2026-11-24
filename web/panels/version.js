@@ -19,7 +19,7 @@
    No clipboard, no timer, no new request, no live region.
 
    UMD like web/fmt.js: CommonJS for node --test (app/test/panels.test.js)
-   exports {name, order, panel, versionText}; in the page the file
+   exports {name, order, panel, versionText, footerText}; in the page the file
    registers itself with window.ALApp (web/registry.js) as "version",
    order 270, after the other settings panels (it only queues its read).
    The core links this file at the panels marker of index.html
@@ -75,6 +75,17 @@
     }
     return "Version " + ver + (commit ? ", build " + commit : "") + (dev ? ", dev" : "");
   }
+
+  /* WEB-PLAY-FOOT-ONE-ROW: the footer's short form of the same line, so
+     the footer stays one row at 1024 px: the build cut to its first 7 hex
+     (always 7 characters, so the row width no longer moves with the
+     commit by more than a letter's width); the full 12-hex line stays in
+     Settings > About and data. "" when versionText says nothing. */
+  function footerText(doc) {
+    var text = versionText(doc);
+    var m = /^(Version [^,]+, build )([0-9a-f]{12})(.*)$/.exec(text);
+    return m ? m[1] + m[2].slice(0, 7) + m[3] : text;
+  }
   /* BUILD-STAMP:end */
 
   function loadDataCredit() {
@@ -86,7 +97,7 @@
       $("credits").hidden = !text; // the About and data group around it
       var ver = versionText(doc);
       if (ver) {
-        $("build-line").textContent = ver;
+        $("build-line").textContent = footerText(doc);
         $("build-line").hidden = false;
         $("about-version").textContent = ver;
       }
@@ -107,5 +118,6 @@
     };
   }
 
-  return { name: NAME, order: ORDER, panel: panel, versionText: versionText };
+  return { name: NAME, order: ORDER, panel: panel, versionText: versionText,
+           footerText: footerText };
 }));
