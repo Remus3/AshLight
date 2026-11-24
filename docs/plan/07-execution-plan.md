@@ -2173,7 +2173,7 @@ Session-tagged ROADMAP follow-ups of sessions 22 and 23 (disjoint files).
 
 - GLANCE-PENDING-OUT [session, S 15m, build] Drop the stale DESIGN_TEXT_PENDING skip from the glance rules test. Files: tests/test_glance_rules.py. Deps: PLAY-TD-23-RECORDS.
 - AUTOSTART-PSEXE [session, S 20m, build] Autostart switch spawns the absolute System32 PowerShell. Files: app/client/launcher.js, app/test/autostart_switch.test.js, tests/test_audit_exe_path.py. Deps: none.
-- BUDGET-RETIRE-TAILER-IDLE [session, S 25m, build] Retire the tailer idle CPU test superseded by B1. Files: tests/test_budgets.py, tools/docs_fresh.py, README.md, tests/test_docs_fresh.py. Deps: RUN-BUDGET-TESTS-DET, DEP14-UNINSTALL-LINE.
+- BUDGET-RETIRE-TAILER-IDLE [session, S 25m, build] Retire the tailer idle CPU test superseded by B1. Files: tests/test_budgets.py, tools/docs_fresh.py, README.md, tests/test_docs_fresh.py, tests/slow_budget.py. Deps: RUN-BUDGET-TESTS-DET, DEP14-UNINSTALL-LINE.
 - KINDLER-STORE-EXPORT-WIRE [session, S 30m, build] Kindler tabs ride settings export and import. Files: server/al/core.py, tests/test_settingsio.py. Deps: KINDLER-STORE.
 - DATA-GEMS-SNAP [session, M 40m, data] Gems snapshot: repoe-fork poe2 gems.json behind web data. Files: server/al/theorycraft/snapshot.py, server/al/theorycraft/snapprobe.py, server/al/theorycraft/datacredit.py, tests/test_tc_snap.py, tests/test_snap_probe.py (+1 more). Deps: KINDLER-DATA.
 - KINDLER-COPY-SHEET [session, S 25m, build, DR] Copy sheet for the Kindler card words. Files: docs/design/copy/kindler.md. Deps: KINDLER-UI-TABS, KINDLER-UI-RESULT.

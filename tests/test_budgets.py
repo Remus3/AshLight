@@ -1,6 +1,7 @@
-"""Core budgets (docs/decisions/0002-stack.md): parse speed, tailer idle CPU,
-bounded memory. Timing budgets widen with fleet_test_guard.budget() while
-other suites share the box. Under AL_CI=1 (CI only) a timing assert skips
+"""Core budgets (docs/decisions/0002-stack.md): parse speed, idle CPU (B1
+runs the tailer thread inside the real loop body), bounded memory. Timing
+budgets widen with fleet_test_guard.budget() while other suites share the
+box. Under AL_CI=1 (CI only) a timing assert skips
 with the measured value printed, after the structural checks (decision
 0080); the memory bounds always hold.
 
@@ -59,27 +60,6 @@ def test_tail_1000_line_burst_under_50ms(tmp_path):
     assert n == 1000
     skip_if_ci_timing("tail of a 1000-line burst", f"{elapsed * 1000:.1f} ms")
     assert elapsed < fleet_test_guard.budget(0.05), f"{elapsed * 1000:.1f} ms"
-
-
-@pytest.mark.slow
-def test_tailer_idle_cpu_under_2_percent(tmp_path):
-    # Superseded by B1 (test_real_loop_body_10_s_worst_case_under_half_percent,
-    # which runs the tailer thread too); kept while tools/docs_fresh.py and
-    # README.md still quote this budget ("idle tailing under 1 to 2 percent").
-    p = tmp_path / "Client.txt"
-    p.write_bytes(b"x\n" * 1000)
-    t = Tailer(p, lambda line: None, poll_s=0.25)
-    t.start()
-    try:
-        time.sleep(0.3)
-        c0, w0 = time.process_time(), time.perf_counter()
-        time.sleep(3.0)
-        cpu, wall = time.process_time() - c0, time.perf_counter() - w0
-    finally:
-        t.stop()
-    share = cpu / wall
-    skip_if_ci_timing("tailer idle CPU", f"{share * 100:.2f} percent")
-    assert share < 0.02 * fleet_test_guard.load_factor(), f"{share * 100:.2f} percent"
 
 
 def test_resume_scan_of_full_32mb_cap_under_500ms(tmp_path):
