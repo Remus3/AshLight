@@ -13,12 +13,13 @@ tests/test_kindler_data.py (test_server_words_are_pinned_exactly) pins
 every one. Pure functions and constants; stdlib only.
 """
 
-# Hot reload names (decision 0042): the template loader's
+# Hot reload names (decision 0042): the template loader's; only TABLE_NAME
+# is in the core's Checks registry, every other watch is registry=False
 TABLE_NAME = "Kindler templates"
 TREE_NAME = "Passive tree (Kindler)"
 GEMS_NAME = "Gems snapshot"
 BASES_NAME = "Weapon bases (Kindler)"
-# ... and the engine's own copies
+# ... and the engine's own copies (registry=False: never shown to a player)
 ENGINE_TABLE_NAME = "Kindler templates (engine)"
 ENGINE_TREE_NAME = "Passive tree (Kindler engine)"
 ENGINE_GEMS_NAME = "Gems snapshot (Kindler engine)"
@@ -35,6 +36,8 @@ BOW_CLASS = "Bow"
 
 def weapon_unknown(where, name):
     """resolve()'s note for an authored weapon base the base_items
-    snapshot does not name as a weapon base; nothing is composed."""
+    snapshot does not name as a weapon base; nothing is composed. Author
+    and test output only: it never reaches a card, Checks or an API
+    answer."""
     return (f"{where}: weapon {name} is not a weapon base in the "
             f"base_items snapshot; not composed")

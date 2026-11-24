@@ -593,3 +593,29 @@ def test_server_words_are_pinned_exactly():
         src = (ROOT / path).read_text(encoding="ascii")
         assert "from ..text import kindler as words" in src, path
     assert engine.words is words
+
+
+def test_weapon_note_never_reaches_a_player():
+    """KW-1 (design review): resolve()'s weapon note is author and test
+    output only. The engine's result and the plan of a template whose base
+    the snapshot lacks carry no note, the Generate route and the planner
+    never read the view's notes, and no web file holds the words."""
+    from server.al.theorycraft import kindler as engine, kindlerplan, treedata
+    table = ar.validate(kf.table_doc(kf.template(weapon="Glass Mallet")))
+    view = ar.resolve(table, tree=_tree(), bases=_bases())
+    assert any("not composed" in n for n in view["notes"])
+    inputs = {"view": view, "table_sha": "t" * 64, "tree": treedata.parse(kf.tree_doc()),
+              "tree_version": "v" * 64, "pin": "a" * 40}
+    tab = {"class": "Warrior", "toggles": {}}
+    calc = lambda build, swaps: {"dps": 1.0, "ehp": 2.0}  # noqa: E731
+    for doc in (engine.generate(inputs, tab, 5, calc), engine.generate(inputs, tab, 5, None),
+                kindlerplan.build_plan(view["templates"][0])):
+        raw = json.dumps(doc)
+        assert "not composed" not in raw and "base_items" not in raw
+    for path in ("server/al/plug/kindler.py", "server/al/theorycraft/kindlerplan.py",
+                 "server/al/theorycraft/kindler.py"):
+        assert '["notes"]' not in (ROOT / path).read_text(encoding="ascii"), path
+    for path in (ROOT / "web").rglob("*"):
+        if path.suffix in (".js", ".html"):
+            text = path.read_text(encoding="utf-8")
+            assert "not composed" not in text and "weapon_unknown" not in text, path

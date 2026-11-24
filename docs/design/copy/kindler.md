@@ -106,11 +106,14 @@ KINDLER-WEAPON-BASE. Imported by server/al/theorycraft/archetypes.py and
 server/al/theorycraft/kindler.py; pinned by tests/test_kindler_data.py
 (test_server_words_are_pinned_exactly).
 
-- Hot reload names (a Checks note names the table that failed to load,
-  decision 0042): `Kindler templates`, `Passive tree (Kindler)`, `Gems
-  snapshot`, `Weapon bases (Kindler)`; the engine's own copies `Kindler
-  templates (engine)`, `Passive tree (Kindler engine)`, `Gems snapshot
-  (Kindler engine)`, `Weapon bases (Kindler engine)`.
+- Hot reload names (decision 0042): `Kindler templates`, `Passive tree
+  (Kindler)`, `Gems snapshot`, `Weapon bases (Kindler)`; the engine's own
+  copies `Kindler templates (engine)`, `Passive tree (Kindler engine)`,
+  `Gems snapshot (Kindler engine)`, `Weapon bases (Kindler engine)`. Only
+  `Kindler templates` is in the core's Checks registry, so it is the one
+  a player can see (a Checks note when the table fails to load). Every
+  other watch is made with registry=False and its name is never shown;
+  the suffixes only tell the copies apart in a log or a test.
 - Weapon kinds an attack template's base may be, the item class names of
   the base_items snapshot word for word (so a base matches its entry):
   melee `One Hand Mace`, `Two Hand Mace`, `One Hand Sword`, `Two Hand
@@ -119,4 +122,12 @@ server/al/theorycraft/kindler.py; pinned by tests/test_kindler_data.py
   `Bow` only.
 - Resolve note for a weapon base the snapshot does not name: `<template
   id>: weapon <base> is not a weapon base in the base_items snapshot; not
-  composed` (a template note for the table's author, never a card line).
+  composed`. It shows only in author and test output and never reaches a
+  card, Checks or an API answer. resolve() notes stay in the resolved view;
+  the engine's result, the plan and the Generate route never carry them.
+  tests/test_kindler_data.py (test_weapon_note_never_reaches_a_player)
+  pins this.
+- The validator check() (archetypes.py) writes its problems and notes
+  inline. They are for tests and the template package only, because
+  check() is never called at run time, so they are not player words and
+  are not listed here.
