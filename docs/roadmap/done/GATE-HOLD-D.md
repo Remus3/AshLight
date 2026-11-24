@@ -1,0 +1,1 @@
+ -- done 2026-11-24 (session wave 57; dropped, not merged: three exclusive soaks 139.7 / 136.8 / 134.5 s median 136.8 s over the 125 s accept line, decision 0060 amendment 2026-11-24, branch worktree-w52-GATE-HOLD-D tip 4f493017b82ad93cce73aa799843cc60b7fb5e9a removed, follow-up TEST-SERIAL-PHASE-CUT)

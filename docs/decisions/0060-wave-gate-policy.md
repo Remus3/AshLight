@@ -167,3 +167,33 @@ kit changes item 16c to forbid ungated file-named runs.
   stops parsing a "@group" id through NodeId.parse, a soak median
   exceeds 145 s (bisect, do not move the number), or a soak median
   reaches 125 s or under (restore the 120 s bound).
+
+## Amendment 2026-11-24 (GATE-HOLD-D dropped)
+
+- Soak: three exclusive runs of python tools/suite_run.py through the
+  suite gate on main with TEST-XDIST-GROUP-RESTORE merged (wave 57),
+  all green: gate hold 139.7, 136.8 and 134.5 s, median 136.8 s
+  (phase 1 about 84 s, phase 2 about 55 s, 21 timing tests).
+- History of exclusive soak medians: 146 s (wave 52), 140.1 s
+  (GATE-HOLD-BISECT), 136.9 s (TEST-XDIST-GROUP-RESTORE), 136.8 s
+  (wave 57). Inside the 145 s interim bound, above the 125 s restore
+  condition, so no bound moves.
+- Decision: GATE-HOLD-D is dropped (adjudicator ruling 2026-11-24).
+  Its only work, kept branch worktree-w52-GATE-HOLD-D at tip
+  4f493017b82ad93cce73aa799843cc60b7fb5e9a (a shared session git
+  template in tests/al_loopkit.py and tests/test_al_loop_gate_cache.py,
+  measured at about 0.5 s), cannot close the 12 s gap to 125 s and is
+  not merged; the gain sits inside the about 5 s soak spread. The
+  interim bound stays at a 145 s median (soak 150 s) and the target
+  stays 120 s. Follow-up row: TEST-SERIAL-PHASE-CUT (the serial timing
+  phase, about 55 s).
+- Alternatives: re-defer it (rejected: a package that cannot meet its
+  accept line stays open for ever); cherry-pick 4f49301 alone
+  (rejected: 0.5 s cannot be measured against the soak spread and
+  costs a gated run).
+- Reverses if: a later soak shows the shared git template alone is
+  worth 5 s or more (then cherry-pick the recorded sha), a soak median
+  after a later package is at or under 125 s (restore 120 s), a soak
+  median exceeds 145 s (bisect, do not move the number), or the
+  operator rules the interim bound tightened or the 120 s target
+  dropped.
