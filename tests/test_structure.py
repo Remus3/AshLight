@@ -300,6 +300,8 @@ def check_text(root, exempt):
 COPY_DIR = "docs/design/copy"
 DESIGN_0001 = "docs/design/0001-design-system.md"
 COPY_SKIP = ("__init__", "common")
+# Sheets whose words live in a web module, not server/al/text/ (KT-8).
+WEB_SHEETS = {"kindler": "web/kindler.js"}
 
 
 def check_copy_sheets(root):
@@ -315,10 +317,14 @@ def check_copy_sheets(root):
     for m in sorted(mods - sheets):
         out.append("server/al/text/%s.py: no copy sheet %s/%s.md"
                    % (m, COPY_DIR, m))
-    for s in sorted(sheets - mods):
+    for s in sorted(WEB_SHEETS):
+        if not (root / WEB_SHEETS[s]).is_file():
+            out.append("%s/%s.md: web module %s is missing"
+                       % (COPY_DIR, s, WEB_SHEETS[s]))
+    for s in sorted(sheets - mods - set(WEB_SHEETS)):
         out.append("%s/%s.md: no text module server/al/text/%s.py"
                    % (COPY_DIR, s, s))
-    for s in sorted(sheets & mods):
+    for s in sorted(sheets & (mods | set(WEB_SHEETS))):
         if "](copy/%s.md)" % s not in s9:
             out.append("%s/%s.md: not linked from design 0001 section 9"
                        % (COPY_DIR, s))
@@ -435,6 +441,9 @@ def _copy_docs(root):
     (root / "docs" / "design").mkdir(parents=True)
     shutil.copytree(ROOT / COPY_DIR, root / COPY_DIR)
     shutil.copy2(ROOT / DESIGN_0001, root / DESIGN_0001)
+    for rel in WEB_SHEETS.values():
+        (root / rel).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(ROOT / rel, root / rel)
 
 
 def test_copy_sheet_guard_on_a_copy(tmp_path):
@@ -454,6 +463,19 @@ def test_copy_sheet_guard_on_a_copy(tmp_path):
     (root / "server" / "al" / "text" / "zz_new.py").unlink()
     assert check_copy_sheets(root) == [
         "docs/design/copy/zz_new.md: no text module server/al/text/zz_new.py"]
+
+
+def test_web_sheet_needs_its_web_module(tmp_path):
+    root = _copy(tmp_path)
+    _copy_docs(root)
+    assert check_copy_sheets(root) == []
+    (root / "web" / "kindler.js").unlink()
+    assert check_copy_sheets(root) == [
+        "docs/design/copy/kindler.md: web module web/kindler.js is missing"]
+    (root / "web" / "kindler.js").write_text("//", encoding="ascii")
+    assert check_copy_sheets(root) == []
+    (root / COPY_DIR / "kindler.md").unlink()
+    assert check_copy_sheets(root) == []
 
 
 def test_copy_sheet_link_must_sit_in_section_9(tmp_path):
