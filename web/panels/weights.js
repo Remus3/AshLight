@@ -13,6 +13,10 @@
    reached through window.ALApp.host, which app.js sets before start().
 
    Changes and clicks only: no clipboard, no new timer, no new request.
+   SAVE-FAIL-SAY (design finding WD-3): a failed save or reset is also said
+   in the page's one shared polite line, the header's #tab-news, through
+   ALTabs.say (failed() below; design 0001 N6), so it is heard while the
+   card is folded or another card page shows.
 
    UMD like web/fmt.js: CommonJS for node --test (app/test/panels.test.js)
    exports {name, order, panel}; in the page the file registers itself with
@@ -56,6 +60,15 @@
   }
 
   function textRow(s) { return { text: s }; }
+
+  /* A failed save or reset: the card's status line, and the same words in
+     the header's polite #tab-news (ALTabs.say; a page without tabs says
+     only the status line). */
+  function failed(text) {
+    $("weights-status").textContent = text;
+    var t = window.ALTabs;
+    if (t && typeof t.say === "function") { t.say(document, text); }
+  }
 
   /* Stat weights editor: saves on change (PUT /api/weights). */
   var weightsBusy = false;
@@ -269,7 +282,7 @@
         focusAfter = null;
         $("weights-status").textContent = "Back to the default.";
       }).catch(function () {
-        $("weights-status").textContent = "Not reset. Try again.";
+        failed("Not reset. Try again.");
       }).then(function () {
         weightsBusy = false;
         if (weightsAgain) { weightsAgain = false; saveWeights(); }
@@ -289,7 +302,7 @@
         $("weights-status").textContent = "Back to the defaults.";
         showCardPage($("weightsbox"), "main", cardHeading($("weightsbox")));
       }).catch(function () {
-        $("weights-status").textContent = "Not reset. Try again.";
+        failed("Not reset. Try again.");
       }).then(function () { weightsBusy = false; });
   }
 
@@ -336,7 +349,7 @@
         $("weights-status").textContent = getSnap() && getSnap().eval
           ? "Saved. The last item was checked again." : "Saved.";
       }).catch(function () {
-        $("weights-status").textContent = "Not saved. Check that each value is a number, then try again.";
+        failed("Not saved. Check that each value is a number, then try again.");
       }).then(function () {
         weightsBusy = false;
         if (weightsAgain) { weightsAgain = false; saveWeights(); }

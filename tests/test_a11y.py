@@ -511,3 +511,53 @@ def test_reading_word_hint_reads_in_place_order():
     hint = by_id()["reading-to"]
     assert hint.tag == "span" and "hidden" in hint.attrs
     assert hint.all_text().strip() == "Opens Settings at Reading and web data."
+
+
+def _arms(src, words):
+    """The source lines that write a failure's words: each must sit in a
+    block that also says them on the polite line."""
+    return [m.start() for m in re.finditer(re.escape(words), src)]
+
+
+def test_failed_saves_are_said_on_the_header_polite_line():
+    """SAVE-FAIL-SAY (design findings UN-1, AS-1, WD-3; design 0001 N6: a
+    failed save also goes to the header's polite line): a failed update OK
+    ack, click-only save, autostart switch save and weights save or reset
+    keep their visible line and are said through ALTabs.say on #tab-news,
+    the page's one shared polite region; no file adds a region of its
+    own."""
+    # web/updates.js: one helper, used by the ack's two failure arms and
+    # the click-only switch's failure arm
+    up = JS["updates.js"]
+    assert re.search(r"function say\(doc, text, opts\) \{\s*var t = tabs\(opts\);\s*"
+                     r"if \(t && typeof t\.say === \"function\"\) \{ t\.say\(doc, text\); \}", up)
+    wire = up[up.index("function wireControls("):]
+    assert len(re.findall(r"said\.textContent = T\.notSaved;\s*say\(doc, T\.notSaved, net\);",
+                          wire)) == 3
+    assert "said.textContent = T.notSaved;" not in re.sub(
+        r"said\.textContent = T\.notSaved;\s*say\(doc, T\.notSaved, net\);", "", wire)
+    # web/autostart.js: every "Not saved" goes through notSaved(), which says it
+    au = JS["autostart.js"]
+    assert re.search(r"function notSaved\(doc\) \{\s*doc\.getElementById\(\"autostart-said\"\)"
+                     r"\.textContent = T\.notSaved;\s*say\(doc, T\.notSaved\);", au)
+    assert re.search(r"function say\(doc, text\) \{\s*var t = tabs\(\);\s*"
+                     r"if \(t && typeof t\.say === \"function\"\) \{ t\.say\(doc, text\); \}", au)
+    assert au.count("T.notSaved") == 2  # the helper's two uses only
+    assert len(re.findall(r"\bnotSaved\(doc\);", au)) == 2
+    assert 'require("./tabs.js")' in au and "root.ALTabs" in au
+    # web/panels/weights.js: the failure lines of save, row reset and reset
+    we = JS["weights.js"]
+    assert re.search(r"function failed\(text\) \{\s*\$\(\"weights-status\"\)\.textContent = text;"
+                     r"\s*var t = window\.ALTabs;\s*"
+                     r"if \(t && typeof t\.say === \"function\"\) \{ t\.say\(document, text\); \}", we)
+    for words, n in (("Not reset. Try again.", 2),
+                     ("Not saved. Check that each value is a number, then try again.", 1)):
+        assert len(re.findall(r"failed\(\"" + re.escape(words) + r"\"\);", we)) == n, words
+        assert len(_arms(we, words)) == n, words
+    # the words fit N6's 12-word cap, and none of the three files makes a
+    # live region of its own
+    for words in ("Not saved. Try again.", "Not reset. Try again.",
+                  "Not saved. Check that each value is a number, then try again."):
+        assert len(words.split()) <= 12, words
+    for name in ("updates.js", "autostart.js", "weights.js"):
+        assert "aria-live" not in JS[name] and not re.search(r"""role["']?\s*,""", JS[name]), name
