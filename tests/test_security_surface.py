@@ -57,7 +57,7 @@ ROUTES = {
     ("GET", "/favicon.ico"): (NONE, None),
     # token-proof GET (1): the client proves the core before it sends the token
     ("GET", "/api/hello"): (PROOF, None),
-    # token GET (18)
+    # token GET (19)
     ("GET", "/api/health"): (HEADER, None),
     ("GET", "/api/version"): (HEADER, None),
     ("GET", "/api/state"): (HEADER, None),
@@ -82,6 +82,8 @@ ROUTES = {
     ("GET", "/api/report"): (HEADER, None),
     # ITEM-INFO-CORE: the plug route (server/al/plug/iteminfo.py, decision 0083)
     ("GET", "/api/iteminfo"): (HEADER, None),
+    # UI-CARD-COLLAPSE: the plug route (server/al/plug/uilayout.py, decision 0082)
+    ("GET", "/api/ui/layout"): (HEADER, None),
     ("GET", "/events"): (QUERY, None),
     # token POST (21)
     ("POST", "/api/consent"): (HEADER, 4096),
@@ -105,8 +107,9 @@ ROUTES = {
     ("POST", "/api/update-now"): (HEADER, 4096),  # REL-UPDATE-TRIGGER: an empty body
     ("POST", "/api/theme"): (HEADER, 4096),  # PLAY-TD-04B-THEME-CHOICE
     ("POST", "/api/player-note"): (HEADER, 4096),  # PLAY-F-186A: text/plain
-    # token PUT (1)
+    # token PUT (2)
     ("PUT", "/api/weights"): (HEADER, 64 * 1024),
+    ("PUT", "/api/ui/layout"): (HEADER, 4096),  # UI-CARD-COLLAPSE plug route
     # refused verbs
     ("DELETE", "*"): (REFUSED, None),
     ("PATCH", "*"): (REFUSED, None),
@@ -351,9 +354,9 @@ def test_route_table_matches_http_py():
     counts = {}
     for (method, _), (rule, _) in ROUTES.items():
         counts[(method, rule)] = counts.get((method, rule), 0) + 1
-    assert counts == {("GET", NONE): 5, ("GET", PROOF): 1, ("GET", HEADER): 18,
+    assert counts == {("GET", NONE): 5, ("GET", PROOF): 1, ("GET", HEADER): 19,
                       ("GET", QUERY): 1,
-                      ("POST", HEADER): 21, ("PUT", HEADER): 1,
+                      ("POST", HEADER): 21, ("PUT", HEADER): 2,
                       ("DELETE", REFUSED): 1, ("PATCH", REFUSED): 1,
                       ("OPTIONS", REFUSED): 1}
     # the token rule in the source is the one the table assumes
@@ -487,14 +490,14 @@ def test_every_token_route_answers_401_without_the_token(srv):
 
 def _cap_probe(server, path, length, ctype):
     """A POST / PUT head declaring `length` bytes, none sent; the status."""
-    method = "PUT" if path == "/api/weights" else "POST"
+    method = "PUT" if ("PUT", path) in ROUTES else "POST"
     head = raw(server, f"{method} {path} HTTP/1.1\r\nHost: 127.0.0.1:{server.port}\r\n"
                        f"X-AL-Token: {TOKEN}\r\nContent-Type: {ctype}\r\n"
                        f"Content-Length: {length}\r\n\r\n")
     return int(head[0].split()[1])
 
 
-# two probes per POST / PUT route (21 + 1 since KINDLER-ENGINE): about 1.5 s
+# two probes per POST / PUT route (21 + 2 since UI-CARD-COLLAPSE): about 1.5 s
 @pytest.mark.slow
 def test_body_caps_are_pinned(srv):
     for (method, path), (rule, cap) in ROUTES.items():

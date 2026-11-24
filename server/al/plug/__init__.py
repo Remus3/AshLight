@@ -15,7 +15,8 @@ optional:
     def rows(f, now): ...            # a Checks row dict, a list of them,
                                      # or None; shown after the built-ins
     ROUTES = {("GET", "/api/x"): fn} # fn(req, query, extra), req = the
-                                     # http.Handler; GET or POST only
+                                     # http.Handler; GET, POST or PUT
+                                     # (PUT since UI-CARD-COLLAPSE)
 
 Routes run only from the HTTP handler's fall-through, after its Host /
 Origin / Sec-Fetch-Site / token guard, and only for an exact path under
@@ -41,7 +42,7 @@ log = logging.getLogger("al.plug")
 
 DEFAULT_ORDER = 100
 API_PREFIX = "/api/"
-ROUTE_VERBS = ("GET", "POST")
+ROUTE_VERBS = ("GET", "POST", "PUT")
 ERROR_EVERY_S = 60.0  # after the first traceback, one line a minute per name
 
 _lock = threading.Lock()
@@ -110,7 +111,7 @@ def _valid_routes(name, mod):
               and key[1].startswith(API_PREFIX) and len(key[1]) > len(API_PREFIX)
               and "?" not in key[1] and "#" not in key[1] and callable(fn))
         if not ok:
-            log.error("plug %s: route %r refused (GET or POST, an exact /api/ "
+            log.error("plug %s: route %r refused (GET, POST or PUT, an exact /api/ "
                       "path and a callable only)", name, key)
             continue
         out[key] = fn

@@ -186,9 +186,16 @@
       return { entries: 1, lines: Math.max(1, Math.floor(px / ROW_PX)), cols: t.cols };
     }
 
+    /* UI-CARD-COLLAPSE: the list rows that fit (web/pager.js fitRows; more
+       in a tall card, decision 0082 part 3) */
+    function fitted(k) {
+      return isFn(P.fitRows) ? P.fitRows(node, k, sizes[k], isFn(o.controls) ? CTL_PX : ROW_PX) : sizes[k];
+    }
+    var lastRows = null;
+
     function size() {
       var k = klass();
-      return mode === "text" ? textShape(k).entries : sizes[k];
+      return mode === "text" ? textShape(k).entries : fitted(k);
     }
 
     function state() {
@@ -232,6 +239,7 @@
       var p = state();
       var k = p.sizeClass;
       lastClass = k;
+      lastRows = fitted(k);
       clear(list);
       list.className = mode === "text" ? CLS.list + " " + CLS.text : CLS.list;
       var empty = isFn(o.empty) ? o.empty() : o.empty;
@@ -287,9 +295,10 @@
       return render();
     }
 
-    /* the size class changed (a window resize): page again */
+    /* the size class changed (a window resize) or the rows that fit
+       (a card collapsed or opened): page again */
     function relayout() {
-      if (lastClass !== klass()) { render(); }
+      if (lastClass !== klass() || lastRows !== fitted(klass())) { render(); }
     }
 
     render();
