@@ -21,6 +21,12 @@ Two phases, always both, in this order:
    row TEST-TIMING-ALONE); "no tests collected" (5) counts as green.
 The exit code is the worst phase's. Children run at below-normal priority.
 
+Order (TEST-XDIST-GROUP-RESTORE): FIRST_ENV names, comma-separated, the
+tests that tests/conftest.py moves to the front of the collection (FIRST:
+the about 24 s test_shots render, so it starts in the first wave of
+dispatch instead of late in file order). Under --dist loadgroup the
+multi-test groups still go out before any single test.
+
 xdist is an optional dev-only test plugin (decision 0002, Test plugins):
 this file only asks importlib whether it is present and never imports it.
 Stdlib only.
@@ -38,6 +44,8 @@ GATE_REL = "ops/fleet_kit/fleet_suite_gate.py"
 SELF_REL = "tools/suite_run.py"
 SLOT_ENV = "FLEET_SUITE_SLOT"
 T0_ENV = "AL_SUITE_T0"  # epoch seconds of the runner start (tests/slow_budget.py)
+FIRST_ENV = "AL_SUITE_FIRST"  # node ids run first, read by tests/conftest.py
+FIRST = ("tests/test_shots.py::test_real_render_from_a_real_demo_core",)
 WORKERS = 12  # research 0049 addendum 2026-11-21 (TEST-SUITE-HOLD-75)
 SPARE_CPUS = 4  # logical CPUs left free for the player's own work
 MIN_WORKERS = 2
@@ -104,6 +112,7 @@ def run(environ=None, runner=None, xdist=None, out=None):
     runner = runner or _default_runner
     if not env.get(T0_ENV):  # an outer runner's value is kept
         env[T0_ENV] = repr(time.time())
+    env[FIRST_ENV] = ",".join(FIRST)
     codes = []
     for name, argv in phases(xdist):
         print(f"suite_run: phase {name}: {' '.join(argv[1:])}", file=out, flush=True)
