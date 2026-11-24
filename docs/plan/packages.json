@@ -18550,7 +18550,8 @@
     "web/panels/restart.js",
     "web/panels/settingsio.js",
     "web/panels/pager.js",
-    "web/panels/version.js"
+    "web/panels/version.js",
+    "web/panels/feedpace.js"
    ],
    "integrator_edits": [
     {

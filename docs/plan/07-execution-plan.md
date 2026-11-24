@@ -2051,7 +2051,7 @@ move, rename and close.
 
 - UI-HEADER-TEXT [session, S 20m, build, P2, DR] Drop the visible AshLight text left of the tabs; sr-only h1 kept. Files: web/index.html, web/app.css, tests/test_brand_assets.py, tests/test_a11y.py. Deps: none.
 - KINDLER-ENGINE [session, L 90m, build, P2] Kindler candidates, PoB scoring and deterministic ranking on the Generate route. Files: server/al/theorycraft/bridge.py, server/al/theorycraft/kindler.py, server/al/plug/kindler.py, tests/test_kindler_engine.py, tests/test_kindler_live.py. Deps: KINDLER-DATA, KINDLER-TEMPLATES, KINDLER-STORE.
-- TEST-WEB-PANELS-C2 [session, L 90m, build, P2, DR] Panel move C2: settings-side blocks leave web/app.js, view modules register themselves, app.js is a shell. Files: web/app.js, app/test/panels.test.js, app/test/registry.test.js, app/test/logpath.test.js, app/test/dashboard.test.js (+25 more). Deps: TEST-WEB-PANELS-C1.
+- TEST-WEB-PANELS-C2 [session, L 90m, build, P2, DR] Panel move C2: settings-side blocks leave web/app.js, view modules register themselves, app.js is a shell. Files: web/app.js, app/test/panels.test.js, app/test/registry.test.js, app/test/logpath.test.js, app/test/dashboard.test.js (+26 more). Deps: TEST-WEB-PANELS-C1.
 
 ### Wave 41: operator requests 2026-11-19, Kindler plan and card collapse
 

@@ -1221,14 +1221,24 @@ of the HALT check.
   runs only in tests and KINDLER-TEMPLATES. KINDLER-TEMPLATES: 4 authored
   templates (melee, spell, minion, bow), 7 stages from G1_1 to early maps;
   gem names from cached base_items until DATA-GEMS-SNAP, no gem levels or
-  bonus points authored. Reverses if: PoB drift makes route XML
-  unreliable, 12 candidates in 60 s breach the 0024 / 0028 budgets,
+  bonus points authored. KINDLER-ENGINE: POST /api/kindler-generate
+  {id, op generate|read} runs one Generate at a time on Kindler's own
+  daemon worker; candidates in toggle-match then id order, one variant
+  per stage skill, at most 12; PoB XML takes its class index and
+  ascendancy id from the cached tree export, gem level 20, no items;
+  ranked by percent of the best candidate under the 0024 blend, ties
+  template id then variant; key over class, toggles, archetypes sha256,
+  PoB commit, tree export sha256, 10-level band; final results cached in
+  memory (16 keys), never partial or calc-off. Reverses if: PoB drift
+  makes route XML unreliable, 12 candidates in 60 s breach the 0024 / 0028 budgets,
   automatic regeneration is wanted and shown to cost no FPS, 6 tabs prove
   too few, a name collision or GGG use of the word is found, the operator
   rules generated builds out of scope, authored node lists prove too
   costly to keep, a real PoB output makes the repeat-run test
-  non-identical, the follow default annoys players in play, or PoB stops
-  reporting support applicability through the bridge.
+  non-identical, the follow default annoys players in play, PoB stops
+  reporting support applicability through the bridge, attack scoring
+  needs items (KINDLER-WEAPON-BASE) or a review rules another rank
+  baseline.
 - UI 0082: item names are link-like buttons opening one shared,
   fixed-position item info popover (web/iteminfo.js, one open, Escape
   returns focus, never resizes a card) over a cache-only token-gated GET

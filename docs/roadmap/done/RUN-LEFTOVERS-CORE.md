@@ -1,0 +1,1 @@
+ -- done 2026-11-23 (session wave 40; wave 39 carried; verified; partial: first-run card sentence moved to RUN-LEFTOVERS-CARD)
