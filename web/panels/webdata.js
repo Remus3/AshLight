@@ -63,16 +63,24 @@
   // REL-UPDATE-NOTICE-UI: the opt-in wording version of the last answer that named one
   var wordingSeen = null;
 
-  /* The switch, the contact field (DATA-CONTACT-UI: shown only until a
-     contact is set; never prefilled) and the league picker. A partial doc
-     (only web_data, from /api/rates) leaves the field and the picker. */
+  /* The switch, the contact field (DATA-CONTACT-UI: never prefilled;
+     DATA-CONTACT-CLEAR: it stays once a contact is set, with Clear and
+     the saved note) and the league picker. A partial doc (only web_data,
+     from /api/rates) leaves the field and the picker. */
   function fillWebData(doc) {
     var v = P.webDataView(doc);
     var w = doc ? doc.wording_version : null;
     if (typeof w === "number" && w > 0 && Math.floor(w) === w) { wordingSeen = w; }
     webOn = v.on;
     $("webdata-on").checked = v.on;
-    if (v.contact.show !== null) { $("webdata-contact-row").hidden = !v.contact.show; }
+    if (v.contact.show !== null) {
+      $("webdata-contact-row").hidden = !v.contact.show;
+      // a page fixture that lacks the Clear button or the note leaves them
+      var clr = $("webdata-contact-clear");
+      var note = $("webdata-contact-note");
+      if (clr) { clr.hidden = !v.contact.clear; }
+      if (note) { note.textContent = v.contact.note; }
+    }
     if (doc && Array.isArray(doc.leagues)) {
       webDoc = doc;
       var lv = P.leagueView(doc);
@@ -110,6 +118,21 @@
     loadRates();
   }
 
+  /* DATA-CONTACT-CLEAR (design DCC-1): a failed contact Save or Clear is
+     written in #webdata-status (not a live region) and said once on the
+     header's polite #tab-news through ALTabs.say, as web/autostart.js and
+     web/panels/weights.js do; a page without tabs says only the line. */
+  var NOT_SAVED = "Not saved. Try again.";
+  var NOT_CLEARED = "Not cleared. Try again.";
+
+  function failed(text) {
+    $("webdata-status").textContent = text;
+    var t = window.ALTabs;
+    if (t && typeof t.say === "function" && typeof document !== "undefined") {
+      t.say(document, text);
+    }
+  }
+
   /* DATA-CONTACT-UI: the Save click (the form's submit). The value goes
      only to POST /api/web-data {contact}; the answer says contact_set,
      never the value. The field is cleared after a save; a refused value
@@ -131,8 +154,34 @@
       renderPrice(getSnap() ? getSnap().price : null, true);
       loadRates();
     }).catch(function (e) {
-      $("webdata-status").textContent = e && e.message === "HTTP 400"
-        ? P.CONTACT_REFUSED : "Not saved. Try again.";
+      if (e && e.message === "HTTP 400") {
+        $("webdata-status").textContent = P.CONTACT_REFUSED;
+      } else {
+        failed(NOT_SAVED);
+      }
+    }).then(function () { webBusy = false; });
+  }
+
+  /* DATA-CONTACT-CLEAR (finding DCD-3): the Clear click posts only
+     {contact: ""}; the core removes the key and answers contact_set false,
+     never a value. Clear hides itself on success, so focus moves to the
+     field (the player may type a new one). */
+  function clearContact() {
+    if (webBusy) { return; }
+    webBusy = true;
+    $("webdata-status").textContent = "Saving...";
+    api("POST", "/api/web-data", { contact: "" }).then(function (doc) {
+      var box = $("webdata-contact");
+      box.value = "";
+      fillWebData(doc);
+      var said = P.contactClearedText(doc);
+      if (said === NOT_CLEARED) { failed(said); } else { $("webdata-status").textContent = said; }
+      var clr = $("webdata-contact-clear");
+      if (!clr || clr.hidden) { box.focus(); }
+      renderPrice(getSnap() ? getSnap().price : null, true);
+      loadRates();
+    }).catch(function () {
+      failed(NOT_CLEARED);
     }).then(function () { webBusy = false; });
   }
 
@@ -183,6 +232,11 @@
     $("webdata-form").addEventListener("change", saveWebData);
     // DATA-CONTACT-UI: Save (or Enter in the contact field) submits the form
     $("webdata-form").addEventListener("submit", function (e) { e.preventDefault(); saveContact(); });
+    // DATA-CONTACT-CLEAR: Clear is a plain button (never submits the form);
+    // its click is read on the form, like the change event above
+    $("webdata-form").addEventListener("click", function (e) {
+      if (e && e.target && e.target.id === "webdata-contact-clear") { clearContact(); }
+    });
     webLink.fill = fillWebData;
     webLink.saved = webDataSaved;
     webLink.state = function () { return { on: webOn, busy: webBusy, doc: webDoc }; };
