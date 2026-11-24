@@ -306,7 +306,9 @@ def test_sources_policy():
     assert s["skilltree"] == TREE_URL
     # HUD-ACT (decision 0020): world areas for the zone level table.
     assert s["world_areas"] == "https://repoe-fork.github.io/poe2/world_areas.json"
-    assert set(s) == {"base_items", "stat_translations", "skilltree", "world_areas"}
+    # DATA-GEMS-SNAP (decision 0081): gem names and levels for Kindler.
+    assert s["gems"] == "https://repoe-fork.github.io/poe2/gems.json"
+    assert set(s) == {"base_items", "stat_translations", "skilltree", "world_areas", "gems"}
     assert set(snapshot.ALLOWED_HOSTS) == {"repoe-fork.github.io", "raw.githubusercontent.com"}
 
 
@@ -324,7 +326,7 @@ def test_real_source_names_mocked_fetch(tmp_path):
     man = json.loads((tmp_path / "manifest.json").read_text(encoding="ascii"))
     assert man["files"]["skilltree"]["url"] == TREE_URL
     assert man["files"]["world_areas"]["url"].endswith("/world_areas.json")
-    assert len(man["files"]) == 4
+    assert len(man["files"]) == 5
     assert (tmp_path / "skilltree.json").is_file()
     assert "tree export" in snapshot.ATTRIBUTION
     for _, headers in fake.calls:
@@ -373,13 +375,37 @@ def test_a_changed_file_keeps_one_previous_copy(tmp_path):
     assert snapshot.keep_previous(tmp_path / "missing.json") is False
 
 
-def test_a_fresh_snapshot_and_its_manifest_list_four_files(tmp_path):
-    # DATA-SNAP-TRIM: a default run fetches four files, never mods or stats.
+def test_a_fresh_snapshot_and_its_manifest_list_five_files(tmp_path):
+    # DATA-SNAP-TRIM: a default run fetches five files (DATA-GEMS-SNAP added
+    # gems), never mods or stats.
     bodies = {u: b'{"nodes": {}}' for u in snapshot.SOURCES.values() if u}
     fake = Fake(bodies)
     out = snapshot.run(tmp_path, fetch=fake, now=1_800_000_000, contact="test-contact",
                        probes={})
-    assert set(out) == {"base_items", "stat_translations", "skilltree", "world_areas"}
+    assert set(out) == {"base_items", "stat_translations", "skilltree", "world_areas",
+                        "gems"}
     man = json.loads((tmp_path / "manifest.json").read_text(encoding="ascii"))
     assert set(man["files"]) == set(out)
     assert not (tmp_path / "mods.json").exists() and not (tmp_path / "stats.json").exists()
+
+
+def test_gems_source_lands_where_kindler_reads_it(tmp_path):
+    """DATA-GEMS-SNAP: the gems source is a repoe-fork file under the same
+    opt-in and attribution, cached as the file archetypes reads, with a cap
+    no smaller than the reader's own ceiling."""
+    from server.al.theorycraft import archetypes
+    url = snapshot.SOURCES["gems"]
+    snapshot._check_url(url)
+    assert url.startswith(snapshot.REPOE_POE2)
+    assert not snapshot.needs_contact("gems", url)
+    assert "gems.json" == archetypes.GEMS_FILE
+    assert snapshot.source_cap("gems") >= archetypes.GEMS_MAX_BYTES
+    assert "repoe-fork" in snapshot.ATTRIBUTION
+    body = json.dumps({"Metadata/Items/Gems/SkillGemA": {
+        "display_name": "Alpha Strike", "requirements": {"level": 2}}}).encode("ascii")
+    fake = Fake({url: body})
+    out = snapshot.run(tmp_path, fetch=fake, sources={"gems": url}, now=1_800_000_000,
+                       probes={})
+    assert out == {"gems": "fetched"}
+    assert archetypes.load_gems(tmp_path / archetypes.GEMS_FILE) == {
+        "alpha strike": {"name": "Alpha Strike", "level": 2}}
