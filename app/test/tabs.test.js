@@ -219,7 +219,9 @@ test("Play holds only the regions; tools and the full cards live in other tabs",
   const run = HTML.slice(HTML.indexOf('id="panel-run"'), HTML.indexOf('id="panel-settings"'));
   assert.match(run, /^id="panel-run"[^>]*>\s*<div class="col">\s*<!--[\s\S]*?-->\s*<section id="summarybox"/);
   const build = HTML.slice(HTML.indexOf('id="panel-build"'), HTML.indexOf('id="panel-run"'));
-  assert.match(build, /^id="panel-build"[^>]*>\s*<div class="col">\s*<section id="buildbox"/);
+  // KINDLER-UI-TABS (adjudicator ruling 2026-11-23): the Build sub-tab group
+  // comes first (DOM order = Tab order), then the first card cell
+  assert.match(build, /^id="panel-build"[^>]*>\s*(?:<!--[\s\S]*?-->\s*)?<div id="kindler-bar"[^>]*role="group"[\s\S]*?<\/div>\s*<div class="col">\s*<section id="buildbox"/);
   assert.match(build, /<\/div>\s*<div class="col">\s*<!--[\s\S]*?-->\s*<section id="evalbox"/);
   // PLAY-TD-19D-ITEMS-GRID (F-056): the price, value and upgrade boxes are
   // rows of the Last item card and the separate price watch card is gone
