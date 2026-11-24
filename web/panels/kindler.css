@@ -1,0 +1,82 @@
+/* KINDLER-UI-TABS (decision 0081 points 7 to 11): the Build sub-tabs and
+   the Kindler editor card (web/kindler.js). Linked by the al:panels marker
+   (server/al/webpage.py; adjudicator ruling 2026-11-23, as ITEM-INFO-UI's
+   sheet), after web/app.css.
+
+   The bar is one 24 px row across the Build grid. In the cockpit classes
+   the grid gives it an auto row on top of the two card rows, so the cards
+   share what is left (the 22 / 36 px card slack of web/app.css takes the
+   24 px row and its 8 px gap). While a Kindler sub-tab is shown the six
+   card cells are not drawn and the editor card spans both rows. The shown
+   sub-tab says so by its edge AND its weight, never by colour alone; a
+   hidden copy of its label at 600 keeps its width (as button.tab). No
+   motion. */
+.kindler-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--al-space-1);
+  min-width: 0; }
+#panel-build > .kindler-bar, #panel-build > .kindler-card { grid-column: 1 / -1; }
+#panel-build[data-sub="kindler"] > .col { display: none; }
+button.subtab {
+  min-height: 1.5rem;
+  padding: 0 var(--al-space-2);
+  font-size: var(--al-fs-meta);
+  line-height: var(--al-lh-meta);
+  border: none;
+  border-bottom: 3px solid transparent;
+  border-radius: var(--al-radius-control) var(--al-radius-control) 0 0;
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+button.subtab[aria-current="true"] { border-bottom-color: var(--fk-accent); font-weight: 600; }
+button.subtab:hover { background: var(--fk-surface); }
+button.subtab::after { display: block; height: 0; overflow: hidden; visibility: hidden;
+  font-weight: 600; content: attr(data-label); }
+.kindler-bar #kindler-full { flex: 1 1 12rem; }
+
+.kindler-card { display: flex; flex-direction: column; gap: var(--al-space-2); min-width: 0;
+  padding: var(--al-space-3); }
+.kindler-head { display: flex; align-items: baseline; gap: var(--al-space-2); min-width: 0; }
+.kindler-card .kindler-head h2 { margin: 0; font-size: var(--al-fs-title); line-height: var(--al-lh-title); }
+.kindler-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--al-space-1) var(--al-space-2);
+  min-width: 0; margin: 0; }
+.kindler-form { display: flex; flex-direction: column; gap: var(--al-space-2); margin: 0; }
+.kindler-form p, .kindler-card > p { margin: 0; }
+.kindler-card select, .kindler-card input[type="text"] {
+  font: inherit;
+  font-size: var(--al-fs-meta);
+  color: var(--fk-text);
+  background: var(--fk-surface);
+  border: 1px solid var(--al-control-edge); /* control boundary, 0001 5.1 */
+  border-radius: var(--al-radius-control);
+  padding: 0 var(--al-space-1);
+  min-height: 1.75rem;
+  min-width: 0;
+}
+.kindler-card input[type="text"] { flex: 0 1 14rem; }
+.kindler-toggles { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(20rem, 100%), 1fr));
+  gap: var(--al-space-1) var(--al-space-4); }
+.kindler-toggle { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--al-space-2);
+  border: 0; margin: 0; padding: 0; min-width: 0; }
+.kindler-toggle legend { float: left; width: 7rem; padding: 0; font-size: var(--al-fs-meta);
+  line-height: var(--al-lh-meta); font-weight: 600; }
+.kindler-choice { display: inline-flex; align-items: center; gap: var(--al-space-1); min-height: 1.5rem;
+  font-size: var(--al-fs-meta); line-height: var(--al-lh-meta); }
+.kindler-choice input[type="radio"] { width: 1.5rem; height: 1.5rem; margin: 0; accent-color: var(--fk-accent); }
+.kindler-result { overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.kindler-result .badge { margin-right: var(--al-space-1); }
+
+@media (min-width: 64em) and (min-height: 43.75em) {
+  #panel-build.panel-cards { grid-template-rows: auto repeat(2, minmax(0, 1fr)); }
+  #panel-build > .kindler-card { grid-row: 2 / span 2; min-height: 0; overflow: hidden; }
+  .kindler-bar { flex-wrap: nowrap; }
+  button.subtab { flex: 0 1 auto; min-width: 3rem; }
+  .kindler-bar #kindler-full { min-width: 0; }
+}
+[data-text-spacing="user"] #panel-build.panel-cards { grid-template-rows: none; }
+[data-text-spacing="user"] #panel-build > .kindler-card { grid-row: auto; overflow: visible; }
+[data-text-spacing="user"] .kindler-bar { flex-wrap: wrap; }
+@media (forced-colors: active) {
+  button.subtab { border-bottom-color: Canvas; }
+  button.subtab[aria-current="true"] { border-bottom-color: Highlight; }
+}
