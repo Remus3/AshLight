@@ -87,7 +87,7 @@ test("every emitted link passes the client's rule; others do not", () => {
   for (const h of listed()) { assert.equal(Link.isExternalUrl("https://" + h + "/x"), true, h); }
   assert.equal(Link.isExternalUrl("https://www.pathofexile2.com/passive-skill-tree/A"), true);
   for (const l of tc.links("Some Item")) { assert.equal(Link.isExternalUrl(l.href), true); }
-  for (const bad of ["https://poe.ninja/", "https://example.org/", "http://poe2db.tw/us/x",
+  for (const bad of ["https://poe.ninja.evil.example/", "https://example.org/", "http://poe2db.tw/us/x",
                      "https://poe2db.tw.evil.example/", "https://notpathofexile.com/"]) {
     assert.equal(Link.isExternalUrl(bad), false, bad);
   }

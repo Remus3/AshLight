@@ -192,9 +192,20 @@ test("Play holds only the regions; tools and the full cards live in other tabs",
   // and Zone tip cards are gone (regions C and N carry them)
   assert.ok(!HTML.includes("data-legacy"));
   ["consent", "consent-yes", "consent-path", "consent-error", "langbox", "lang-dismiss",
-    "hintbox", "hint-text", "zone-note-box", "zone-note", "campaign-hints"].forEach((id) => {
+    "hintbox", "hint-text", "campaign-hints"].forEach((id) => {
     assert.ok(!HTML.includes('id="' + id + '"'), id);
   });
+  // DATA-GUIDE-ONE-BLOCK: the zone tile prints one guide block; the Zone tip
+  // markup and style are gone from every web/ file
+  const fs = require("node:fs");
+  const path = require("node:path");
+  (function scan(dir) {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const f = path.join(dir, e.name);
+      if (e.isDirectory()) { scan(f); continue; }
+      assert.ok(!fs.readFileSync(f, "utf8").includes("zone-note"), f);
+    }
+  })(web.dir);
   // PLAY-TD-21A-SETTINGS-RAIL: the opt-out left the footer for Settings,
   // Reading and web data, where the bar status word leads
   const foot = HTML.slice(HTML.indexOf("<footer"));

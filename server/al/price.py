@@ -26,12 +26,18 @@ poe.ninja price (`lookup`, the core passes RatesClient.lookup: cache only,
 never a request; None while web data is off) and the card carries it as
 `ninja` {kind, name, value, unit, listings, few, change, league, checked_at,
 league_changed_at}.
+
+DATA-PRICE-NINJA-LINK (decision 0016 amendment 2026-11-23): the card also
+carries `ninja_url`, the poe.ninja category page of that cached price's
+overview type in its league (ninjalink.url_for, a table of page forms read
+from poe.ninja's public pages), else None. It is a link the player opens in
+their own browser; the app requests nothing for it.
 """
 
 import threading
 import time
 
-from . import trade
+from . import ninjalink, trade
 from .theorycraft import item as item_mod
 
 DEFAULT_LEAGUE = trade.DEFAULT_LEAGUE
@@ -54,7 +60,9 @@ def card_of(doc):
     status = doc.get("status")
     card = {"status": "error", "wait_s": None, "item": item, "league": doc.get("league"),
             "count": None, "listings": [], "error": None, "url": None,
-            "ninja": ninja_of(doc.get("ninja"))}
+            "ninja": ninja_of(doc.get("ninja")), "ninja_url": None}
+    if ninjalink.is_page_url(doc.get("ninja_url")):
+        card["ninja_url"] = doc["ninja_url"]
     if status == "link" and trade.is_search_link(doc.get("url")):
         card.update(status="link", url=doc["url"])
     elif status == "skipped" and doc.get("reason") == NOT_AN_ITEM:
@@ -137,13 +145,17 @@ class PriceChecker:
             url = trade.search_link(parsed, league)
         except ValueError as e:
             return self._new_doc("skipped", press, reason=str(e), item=item)
+        hit = self._hit(parsed)
+        found = ninja_of(hit)
+        page = ninjalink.url_for(hit.get("type"), hit.get("league")) if found else None
         return self._new_doc("link", press, item=item, league=league, url=url,
-                             ninja=self._ninja(parsed))
+                             ninja=found, ninja_url=page)
 
-    def _ninja(self, parsed):
+    def _hit(self, parsed):
         if not callable(self.lookup):
             return None
         try:
-            return ninja_of(self.lookup(parsed))
+            hit = self.lookup(parsed)
         except Exception:  # noqa: BLE001 - a cache read never breaks the link
             return None
+        return hit if isinstance(hit, dict) else None
