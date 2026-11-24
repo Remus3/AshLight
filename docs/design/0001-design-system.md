@@ -650,6 +650,7 @@ Generation rules:
    - explain: [`docs/design/copy/explain.md`](copy/explain.md)
    - playernotes: [`docs/design/copy/playernotes.md`](copy/playernotes.md)
    - iteminfo: [`docs/design/copy/iteminfo.md`](copy/iteminfo.md)
+   - kindler: [`docs/design/copy/kindler.md`](copy/kindler.md)
 3. **Player text is quoted, never rewritten.** Whisper bodies and names
    are shown verbatim (textContent only, never innerHTML), clipped with
    "..." at the line limit.
@@ -717,6 +718,17 @@ Generation rules:
     read. AshLight keeps trying.` with the fix `Close any program that has
     Client.txt open, or check that you can open the file yourself.` It
     shows only after the opt-in and is named before the quiet-log state.
+13. Item check card words (TC-CARD-PARTS; review TCP-8). Mark words: the
+    word that pairs the verdict mark is one of `Upgrade`, `Sidegrade`,
+    `Downgrade`, `Not checked`, `Risky`, `No risky mods`; a card part that
+    needs a new word adds it here first. Tones: the mark's tone, the
+    overlay card's verdict edge, is one of `cardparts.TONES`: `upgrade`,
+    `sidegrade`, `downgrade`, `risky`, `note`, `""` (no edge); a part's
+    new tone is honoured only together with a new word, never colour
+    alone. Part keys: a part's `words()` changes only `cardparts.WORD_KEYS`:
+    `notes`, `word`, `tone`, `head`, `answers`, `calc`; every other key
+    is put back. `tests/test_tc_cardparts.py` keeps these three lists
+    equal to the module.
 
 ## 10. Overlay rules
 

@@ -4,9 +4,11 @@ value adding nothing, the notes cap, word / tone pass-through, `answers`
 keeping the item card on the overlay, and the press wiring (ctx keys)."""
 
 import logging
+import re
 import sys
 import types
 import uuid
+from pathlib import Path
 
 import pytest
 
@@ -255,3 +257,39 @@ def test_a_bare_last_eval_has_empty_ctx_extra(core, use_parts):
     core.last_eval.ctx_extra = {}
     core.last_eval.run(RARE_GLOVES)
     assert core.state.snapshot()["eval"]["parts"] == {}
+
+
+def _s9_rule13():
+    """Rule 13 of design 0001 section 9 (TC-CARD-PARTS-DOC, review TCP-8)."""
+    text = (Path(__file__).resolve().parents[1] / "docs" / "design"
+            / "0001-design-system.md").read_text(encoding="ascii")
+    s9 = text.split("\n## 9. ", 1)[1].split("\n## 10. ", 1)[0]
+    rule = s9.split("\n13. ", 1)[1]
+    rule = " ".join(rule.split())
+
+    def listed(label, upto):
+        part = rule.split(label, 1)[1].split(upto, 1)[0]
+        return [w for w in re.findall(r"`([^`]*)`", part)
+                if not w.startswith("cardparts.") and w != "words()"]
+    return rule, listed
+
+
+def test_design_section_9_names_the_card_words():
+    """The section 9 lists stay equal to the module: the mark words to the
+    words a part may pair with the mark (cardparts' contract text and the
+    Play kit map playcards.WORD_KIT), the tones to cardparts.TONES ("" is
+    written as two quote marks) and the part keys to cardparts.WORD_KEYS."""
+    from server.al.playcards import WORD_KIT
+    rule, listed = _s9_rule13()
+    words = listed("Mark words:", "; a card part")
+    assert words == ["Upgrade", "Sidegrade", "Downgrade", "Not checked", "Risky",
+                     "No risky mods"]
+    assert set(words) == set(WORD_KIT)
+    contract = " ".join(cardparts.__doc__.split())
+    assert ("section 9: " + ", ".join(words) + ", or a new word added to section 9"
+            in contract)
+    tones = ["" if t == '""' else t for t in listed("Tones:", "; a part's new tone")]
+    assert tuple(tones) == cardparts.TONES
+    keys = listed("Part keys:", "; every other key")
+    assert tuple(keys) == cardparts.WORD_KEYS
+    assert re.search(r"only `cardparts\.WORD_KEYS`", rule)
