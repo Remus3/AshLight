@@ -82,7 +82,7 @@ def _fn(req, query, extra):
 
 
 ROUTES = {("GET", "/zzq-out"): _fn, ("GET", "/web/zzq.js"): _fn, ("GET", "/events"): _fn,
-          ("GET", "/api/"): _fn, ("PUT", "/api/zzq-put"): _fn,
+          ("GET", "/api/"): _fn, ("PATCH", "/api/zzq-put"): _fn,
           ("DELETE", "/api/zzq-del"): _fn, ("GET", "/api/zzq-q?x=1"): _fn,
           ("GET", "/api/zzq-none"): None, "zzq": _fn,
           ("GET", "/api/zzq-ok"): _fn}
@@ -204,7 +204,7 @@ def test_plug_route_outside_api_is_refused(plugs, tmp_path, serve_core, caplog):
     assert routes == [("GET", "/api/zzq-ok")]
     assert sum("refused" in r.getMessage() for r in caplog.records) == 9
     for verb, path in (("GET", "/zzq-out"), ("GET", "/web/zzq.js"), ("GET", "/events"),
-                       ("GET", "/api/"), ("PUT", "/api/zzq-put")):
+                       ("GET", "/api/"), ("PATCH", "/api/zzq-put")):
         assert plug.route(verb, path) is None, (verb, path)
     # even a table entry outside /api/ (planted past discovery) is never served
     plug._routes[("GET", "/zzq-out")] = lambda *a: None
