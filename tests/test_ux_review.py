@@ -475,9 +475,12 @@ def test_price_and_points_follows_price():
     Item scoring card's weights."""
     _, main = _main_order()
     assert main.index('id="price-result"') < main.index('id="eval-rows"') < main.index('id="weights"')
-    js = srcpaths.read("app.js", encoding="utf-8")
+    # TEST-WEB-PANELS-C1 (adjudicator ruling, wave 39): the Last item card
+    # lives in web/panels/itemcheck.js
+    js = srcpaths.read("panels/itemcheck.js", encoding="utf-8")
     assert "evalRows.check.concat(evalRows.price, evalRows.after)" in js
-    ev = js[js.index("  function renderEval(ev) {"):js.index("  /* ---- DATA-NINJA-UI")]
+    at = js.index("  function renderEval(ev) {")
+    ev = js[at:js.index("\n  }\n", at)]
     assert ev.index("P.valueView(ev.value)") < ev.index("P.upgradeView(ev.upgrade)")
 
 

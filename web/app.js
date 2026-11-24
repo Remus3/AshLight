@@ -67,86 +67,8 @@
     if (window.ALRegions) { window.ALRegions.tick(document, snap, now); }
   }
 
-  /* UX-PERF: most state pushes (timers, trades, HUD fields) leave the
-     recent list as it was; rebuild its rows only when the list changed.
-     PLAY-TD-20B-RUN-CARDS: Run > Recent is a grid card, the twin of Play's
-     feed: every recent event newest first in one-line rows that page at 8
-     (6 compact) through web/pager.js (ALSearch.rowPager; the whole text in
-     title and on the Full text page). A row is the local time, a muted tag
-     (From / To for whispers, no edge; Death in the bad state colour) and
-     the core's sentence. The chips All, Deaths and Trades (aria-pressed)
-     filter the rows; a chip press starts the list at its first page. */
-  var renderedEvents = "";
-  var evRows = [];
-  var evFilter = "all";
-  var evPager = null;
-  var EV_SIZE = { full: 8, compact: 6 };
-  var EV_NONE = { death: "No deaths among your recent events.",
-    trade: "No trades among your recent events." };
-
-  function evTag(kind) { return kind.charAt(0).toUpperCase() + kind.slice(1); }
-
-  function evShows(kind, filter) {
-    return filter === "all" || kind === filter;
-  }
-
-  function evChips() {
-    return Array.prototype.slice.call(document.querySelectorAll("[data-ev-filter]"));
-  }
-
-  function evStart() {
-    var slot = $("events");
-    if (!slot || !window.ALSearch) { return null; }
-    var S = window.ALSearch;
-    evPager = S.rowPager(document, {
-      label: "recent events",
-      size: EV_SIZE,
-      sizeClass: function () { return S.sizeClass(document); },
-      text: function (r) { return r.text; },
-      parts: function (r) {
-        return [{ text: r.time ? r.time + " " : "", cls: "ev-time" },
-          { text: r.tag + " ", cls: "ev-tag" }, { text: r.body }];
-      },
-      rowClass: function (r) { return "ev-" + r.kind; }
-    });
-    slot.replaceChildren(evPager.node);
-    evChips().forEach(function (b) {
-      b.addEventListener("click", function () {
-        evFilter = b.getAttribute("data-ev-filter") || "all";
-        evChips().forEach(function (c) {
-          c.setAttribute("aria-pressed", c === b ? "true" : "false");
-        });
-        renderedEvents = "";
-        renderEvents(evRows);
-        while (evPager.state().hasPrev) { evPager.press("prev"); }
-      });
-    });
-    return evPager;
-  }
-
-  function renderEvents(rows) {
-    evRows = rows;
-    var key = evFilter + "#" + D.eventsKey(rows);
-    if (key === renderedEvents) { return; }
-    if (!evPager && !evStart()) { return; }
-    renderedEvents = key;
-    var shown = [];
-    for (var i = rows.length - 1; i >= 0; i--) {
-      var row = rows[i];
-      var k = D.kindOf(row);
-      if (!evShows(k, evFilter)) { continue; }
-      var t = clock(row.at);
-      var tag = evTag(k);
-      shown.push({ kind: k, time: t, tag: tag, body: row.text,
-        text: (t ? t + " " : "") + tag + ": " + row.text });
-    }
-    $("events").hidden = shown.length === 0;
-    $("events-empty").hidden = rows.length > 0;
-    var none = $("events-none");
-    setText(none, rows.length && !shown.length ? EV_NONE[evFilter] || "" : "");
-    none.hidden = !none.textContent;
-    evPager.set(shown);
-  }
+  /* TEST-WEB-PANELS-C1: Run > Recent (the recent events list) lives in
+     web/panels/events.js. */
 
   /* DESKTOP-CLIENT (decision 0041): inside the desktop client the page
      gets one action, window.alClient.restartOverlay (app/client/preload.js);
@@ -169,8 +91,6 @@
      (TEST-WEB-PANELS-A). This file keeps what it shares with the other
      cards (el, linkOut, the card pages, the pagers, setLine) and hands it
      over through A.host (set before the panel registrations below). */
-  var T = window.ALTc; // web/tc.js: pure view helpers
-
   function el(tag, cls, text) {
     var e = document.createElement(tag);
     if (cls) { e.className = cls; }
@@ -379,111 +299,26 @@
     }).then(function () { input.value = ""; });  /* the same file can be picked again */
   }
 
-  /* ---- TC-EVAL-UI: the last item check (from the hotkey press). */
-  // PLAY-LEGACY-OUT-2: a new check showing Play is the news hook of
-  // web/regions.js now (UI-GLANCE ZERO-CLICK); this only fills the card
-  var evalShown = null;
+  /* ---- TEST-WEB-PANELS-C1: the Last item card (TC-EVAL-UI) lives in
+     web/panels/itemcheck.js and the Prices card with the last price check
+     (DATA-NINJA-UI / PRICE-1-UI, decision 0016) in web/panels/rates.js.
+     On their wires they fill these links: evalLink with price(rows),
+     ratesLink with getRatesDoc, renderRates, renderPrice, loadRates and
+     paintPricesList; the host's rates helpers below forward to it. */
+  var evalLink = {};
+  var ratesLink = {};
 
-  /* PLAY-TD-19D-ITEMS-GRID: the Last item card's rows, one line each,
-     paged with a Full text twin: the check's own rows, then the price
-     rows (web/app.js renderPrice), then price and points and the upgrade
-     search (UX-NEWEST N2: the price words sit together). */
-  var EVAL_ROWS = { full: 6, compact: 4 };
-  var evalRows = { check: [], price: [], after: [] };
-
-  function paintEvalRows() {
-    linkPager("eval-rows", "the item check", EVAL_ROWS, {
-      rows: evalRows.check.concat(evalRows.price, evalRows.after),
-      text: function (r) { return r.text; }
-    });
+  function viaRates(name, none) {
+    return function () {
+      var f = ratesLink[name];
+      return typeof f === "function" ? f.apply(null, arguments) : none;
+    };
   }
-
-  function textRow(s) { return { text: s }; }
-
-  function renderEval(ev) {
-    var key = ev ? ev.id : null;
-    if (key === evalShown) { return; }
-    evalShown = key;
-    var v = T.evalView(ev, clock);
-    $("eval-empty").hidden = !!v;
-    $("eval-body").hidden = !v;
-    var check = [];
-    if (v) {
-      var w = $("eval-word");
-      w.textContent = v.word;
-      w.setAttribute("data-verdict", v.verdict);
-      setLine($("eval-item"), v.item);
-      $("eval-sentence").textContent = v.sentence;
-      $("eval-calc").textContent = v.calc;
-      $("eval-calc").hidden = !v.calc;
-      if (v.sentence) { check.push(textRow(v.sentence)); }
-      if (v.calc) { check.push(textRow(v.calc)); }
-      v.notes.forEach(function (n) { check.push(textRow(n)); });
-      if (v.rewards) { check.push(textRow(v.rewards)); }
-      v.comparisons.forEach(function (c) {
-        var slot = c.slot || "Slot";
-        // the headline already says the best slot's sentence and calc line;
-        // MATH-COMPARE: the other slot's own sentence and Path of Building line
-        if (c.slot !== ev.slot && c.sentence) { check.push(textRow(slot + ": " + c.sentence)); }
-        if (c.slot !== ev.slot && c.calc) { check.push(textRow(slot + ": " + c.calc)); }
-        if (c.stats && c.stats.length) {
-          // CL-3: the points in brackets, never run on from the mod text
-          c.stats.forEach(function (s) { check.push(textRow(T.statRowText(slot, s))); });
-        } else {
-          check.push(textRow(slot + ": no stat differences."));
-        }
-      });
-      if (v.unweighted) { check.push(textRow(v.unweighted)); }
-      // MATH-POTENTIAL-UI: the core's worst / now / best roll scores
-      if (v.rolls) { check.push(textRow(v.rolls)); }
-    }
-    // TC-CARD-PARTS-WEB: the card parts' notes, read with the verdict
-    var notes = document.createDocumentFragment();
-    (v ? v.notes : []).forEach(function (n) { notes.appendChild(el("li", "", n)); });
-    $("eval-notes").replaceChildren(notes);
-    $("eval-notes").hidden = !(v && v.notes.length);
-    // UTIL-WAYSTONE-REWARD: the core's reward totals for a waystone
-    $("eval-rewards").hidden = !(v && v.rewards);
-    $("eval-rewards").textContent = v ? v.rewards : "";
-    setLine($("eval-when"), v ? v.when : "");
-    var after = [];
-    // MATH-VALUE-UI: the item's Note price against its points, from the
-    // rates the core already has; nothing when the item has no note price
-    var val = v && ev ? P.valueView(ev.value) : null;
-    // UX-REGRESSION-SWEEP: with no verdict (no build) there is no points
-    // figure to set against the price; the asking price still shows
-    if (val && !ev.ok) { val = Object.assign({}, val, { per: "" }); }
-    if (val) {
-      ["sentence", "per", "stale", "credit"].forEach(function (f) {
-        if (val[f]) { after.push(textRow(val[f])); }
-      });
-    }
-    // TC-UPGRADE (decision 0017): the player's click opens the upgrade
-    // search in their browser; AshLight never opens or fetches it
-    var up = v && ev ? P.upgradeView(ev.upgrade) : null;
-    if (up) {
-      after.push({ text: up.sentence, link: { href: up.href, label: "Trade site" },
-        linkName: up.text.replace(/^Search the official trade site for /, "") });
-    }
-    evalRows.check = check;
-    evalRows.after = after;
-    paintEvalRows();
-  }
-
-  /* ---- DATA-NINJA-UI / PRICE-1-UI (decision 0016): the one web-data
-     opt-in, poe.ninja currency values and the last price check. Rates are
-     polled from the local core every few minutes (the core itself asks
-     poe.ninja at most once an hour); no refresh button. */
-  var P = window.ALPrices; // web/prices.js: pure view helpers
-  var RATES_POLL_MS = 5 * 60 * 1000;
-  var ratesDoc = null;
-  var ratesAgain = null;
-  var priceShown = null;
 
   /* TEST-WEB-PANELS-B: the web data switch, the contact field and the
      league picker live in web/panels/webdata.js. On its wire that panel
      fills this link with fill(doc), saved(doc) and state() (on, busy, doc),
-     so the rates below follow the switch without owning it. */
+     so the rates follow the switch without owning it. */
   var webLink = {};
 
   function webState() {
@@ -492,99 +327,6 @@
 
   function webDataSaved(doc) {
     if (typeof webLink.saved === "function") { webLink.saved(doc); }
-  }
-
-  /* PLAY-TD-19D-ITEMS-GRID (F-056): the Prices card is one list that
-     pages: your checked items first (web/pricewatch.js rows), then the
-     currency values (top 6), then the week's movers (3) worded as a
-     trend. All of it is the cached poe.ninja book; nothing new is asked. */
-  var PRICE_ROWS = { full: 7, compact: 4 };
-  var rateRows = [];
-  var trendRows = [];
-
-  function paintPricesList() {
-    var watch = window.ALPriceWatch ? window.ALPriceWatch.rows(snap ? snap.price_watch : null) : [];
-    linkPager("prices-list", "prices", PRICE_ROWS, {
-      rows: watch.concat(rateRows, trendRows).map(textRow),
-      text: function (r) { return r.text; }
-    });
-  }
-
-  function renderRates() {
-    var v = P.ratesView(ratesDoc, webState().doc);
-    setPill($("rates-pill"), v.pill.state, v.pill.glyph, v.pill.word);
-    // PLAY-TD-21A-SETTINGS-RAIL: the same state beside the web data switch
-    setPill($("book-state"), v.pill.state, v.pill.glyph, v.pill.word);
-    $("rates-credit").textContent = v.credit;
-    $("rates-unit").textContent = v.rows.length
-      ? ", in " + v.primary + (v.leagueLine ? ", " + v.leagueLine : "") : "";
-    $("rates-credit-line").setAttribute("title", $("rates-credit-line").textContent);
-    $("rates-attrib").textContent = v.attribution;
-    rateRows = v.rows.map(function (r) {
-      return r.name + ": " + r.value + (r.per ? " (" + r.per + ")" : "");
-    });
-    renderMovers();
-  }
-
-  /* UTIL-MOVERS: the week's biggest moves from the same /api/rates doc */
-  function renderMovers() {
-    trendRows = P.trendRows(ratesDoc);
-    paintPricesList();
-  }
-
-  function loadRates() {
-    if (ratesAgain) { clearTimeout(ratesAgain); ratesAgain = null; }
-    api("GET", "/api/rates").then(function (doc) {
-      ratesDoc = doc;
-      var web = webState();
-      if (typeof doc.web_data === "boolean" && !web.busy && doc.web_data !== web.on &&
-          typeof webLink.fill === "function") {
-        webLink.fill({ web_data: doc.web_data });
-      }
-      renderRates();
-      renderPrice(snap ? snap.price : null, true);
-      // a refresh the core just started finishes in a few seconds
-      if (doc.refreshing) { ratesAgain = setTimeout(loadRates, 3000); }
-    }).catch(function () {
-      setPill($("rates-pill"), "failed", "[x]", "can't load currency values - is AshLight running?");
-      setPill($("book-state"), "failed", "[x]", "can't load currency values - is AshLight running?");
-    });
-  }
-
-  function pollRates() {
-    if (!document.hidden && linkLive) { loadRates(); }
-  }
-
-  function renderPrice(pr, force) {
-    var v = P.priceView(pr, ratesDoc, clock);
-    var key = v ? v.key : "";
-    if (key === priceShown && !force) { return; }
-    priceShown = key;
-    $("price-body").hidden = !v;
-    var rows = [];
-    if (v) {
-      setPill($("price-badge"), v.badge.state, v.badge.glyph, v.badge.word);
-      $("price-sentence").textContent = v.sentence;
-      if (v.sentence) { rows.push(textRow(v.sentence)); }
-      // PRICE-TRADE-LINK (decision 0017): the player's click opens the trade
-      // search in their browser; AshLight never opens or fetches it
-      if (v.link) {
-        rows.push({ text: v.link.text, link: { href: v.link.href, label: "Trade site" },
-          linkName: v.item || "this item" });
-      }
-      // DATA-PRICE-NINJA-LINK: the poe.ninja category page, opened only by
-      // the player's click in their browser; AshLight requests nothing
-      if (v.ninjaLink) {
-        rows.push({ text: v.ninjaLink.text,
-          link: { href: v.ninjaLink.href, label: "poe.ninja", aria: v.ninjaLink.label },
-          linkName: v.item || "this item" });
-      }
-      v.rows.forEach(function (r) {
-        rows.push(textRow(r.text + (r.about ? " (" + r.about + ")" : "")));
-      });
-    }
-    evalRows.price = rows;
-    paintEvalRows();
   }
 
   /* ---- TEST-WEB-REGISTRY (F-135): the dashboard panels. Each paint, tick
@@ -610,9 +352,11 @@
     linkPager: linkPager, textPager: textPager, cardShown: cardShown,
     cardHome: cardHome, setCardHome: setCardHome, showCardPage: showCardPage,
     cardHeading: cardHeading, cardOpener: cardOpener, webDataSaved: webDataSaved,
-    sizeClass: sizeClass, getRatesDoc: function () { return ratesDoc; },
-    renderRates: renderRates, renderPrice: renderPrice, loadRates: loadRates,
-    webLink: webLink, onConnect: onConnect
+    sizeClass: sizeClass, getRatesDoc: viaRates("getRatesDoc", null),
+    renderRates: viaRates("renderRates"), renderPrice: viaRates("renderPrice"),
+    loadRates: viaRates("loadRates"), webLink: webLink, onConnect: onConnect,
+    clock: clock, setText: setText, setPill: setPill, isLive: function () { return linkLive; },
+    webState: webState, evalLink: evalLink, ratesLink: ratesLink
   };
   A.register({
     name: "build",
@@ -628,16 +372,6 @@
       if (window.ALSearch) { window.ALSearch.paint(document, null, navigator); }
       if (window.ALHealth) { window.ALHealth.paint(document, null, navigator); }
     }
-  });
-  A.register({
-    name: "eval",
-    order: 20,
-    paint: function (s) { renderEval(s.eval || null); }
-  });
-  A.register({
-    name: "price",
-    order: 40,
-    paint: function (s) { renderPrice(s.price || null, false); }
   });
   A.register({
     name: "chars",
@@ -697,11 +431,6 @@
     paint: function () { showReading(); }
   });
   A.register({
-    name: "events",
-    order: 90,
-    paint: function (s) { renderEvents(s.recent_events || []); }
-  });
-  A.register({
     name: "acts",
     order: 110,
     paint: function (s, c) {
@@ -758,7 +487,7 @@
     // UTIL-PRICE-WATCH: moved prices of the items the player checked, on
     // top of the Prices card list (PLAY-TD-19D-ITEMS-GRID)
     paint: function (s) {
-      if (window.ALPriceWatch && window.ALPriceWatch.paint(document, s)) { paintPricesList(); }
+      if (window.ALPriceWatch && window.ALPriceWatch.paint(document, s)) { viaRates("paintPricesList")(); }
     },
     wire: function () {
       if (window.ALPriceWatch) { window.ALPriceWatch.wire(document, api); }
@@ -1179,7 +908,7 @@
     // TEST-WEB-PANELS-B: the overlay layout, the stat weights and the web
     // data setting, read by their panels (onConnect, in wire order)
     connectReads.forEach(function (fn) { fn(); });
-    loadRates();
+    A.host.loadRates();
     loadDataCredit();
     api("GET", "/api/state").then(render).catch(function () {
       // a feed that found the core restarted keeps saying so
@@ -1254,7 +983,6 @@
         tabs: window.ALTabs || null
       });
     }
-    setInterval(pollRates, RATES_POLL_MS);
     // The two timers advance once a second while the page shows and the
     // game is not idle; nothing else moves.
     pace.sync();

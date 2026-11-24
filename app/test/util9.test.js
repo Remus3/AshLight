@@ -82,7 +82,8 @@ test("price watch: a moved item is a first row of the Prices list and marks the 
 });
 
 test("the Prices card renders a moved checked item above the currency values and movers", () => {
-  const js = require("./_web.js").source("app.js", "ascii");
+  // TEST-WEB-PANELS-C1: the Prices card list lives in web/panels/rates.js
+  const js = require("./_web.js").source("rates.js", "ascii");
   const at = js.indexOf("function paintPricesList()");
   const body = js.slice(at, js.indexOf("\n  }\n", at));
   assert.match(body, /watch\.concat\(rateRows, trendRows\)/);
