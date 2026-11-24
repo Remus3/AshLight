@@ -275,3 +275,41 @@ overlay's 250 MB ceiling above and the smoke test's 215 MB stay.
 - Reverses if: B10 or B12 breach persistently in the log, the operator
   keeps 300 MB, or a later log puts the companion-open median over 350 MB
   (then trim or default the companion to the tray).
+
+## Loop body clock step (TEST-BUDGET-LOOPBODY-NOISE, 2026-11-24)
+
+Amended 2026-11-24 (TEST-BUDGET-LOOPBODY-NOISE, hand-off session 23
+finding 2): `test_real_loop_body_10_s_worst_case_under_half_percent` (B1,
+the README "tailer idle" figure) keeps its 0.5 percent budget; its assert
+allows one measured step of the process CPU clock on top of it.
+
+- Quiet figure: six gated runs of the test alone on main (2026-11-24,
+  nothing else holding the suite gate) read 0.000 percent each, 10 passes
+  over 5.1 s: the loop body used less than one clock step.
+- Cause: `time.process_time()` is GetProcessTimes on Windows and moves only
+  in whole 15.6 ms steps (`get_clock_info` reports 1e-07, which is not the
+  real step). A 5 s window can read 0, 1 or 2 steps, that is 0, 0.31 or
+  0.62 percent, and the 0.5 percent line lies between 1 and 2 steps. The
+  intermittent batch-suite red of about 0.615 percent is exactly 2 steps
+  (31.25 ms over about 5.08 s): load shifts the work across one step
+  boundary, not a regression.
+- Rule: the test measures the step (`_cpu_clock_unit`, the largest of three
+  observed changes, capped at 20 ms) and asserts share < 0.005 x
+  load_factor + step / wall, that is CPU used under the budget plus one
+  step. Three or more steps in the window still fail. On a clock with a fine step (Linux) the allowance is about a
+  microsecond, so the assert is the plain share. The budget literal stays
+  `0.005 * load_factor()`, so tools/docs_fresh.py and README keep 0.5.
+- Alternatives: a longer window (a 20 s window cuts a step to 0.08 percent
+  but adds 15 s to every gated suite under the 145 s hold, and the slow-test
+  ceiling is 15 s); a median of several windows (each window is still
+  quantized to the same steps, so the median keeps the same 0 / 1 / 2
+  outcomes); a cycle-count clock through ctypes (QueryProcessCycleTime
+  needs a cycles-to-seconds guess that is itself load-dependent); a rerun
+  plugin (settled out); moving the budget (no quiet figure supports it).
+- Why: the reading's error is one clock step by construction; allowing
+  exactly that and no more removes the noise without loosening the share
+  the test guards.
+- Reverses if: the test reds at 3 or more steps on a quiet machine with
+  main only (then a regression row and a bisect), Windows gives the
+  process clock a finer step (the allowance then shrinks by itself), or
+  the window or the budget changes (then re-derive the step arithmetic).
