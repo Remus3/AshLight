@@ -289,6 +289,19 @@ def test_changed_idle_share_names_readme_and_stack(tmp_path):
     assert all("core idle budget" in p for p in problems)
 
 
+def test_tailer_idle_fact_reads_the_real_loop_body_budget(tmp_path):
+    # BUDGET-RETIRE-TAILER-IDLE: B1 (the real loop body with the tailer
+    # thread polling) owns the README's idle tailing figure.
+    assert df._BUDGET_TESTS["tailer idle"][0] == "test_real_loop_body"
+    root = _copy(tmp_path)
+    _edit(root, df.BUDGETS_REL, "share < 0.005 * fleet_test_guard",
+          "share < 0.008 * fleet_test_guard")
+    problems = df.check(root)
+    assert _named(problems) == {df.README_REL}
+    assert all("tailer idle budget" in p for p in problems)
+    assert any("'0.8'" in p for p in problems)
+
+
 def test_changed_parse_budget_names_readme_only(tmp_path):
     root = _copy(tmp_path)
     _edit(root, df.BUDGETS_REL, "fleet_test_guard.budget(0.25)",

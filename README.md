@@ -396,8 +396,9 @@ left in place; delete it too if you no longer want it.
 AshLight must never cost you frames. The tested budgets:
 
 - Core: parses 10,000 log lines in under 250 ms; a 1,000-line burst in under
-  50 ms; idle tailing under 1 to 2 percent of one CPU core; memory stays flat
-  (every buffer is bounded).
+  50 ms; idle tailing under 0.5 percent of one CPU core for the whole core
+  loop, tailer included, and under 1 percent with the dashboard and overlay
+  streams open; memory stays flat (every buffer is bounded).
 - Overlay: no animation and no render loop - it draws only when a shown value
   changes; hardware acceleration off; idle CPU under 1 percent of one core;
   under 250 MB for all its processes.

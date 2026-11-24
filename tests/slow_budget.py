@@ -147,8 +147,6 @@ SLOW_TABLE = {
         (SLOW_S, "an ast pass over every test file"),
     "tests/test_budgets.py::test_core_idle_cpu_under_1_percent_with_dashboard_and_overlay_streams":
         (SLOW_S, "samples real core CPU over a fixed idle window"),
-    "tests/test_budgets.py::test_tailer_idle_cpu_under_2_percent":
-        (SLOW_S, "samples real tailer CPU over a fixed idle window"),
 }
 
 
