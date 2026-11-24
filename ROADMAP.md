@@ -30,8 +30,8 @@ operator phrase.`
   BLOCKED: operator plays one map with tools/ovl_check.py armed (Q-18, B19); the loop skips it until
   then (operator).
 - [ ] LOG-SHAPE-20261123 (build) New masked log shapes passed the two-sighting rule: work each NEW SHAPE line of ops/runtime/watch/live1_report.json (copied into the lane worktree) into a parser pattern with a fixture, or note why it stays unparsed. ACCEPT: every listed shape has a fixture and a passing test or a one-line note. SOURCE: watch ledger log-shape, filed 2026-11-23.
-- [ ] PLAY-FIT-G5-TOTALS (build) tests/play_fit_pending/g.txt still marks the play-fit G5 visible-element and word totals pending: with it removed the sweep fails 55 G5 checks (for example 143 visible elements against a max of 100 in state c); G1 page overflow is enforced since WEB-PLAY-FOOT-ONE-ROW. Cut the counted elements and words per state to the G5 maxima (or record a design 0001 ruling that moves a maximum, with the reason), then delete g.txt. ACCEPT: python -m pytest -q tests/test_play_fit.py passes with tests/play_fit_pending/g.txt removed. ZERO-CLICK: layout and words only; no setting. DEPENDS: WEB-PLAY-FOOT-ONE-ROW. BLOCKED: session (design review).
-- [ ] TEST-XDIST-GROUP-RESTORE (build) Pinned pytest 9.2.0 + xdist 3.8.0 ignore xdist_group, so loadgroup runs as plain load and the calc and supervisor groups split (repro: 8 grouped tests on 4 workers land on all 4; decision 0060 note 2026-11-24). Restore grouping (a hash-pinned pair that honours it, or the group set in tests/conftest.py), re-soak, and start the test_shots render first (about 6 s); one worker per calc group may lengthen phase 1. ACCEPT: a test proves grouped tests share a worker; three exclusive soaks median at or under 145 s. ZERO-CLICK: test-side only. DEPENDS: GATE-HOLD-BISECT. BLOCKED: session.
+- [ ] PLAY-FIT-G5-TOTALS (build) tests/play_fit_pending/g.txt still marks the play-fit G5 visible-element and word totals pending: with it removed the sweep fails 55 G5 checks (for example 143 visible elements against a max of 100 in state c); G1 page overflow is enforced since WEB-PLAY-FOOT-ONE-ROW. Cut the counted elements and words per state to the G5 maxima (or record a design 0001 ruling that moves a maximum, with the reason), then delete g.txt. ACCEPT: python -m pytest -q tests/test_play_fit.py passes with tests/play_fit_pending/g.txt removed. ZERO-CLICK: layout and words only; no setting. DEPENDS: WEB-PLAY-FOOT-ONE-ROW. BLOCKED: session wave 55 (design review).
+- [ ] TEST-XDIST-GROUP-RESTORE (build) Pinned pytest 9.2.0 + xdist 3.8.0 ignore xdist_group, so loadgroup runs as plain load and the calc and supervisor groups split (repro: 8 grouped tests on 4 workers land on all 4; decision 0060 note 2026-11-24). Restore grouping (a hash-pinned pair that honours it, or the group set in tests/conftest.py), re-soak, and start the test_shots render first (about 6 s); one worker per calc group may lengthen phase 1. ACCEPT: a test proves grouped tests share a worker; three exclusive soaks median at or under 145 s. ZERO-CLICK: test-side only. DEPENDS: GATE-HOLD-BISECT. BLOCKED: session wave 56.
 
 ## Lane: data
 
@@ -52,7 +52,7 @@ operator phrase.`
 ## Lane: review
 
 - [ ] WT-SIDECAR-WIRE (review) Reopened WT-SIDECAR: agent worktrees must land under the AL sidecar through the decision 0012 hooks, not only by the hand-run hook. ACCEPT: python -m pytest -q tests/test_wt_sidecar_hook.py -rs reports no skip and git worktree list after one isolated agent spawn shows its path under the sidecar Worktree folder. ZERO-CLICK: One paste by the operator, once; every later wave spawn lands in the sidecar by itself. BLOCKED: operator act (paste the two hook entries of decision 0012 into .claude/settings.json); AUTO-26 flips it when its proof passes.
-- [ ] GATE-HOLD-D (review) Restore the 120 s suite target: the GATE-HOLD-C soak median 133.2 s is still over the 125 s line of the decision 0060 amendment, so 145 s stays the interim bound; find the next test-side cuts (the two test_al_loop_gate_cache wall-clock overruns at 3.07 / 3.38 s under load first). ACCEPT: three --exclusive soak runs from Bash on main with a median at or under 125 s, the bound moved back to 120 s in decision 0060 and CLAUDE.md. ZERO-CLICK: the soak runs by itself through the suite gate. DEPENDS: GATE-HOLD-C. BLOCKED: session wave 52.
+- [ ] GATE-HOLD-D (review) Restore the 120 s suite target: the GATE-HOLD-C soak median 133.2 s is still over the 125 s line of the decision 0060 amendment, so 145 s stays the interim bound; find the next test-side cuts (the two test_al_loop_gate_cache wall-clock overruns at 3.07 / 3.38 s under load first). ACCEPT: three --exclusive soak runs from Bash on main with a median at or under 125 s, the bound moved back to 120 s in decision 0060 and CLAUDE.md. ZERO-CLICK: the soak runs by itself through the suite gate. DEPENDS: GATE-HOLD-C. BLOCKED: session wave 57.
 
 
 ## Theorycraft and item optimization (decision 0004, research 0010)
@@ -486,10 +486,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
 - [ ] TC-TREE-URL (build) Official tree viewer link (version 7 URL). ACCEPT: python -m pytest -q
   tests/test_tc_treeurl.py passes and npm test --prefix app passes. ZERO-CLICK: The link is always
   ready; one click opens the browser. DEPENDS: TC-PRESS-BUILD, TC-UPGRADE-PER-SLOT,
-  TC-WEIGHTS-DELTA-UI. BLOCKED: a cached GGG tree export on the dev host for the fixture and the
-  byte-value check (needs web data on with the contact set: operator act g); unblocks when the file
-  Cache/gamedata/skilltree.json exists under the AL sidecar root (treedata.FILE_NAME) after the
-  operator sets the contact and the snapshot runs (operator).
+  TC-WEIGHTS-DELTA-UI. BLOCKED: session wave 55 (OA-8 tree export cached 2026-11-22).
 - [ ] TC-AFFIX-LINE (build) Affix line on the item card. ACCEPT: python -m pytest -q
   tests/test_tc_affix_line.py tests/test_eval_text.py passes. ZERO-CLICK: Same press; no click.
   DEPENDS: TC-CARD-PARTS, TC-PRESS-FIXTURES. BLOCKED: a real advanced-copy item sample as a fixture;

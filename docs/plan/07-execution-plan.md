@@ -2289,23 +2289,6 @@ Session-tagged ROADMAP follow-ups of sessions 22 and 23 (disjoint files).
 - WEB-STALE-COMMENTS [session, S 25m, build] Stale path comments point at the code's new homes. Files: web/index.html, web/app.css, web/strip.css, web/strip.js, app/test/strip.test.js. Deps: TEST-WEB-PANELS-C2, WEB-PANEL-NAMES.
 - TEST-BUDGET-LOOPBODY-NOISE [session, M 45m, build] Real loop body budget reading: quiet figure, then a ruling. Files: tests/test_budgets.py, docs/decisions/0002-stack.md. Deps: BUDGET-RETIRE-TAILER-IDLE.
 
-### Wave 52: optional tail, suite target
-
-Session-tagged ROADMAP follow-ups of sessions 22 and 23 (disjoint files).
-
-- Session 12; width 1 worktree + 0 main-checkout, 0 loop rows released.
-- Hotspots: none.
-- Integrator: ROADMAP.md rows of all 1 packages; CLAUDE.md: GATE-HOLD-D.
-- Gate: per package: its named tests as a file-named run; main-checkout acts
-  one at a time in merge order; per merge batch of 4 on the integration
-  worktree: merge, then the integrator's edits for the batch as one commit,
-  then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python
-  tools/suite_run.py and npm test --prefix app, green, then main moves; then
-  python tools/plan_check.py check; the wave closes when every session row
-  is flipped and main is clean.
-
-- GATE-HOLD-D [session, L 80m, review] Restore the 120 s suite target. Files: tests/test_al_loop_gate_cache.py, tests/al_loopkit.py, docs/decisions/0060-wave-gate-policy.md. Deps: TEST-BUDGET-LOOPBODY-NOISE.
-
 ### Wave 53: item info docs, verdict word, footer row, gem variants
 
 Session-tagged ROADMAP follow-ups of session 24 (disjoint files).
@@ -2345,6 +2328,64 @@ Session-tagged ROADMAP follow-up of session 24; runs after wave 53 merges.
   is flipped and main is clean.
 
 - GATE-HOLD-BISECT [session, L 90m, review] Bring the gated suite soak back under the 145 s bound. Files: tests/test_shots.py, tests/test_dash_perf.py, tests/test_logshapes.py, tests/test_fullstack.py, tests/test_math_e2e_live.py (+2 more). Deps: ITEM-INFO-DOC-SOURCES, TC-VERDICT-FALLBACK-WORD, WEB-PLAY-FOOT-ONE-ROW, KINDLER-GEM-VARIANT.
+
+### Wave 55: Play G5 totals, tree viewer link
+
+Session-tagged ROADMAP follow-up of session 25 and the unparked TC-TREE-URL
+(disjoint files).
+
+- Session 14; width 2 worktree + 0 main-checkout, 0 loop rows released.
+- Hotspots: web/index.html (PLAY-FIT-G5-TOTALS); web/app.css
+  (PLAY-FIT-G5-TOTALS); docs/design/0001-design-system.md
+  (PLAY-FIT-G5-TOTALS).
+- Integrator: ROADMAP.md rows of all 2 packages; docs/design/reviews.log:
+  PLAY-FIT-G5-TOTALS, TC-TREE-URL.
+- Gate: per package: its named tests as a file-named run; main-checkout acts
+  one at a time in merge order; per merge batch of 4 on the integration
+  worktree: merge, then the integrator's edits for the batch as one commit,
+  then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python
+  tools/suite_run.py and npm test --prefix app, green, then main moves; then
+  python tools/plan_check.py check; the wave closes when every session row
+  is flipped and main is clean.
+
+- PLAY-FIT-G5-TOTALS [session, L 90m, build, DR] Play state word and element totals under the G5 maxima. Files: tests/play_fit_pending/g.txt, tests/test_play_fit.py, docs/design/0001-design-system.md, docs/design/play-fit-figures.md, web/index.html (+25 more). Deps: WEB-PLAY-FOOT-ONE-ROW.
+- TC-TREE-URL [session, M 60m, build, P3, DR] Official tree viewer link (version 7 URL). Files: server/al/theorycraft/store.py, web/tc.js, app/test/tc_view.test.js, app/test/audit_tree_url.test.js, server/al/theorycraft/treeurl.py (+1 more). Deps: TC-PRESS-BUILD, TC-UPGRADE-PER-SLOT, TC-WEIGHTS-DELTA-UI.
+
+### Wave 56: xdist group restore
+
+Session-tagged ROADMAP follow-up of session 25; restores loadgroup before
+the 120 s retry.
+
+- Session 14; width 1 worktree + 0 main-checkout, 0 loop rows released.
+- Hotspots: none.
+- Integrator: ROADMAP.md rows of all 1 packages; CLAUDE.md:
+  TEST-XDIST-GROUP-RESTORE.
+- Gate: per package: its named tests as a file-named run; main-checkout acts
+  one at a time in merge order; per merge batch of 4 on the integration
+  worktree: merge, then the integrator's edits for the batch as one commit,
+  then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python
+  tools/suite_run.py and npm test --prefix app, green, then main moves; then
+  python tools/plan_check.py check; the wave closes when every session row
+  is flipped and main is clean.
+
+- TEST-XDIST-GROUP-RESTORE [session, L 90m, review] Restore xdist_group honouring in the gated suite. Files: tests/conftest.py, requirements-dev.txt, tools/suite_run.py, tests/test_suite_run.py, docs/decisions/0060-wave-gate-policy.md (+1 more). Deps: GATE-HOLD-BISECT.
+
+### Wave 57: optional tail, suite target
+
+Deferred GATE-HOLD-D after the grouping fix (both edit decision 0060).
+
+- Session 14; width 1 worktree + 0 main-checkout, 0 loop rows released.
+- Hotspots: none.
+- Integrator: ROADMAP.md rows of all 1 packages; CLAUDE.md: GATE-HOLD-D.
+- Gate: per package: its named tests as a file-named run; main-checkout acts
+  one at a time in merge order; per merge batch of 4 on the integration
+  worktree: merge, then the integrator's edits for the batch as one commit,
+  then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python
+  tools/suite_run.py and npm test --prefix app, green, then main moves; then
+  python tools/plan_check.py check; the wave closes when every session row
+  is flipped and main is clean.
+
+- GATE-HOLD-D [session, L 80m, review] Restore the 120 s suite target. Files: tests/test_al_loop_gate_cache.py, tests/al_loopkit.py, docs/decisions/0060-wave-gate-policy.md. Deps: TEST-XDIST-GROUP-RESTORE.
 
 <!-- plan_check waves end -->
 
@@ -2738,16 +2779,15 @@ with packages.json.
   AUTO-24.
 - server/al/state.py: DATA-LOOT-TALLY, TC-WAYSTONE-TUNE.
 - web/index.html: TC-BUILD-FILEPICK, TC-WAYSTONE-TUNE-UI, TC-IMPORT-UI.
-- web/tc.js: TC-BUILD-FILEPICK, TC-WAYSTONE-TUNE-UI, TC-TREE-URL.
+- web/tc.js: TC-BUILD-FILEPICK, TC-WAYSTONE-TUNE-UI.
 - web/app.js: TC-BUILD-FILEPICK, TC-WAYSTONE-TUNE-UI, TC-IMPORT-UI.
-- app/test/tc_view.test.js: TC-BUILD-FILEPICK, TC-WAYSTONE-TUNE-UI,
-  TC-TREE-URL.
+- app/test/tc_view.test.js: TC-BUILD-FILEPICK, TC-WAYSTONE-TUNE-UI.
 - server/al/diag.py: SEC-STEAM-SCAN-A03, AUTO-24.
 - tests/test_zone_guide.py: DATA-GUIDE-ACTS-5-6, DATA-GUIDE-GAP-TUNE.
 - docs/decisions/0002-stack.md: RUN-OVL-BUDGET-CLOSE, OVL-FPS.
 - Serial group item-press: TC-IMPORT, TC-WAYSTONE-TUNE.
 - Serial group web-tc: TC-BUILD-FILEPICK, TC-WAYSTONE-TUNE-UI,
-  TC-IMPORT-UI, TC-TREE-URL.
+  TC-IMPORT-UI.
 - Serial group guide-data: DATA-GUIDE-ACTS-5-6, DATA-GUIDE-GAP-TUNE.
 
 Unblocked by operator (21):
@@ -2817,12 +2857,9 @@ Unblocked by operator (21):
   RUN-LEDGER-WIRE; F-061) are merged with the per-exit gap bucket, the
   operator has ticked the ledger consent, and the dev host's ledger spans 14
   days of campaign play. Joins wave 17 or later.
-- TC-TREE-URL: waits on a cached GGG tree export on the dev host for the
-  fixture and the byte-value check (needs web data on with the contact set:
-  operator act g). Who: operator. Unblock: the file
-  Cache/gamedata/skilltree.json exists under the AL sidecar root
-  (treedata.FILE_NAME) after the operator sets the contact and the snapshot
-  runs. Joins wave 36 or later.
+- TC-TREE-URL: released 2026-11-24 (PLAN-W55) into wave 55; its unblock
+  read true (Cache/gamedata/skilltree.json under the AL sidecar root since
+  2026-11-22).
 - PLAY-F-204B-SR-RUN: waits on The operator confirms the game is closed (not
   only that they are not playing) and game_idle is true; speech output and a
   visible browser on this machine. Who: operator. Unblock: The operator says

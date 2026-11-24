@@ -914,18 +914,17 @@
   },
   {
    "n": 12,
-   "title": "Session 12: waves 46 to 52",
+   "title": "Session 12: waves 46 to 51",
    "waves": [
     46,
     47,
     48,
     49,
     50,
-    51,
-    52
+    51
    ],
    "est_wall_min": 545,
-   "session_packages": 25,
+   "session_packages": 24,
    "milestones": [
     "the Kindler tabs export, gem-checked, score attacks and mark support fit"
    ]
@@ -941,6 +940,20 @@
    "session_packages": 5,
    "milestones": [
     "the Kindler attack templates score their named skills"
+   ]
+  },
+  {
+   "n": 14,
+   "title": "Session 14: waves 55 to 57",
+   "waves": [
+    55,
+    56,
+    57
+   ],
+   "est_wall_min": 360,
+   "session_packages": 4,
+   "milestones": [
+    "the Play cockpit meets the G5 totals and the build shows its official tree link"
    ]
   }
  ],
@@ -1941,15 +1954,6 @@
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
   },
   {
-   "n": 52,
-   "title": "Wave 52: optional tail, suite target",
-   "goal": "Session-tagged ROADMAP follow-ups of sessions 22 and 23 (disjoint files).",
-   "merge_order": [
-    "GATE-HOLD-D"
-   ],
-   "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
-  },
-  {
    "n": 53,
    "title": "Wave 53: item info docs, verdict word, footer row, gem variants",
    "goal": "Session-tagged ROADMAP follow-ups of session 24 (disjoint files).",
@@ -1967,6 +1971,34 @@
    "goal": "Session-tagged ROADMAP follow-up of session 24; runs after wave 53 merges.",
    "merge_order": [
     "GATE-HOLD-BISECT"
+   ],
+   "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
+  },
+  {
+   "n": 55,
+   "title": "Wave 55: Play G5 totals, tree viewer link",
+   "goal": "Session-tagged ROADMAP follow-up of session 25 and the unparked TC-TREE-URL (disjoint files).",
+   "merge_order": [
+    "PLAY-FIT-G5-TOTALS",
+    "TC-TREE-URL"
+   ],
+   "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
+  },
+  {
+   "n": 56,
+   "title": "Wave 56: xdist group restore",
+   "goal": "Session-tagged ROADMAP follow-up of session 25; restores loadgroup before the 120 s retry.",
+   "merge_order": [
+    "TEST-XDIST-GROUP-RESTORE"
+   ],
+   "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
+  },
+  {
+   "n": 57,
+   "title": "Wave 57: optional tail, suite target",
+   "goal": "Deferred GATE-HOLD-D after the grouping fix (both edit decision 0060).",
+   "merge_order": [
+    "GATE-HOLD-D"
    ],
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
   },
@@ -1993,7 +2025,6 @@
     "TC-PRESS-FIXTURES",
     "AUTO-20",
     "DATA-GUIDE-GAP-TUNE",
-    "TC-TREE-URL",
     "TC-AFFIX-LINE",
     "GP-16",
     "PLAY-F-204B-SR-RUN",
@@ -21122,14 +21153,10 @@
    "isolation": "worktree",
    "lane": "build",
    "design_review": true,
-   "blocked": {
-    "on": "a cached GGG tree export on the dev host for the fixture and the byte-value check (needs web data on with the contact set: operator act g)",
-    "who": "operator",
-    "unblock": "the file Cache/gamedata/skilltree.json exists under the AL sidecar root (treedata.FILE_NAME) after the operator sets the contact and the snapshot runs"
-   },
-   "operator_act": "OA-8 (docs/plan/09): Set the contact in config/local.json (operator act g) so the snapshot can fetch the tree export.",
-   "notes": "Tier P3, blocked. store.py snapshot adds tree_url (line 339 region); web/tc.js buildView shows it through safeTreeUrl. Class and ascendancy byte values are undocumented: check against the export before shipping. Card words changed: run the design-reviewer agent before the commit; its docs/design/reviews.log line is appended at merge (append-only file).",
-   "wave": 99,
+   "blocked": null,
+   "operator_act": "OA-8 (docs/plan/09), done: the cached tree export Cache/gamedata/skilltree.json exists under the AL sidecar root since 2026-11-22.",
+   "notes": "Tier P3, blocked. store.py snapshot adds tree_url (line 339 region); web/tc.js buildView shows it through safeTreeUrl. Class and ascendancy byte values are undocumented: check against the export before shipping. Card words changed: run the design-reviewer agent before the commit; its docs/design/reviews.log line is appended at merge (append-only file). Unparked 2026-11-24 (PLAN-W55): the OA-8 blocker reads true (skilltree.json in the sidecar cache, 2026-11-22).",
+   "wave": 55,
    "owner": "session",
    "tier": "P3",
    "cluster": "TC"
@@ -24123,7 +24150,7 @@
    "integrator_edits": [
     {
      "file": "ROADMAP.md",
-     "change": "Flip this package's row when it merges (its ROADMAP row already exists; PLAN-46 retagged it BLOCKED: session wave 52)."
+     "change": "Flip this package's row when it merges (its ROADMAP row already exists; PLAN-W55 retagged it BLOCKED: session wave 57)."
     },
     {
      "file": "CLAUDE.md",
@@ -24138,7 +24165,7 @@
    "size": "L",
    "est_min": 80,
    "deps": [
-    "TEST-BUDGET-LOOPBODY-NOISE"
+    "TEST-XDIST-GROUP-RESTORE"
    ],
    "serial_group": "",
    "agent": "general-purpose",
@@ -24147,8 +24174,8 @@
    "design_review": false,
    "blocked": null,
    "operator_act": "",
-   "notes": "Optional tail of session 12. GATE-HOLD-C (soak median 133.2 s) is not a plan package; its row DEPENDS stays in ROADMAP. The plan dep orders it after the last budget-test change.",
-   "wave": 52,
+   "notes": "Optional tail of session 12. GATE-HOLD-C (soak median 133.2 s) is not a plan package; its row DEPENDS stays in ROADMAP. The plan dep orders it after the last budget-test change. Re-planned 2026-11-24 (PLAN-W55) from wave 52 to wave 57 behind TEST-XDIST-GROUP-RESTORE (both edit decision 0060, so not one wave); branch worktree-w52-GATE-HOLD-D (4f49301) kept as its start. If three exclusive soaks do not reach a median at or under 125 s, the package records the figures in decision 0060 and is dropped or re-deferred with the reason; the 145 s bound stays.",
+   "wave": 57,
    "owner": "session"
   },
   {
@@ -24377,6 +24404,123 @@
    "design_review": false,
    "notes": "Last in the group: its soaks measure the suite after wave 53 merges. tools/suite_run.py only for test ordering or phase placement; decision 0060's worker rule (min(12, CPUs - 4), never under 2; phase 2 serial) and every decision 0002 budget number stay. GATE-HOLD-D stays deferred behind it (branch worktree-w52-GATE-HOLD-D kept). Run soaks only while the live core reads game_idle true (SESSION-21 LESSONS).",
    "wave": 54
+  },
+  {
+   "id": "PLAY-FIT-G5-TOTALS",
+   "title": "Play state word and element totals under the G5 maxima",
+   "goal": "With tests/play_fit_pending/g.txt removed the play-fit sweep fails 55 G5 checks (for example 143 visible elements against a max of 100 in state c). Cut the counted elements and words per Play state to the design 0001 G5 maxima, or record a design 0001 ruling that moves a maximum with its reason, then delete g.txt.",
+   "units": [],
+   "files": [
+    "tests/play_fit_pending/g.txt",
+    "tests/test_play_fit.py",
+    "docs/design/0001-design-system.md",
+    "docs/design/play-fit-figures.md",
+    "web/index.html",
+    "web/app.css",
+    "web/strip.js",
+    "web/strip.css",
+    "web/context.js",
+    "web/context.css",
+    "web/setupcard.js",
+    "web/setupcard.css",
+    "web/feed.js",
+    "web/feed.css",
+    "web/notice.js",
+    "web/notice.css",
+    "web/buildline.js",
+    "web/buildline.css",
+    "web/itemcard.js",
+    "web/itemcard.css",
+    "web/keptchecks.js",
+    "web/keptchecks.css",
+    "app/test/strip.test.js",
+    "app/test/context.test.js",
+    "app/test/setupcard.test.js",
+    "app/test/feed.test.js",
+    "app/test/notice.test.js",
+    "app/test/buildline.test.js",
+    "app/test/itemcard.test.js",
+    "app/test/keptchecks.test.js"
+   ],
+   "new_files": [],
+   "integrator_edits": [
+    {
+     "file": "ROADMAP.md",
+     "change": "Flip this package's row when it merges (its ROADMAP row already exists; PLAN-W55 retagged it BLOCKED: session wave 55)."
+    },
+    {
+     "file": "docs/design/reviews.log",
+     "change": "Append the design-reviewer line this package returns in its result (one line, append-only)."
+    }
+   ],
+   "tests": [
+    "tests/test_play_fit.py (sweep green with tests/play_fit_pending/g.txt removed; WORD_CAPS, WORDS_MAX, WORDS_STATE_MAX and ELEMENTS_MAX move only with a recorded design 0001 ruling)",
+    "the app/test/<region>.test.js file of every region whose words or elements change"
+   ],
+   "accept": "python -m pytest -q tests/test_play_fit.py passes with tests/play_fit_pending/g.txt removed (git rm), and npm test --prefix app passes.",
+   "zero_click": "Layout and words only; no setting and no click.",
+   "size": "L",
+   "est_min": 90,
+   "deps": [
+    "WEB-PLAY-FOOT-ONE-ROW"
+   ],
+   "serial_group": "play-fit",
+   "agent": "general-purpose",
+   "isolation": "worktree",
+   "lane": "build",
+   "design_review": true,
+   "blocked": null,
+   "operator_act": "",
+   "notes": "Session 26 follow-up (ROADMAP row of session 25). Region words come from the web/<region>.js files; the page totals (words on Play, visible elements) are G5 page checks in tests/test_play_fit.py. A maximum moves only with a dated design 0001 ruling naming the reason, and play-fit-figures.md quotes the new figures. Card words changed: run the design-reviewer agent before the commit.",
+   "wave": 55,
+   "owner": "session"
+  },
+  {
+   "id": "TEST-XDIST-GROUP-RESTORE",
+   "title": "Restore xdist_group honouring in the gated suite",
+   "goal": "Pinned pytest 9.2.0 + xdist 3.8.0 ignore xdist_group, so loadgroup runs as plain load and the calc and supervisor groups split (8 grouped tests on 4 workers land on all 4; decision 0060 note 2026-11-24). Restore grouping (a hash-pinned pytest / xdist pair that honours it, or the group set in tests/conftest.py), start the test_shots render first, and re-soak.",
+   "units": [],
+   "files": [
+    "tests/conftest.py",
+    "requirements-dev.txt",
+    "tools/suite_run.py",
+    "tests/test_suite_run.py",
+    "docs/decisions/0060-wave-gate-policy.md"
+   ],
+   "new_files": [
+    "tests/test_xdist_group.py"
+   ],
+   "integrator_edits": [
+    {
+     "file": "ROADMAP.md",
+     "change": "Flip this package's row when it merges (its ROADMAP row already exists; PLAN-W55 retagged it BLOCKED: session wave 56)."
+    },
+    {
+     "file": "CLAUDE.md",
+     "change": "Only if decision 0060 is amended: one dated clause in the Wave gate Settled bullet naming the soak figures and the grouping fix, with its Reverses if (the 145 s bound does not move)."
+    }
+   ],
+   "tests": [
+    "tests/test_xdist_group.py (new: tests sharing one xdist_group run on one worker under -n 4 --dist loadgroup)",
+    "tests/test_suite_run.py"
+   ],
+   "accept": "python -m pytest -q tests/test_xdist_group.py tests/test_suite_run.py passes, and three --exclusive soak runs of python tools/suite_run.py through the suite gate have a median at or under 145 s, recorded in decision 0060.",
+   "zero_click": "Test-side only; the soak runs by itself through the suite gate.",
+   "size": "L",
+   "est_min": 90,
+   "deps": [
+    "GATE-HOLD-BISECT"
+   ],
+   "serial_group": "",
+   "agent": "general-purpose",
+   "isolation": "worktree",
+   "lane": "review",
+   "design_review": false,
+   "blocked": null,
+   "operator_act": "",
+   "notes": "Test-side only: no server/ or app code and no decision 0002 budget number changes; tools/suite_run.py only for test ordering (test_shots render first) or phase placement; decision 0060's worker rule stays. A new pin pair goes in requirements-dev.txt with --hash lines. Run soaks only while the live core reads game_idle true.",
+   "wave": 56,
+   "owner": "session"
   }
  ],
  "coverage": {
