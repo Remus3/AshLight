@@ -414,8 +414,10 @@ test("release build block: honest words, no promise", () => {
 test("contact field view: write-only, shown only until a contact is set", () => {
   const c = p.contactView({ contact_set: false });
   assert.equal(c.show, true);
-  assert.equal(c.label, "Contact for poe.ninja");
-  assert.match(c.note, /User-Agent/);
+  assert.equal(c.label, "Your contact for poe.ninja");
+  // DATA-CONTACT-DEFAULT: an optional override of the project's issues page
+  assert.match(c.note, /^Optional\. /);
+  assert.match(c.note, /else its project issues page/);
   assert.match(c.note, /poe\.ninja/);
   assert.match(c.note, /only on this computer/);
   assert.equal(p.contactView({ contact_set: true }).show, false);
@@ -440,7 +442,7 @@ test("contact field markup: labelled, never prefilled, answer in #webdata-status
   const html = fs.readFileSync(path.join(__dirname, "..", "..", "web", "index.html"), "utf8");
   const start = html.indexOf('<form id="webdata-form"');
   const form = html.slice(start, html.indexOf("</form>", start));
-  assert.match(form, /<label for="webdata-contact">Contact for poe\.ninja<\/label>/);
+  assert.match(form, /<label for="webdata-contact">Your contact for poe\.ninja<\/label>/);
   const input = form.match(/<input id="webdata-contact"[^>]*>/)[0];
   assert.ok(!/\bvalue=/.test(input), "never prefilled");
   assert.match(input, /autocomplete="off"/);
