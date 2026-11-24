@@ -45,11 +45,6 @@ TWINS = {
 STATUS_WORDS = ("No build loaded", "Not an item", "Can't compare this", "Build loaded",
                 "Build not loaded", "Can't check this item", "Waystone unidentified",
                 "Copy the item first")
-# OVL-COPY-FIRST (F-054): status words the card already uses whose design
-# 0001 section 10 text lands later (PLAY-TD-23-RECORDS; package notes:
-# "Design 0001 text follows with TD-23"); only the design-text check skips
-# them until then
-DESIGN_TEXT_PENDING = ("Copy the item first",)
 PRICE_WORD = "Price:"
 TRADE_WORD = "Trade: "
 
@@ -405,6 +400,4 @@ def test_design_0001_states_both_rules():
     assert "Notification policy" in s71 and "toast" in s71 and "flash" in s71
     assert "Glance rule" in s10 and "26-character clip" in s10 and "twin" in s10
     for word in STATUS_WORDS:
-        if word in DESIGN_TEXT_PENDING:
-            continue
         assert word in s10.replace("\n  ", " "), word

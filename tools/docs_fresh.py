@@ -477,7 +477,7 @@ def budget_values(tree):
 _BUDGET_TESTS = {
     "parse 10k lines": ("test_parse_10k_lines", 1000),
     "tail burst": ("test_tail_1000_line_burst", 1000),
-    "tailer idle": ("test_tailer_idle_cpu", 100),
+    "tailer idle": ("test_real_loop_body", 100),
     "core idle": ("test_core_idle_cpu", 100),
 }
 # (doc, region, budget, pattern with the number as group 1).
@@ -487,9 +487,9 @@ _BUDGET_QUOTES = (
     (README_REL, _md_section("Budgets"), "tail burst",
      _ws(r"a 1,000-line burst in under (\d+) ms")),
     (README_REL, _md_section("Budgets"), "core idle",
-     _ws(r"idle tailing under (\d+) to \d+ percent")),
+     _ws(r"under (\d+) percent with the dashboard and overlay streams")),
     (README_REL, _md_section("Budgets"), "tailer idle",
-     _ws(r"idle tailing under \d+ to (\d+) percent")),
+     _ws(r"idle tailing under (\d+(?:\.\d+)?) percent of one CPU core")),
     (STACK_REL, _md_section("Budgets", prefix=True), "core idle",
      _ws(r"Core idle: under (\d+) percent")),
     (STACK_REL, _md_section("Budgets", prefix=True), "tail burst",
