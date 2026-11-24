@@ -91,6 +91,33 @@ def clean_contact(value):
     return value
 
 
+# DATA-CONTACT-DEFAULT (F-018, decision 0015 amendment 2026-11-23): once the
+# repository address is in the tree (config/public_repo.json, read only
+# through updates.load_repo, the one address source), the default contact
+# is the project's issues page; a typed contact overrides it.
+ISSUES_URL = "https://github.com/{repo}/issues"
+
+
+def default_contact(repo=None):
+    """The issues page of `repo` ('<owner>/<name>'), or of the address
+    constant when repo is None; '' while the address is unset, malformed or
+    too long for a contact (CONTACT_MAX)."""
+    from . import updates  # late: updates imports this module
+    repo = updates.load_repo() if repo is None else updates.clean_repo(repo)
+    if not repo:
+        return ""
+    return clean_contact(ISSUES_URL.format(repo=repo)) or ""
+
+
+def effective_contact(configured, default=None):
+    """The contact a request sends: the typed one (cleaned) when usable,
+    else the default (default_contact() when None), else None."""
+    typed = clean_contact(configured)
+    if typed is not None:
+        return typed
+    return clean_contact(default_contact() if default is None else default)
+
+
 def contact_value(contact):
     """clean_contact of contact() (a callable, read at call time) or of a value."""
     return clean_contact(contact() if callable(contact) else contact)

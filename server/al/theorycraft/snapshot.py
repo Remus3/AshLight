@@ -61,8 +61,9 @@ ATTRIBUTION = datacredit.ATTRIBUTION  # one source: theorycraft/datacredit.py
 UA_PURPOSE = "build-time game-data snapshot"
 USER_AGENT = webfetch.user_agent(UA_PURPOSE)  # base form; run() adds the contact
 # UA-CONTACT: GGG asks for a contact in the User-Agent (research 0011), so a
-# GGG source (the skill tree export) is fetched only with a contact set in
-# config/local.json; without one it reports "off: contact not set".
+# GGG source (the skill tree export) is fetched only with a contact: the one
+# in config/local.json, else the project's issues page (DATA-CONTACT-DEFAULT);
+# without either it reports "off: contact not set".
 CONTACT_SOURCES = ("skilltree",)
 CONTACT_HOSTS = ("www.pathofexile.com", "pathofexile.com")
 
@@ -495,7 +496,9 @@ def run(directory=None, fetch=http_fetch, sources=None, force=False, now=None,
 
 
 def main(argv=None, environ=None, fetch=http_fetch, contact=None, web_data=None):
-    """contact: None = read "contact" from gitignored config/local.json.
+    """contact: None = read "contact" from gitignored config/local.json,
+    else the project's issues page from the address constant
+    (DATA-CONTACT-DEFAULT, decision 0015 amendment 2026-11-23).
     web_data: None = read "web_data" from the same file (strictly True, as the
     core does); while it is off nothing is fetched unless --opt-in is passed
     (AUDIT-SNAPSHOT-OPTIN, decisions 0009 / 0013 amended 2026-11-17)."""
@@ -505,7 +508,7 @@ def main(argv=None, environ=None, fetch=http_fetch, contact=None, web_data=None)
         cfg = paths.load_local_config()
         cfg = cfg if isinstance(cfg, dict) else {}
     if contact is None:
-        contact = cfg.get(webfetch.CONTACT_KEY)
+        contact = webfetch.effective_contact(cfg.get(webfetch.CONTACT_KEY))
     if web_data is None:
         web_data = cfg.get("web_data") is True
     ap = argparse.ArgumentParser(prog="snapshot", description=f"{NAME} game-data snapshot")

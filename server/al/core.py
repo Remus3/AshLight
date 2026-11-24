@@ -312,12 +312,18 @@ class Core:
         self.web_fetch = web_fetch
         rates_dir = (ninja.cache_dir() if runtime is None
                      else self.runtime / "cache" / "ninja")
-        # UA-CONTACT: poe.ninja also needs the "contact" key.
+        # UA-CONTACT: poe.ninja also needs a contact. DATA-CONTACT-DEFAULT
+        # (decision 0015 amendment 2026-11-23): the typed "contact" key, else
+        # the project's issues page from the address constant. Only the real
+        # core reads config/public_repo.json; a test or demo core uses the
+        # update_repo it is handed ('' when none: no default).
+        self._contact_default = webfetch.default_contact(
+            update_repo if update_repo is not None else (None if runtime is None else ""))
         # PRICE-UNIQUE / PRICE-STACKABLES: the unique and stackable overviews
         # share the rates' refresh, gate, opt-in and contact (pricebook.py).
         self.rates = ninja.RatesClient(rates_dir, enabled=self.web_data_enabled,
                                        league=self.configured_league, fetch=web_fetch,
-                                       contact=self.contact,
+                                       contact=self.effective_contact,
                                        book=pricebook.PriceBook(rates_dir))
         # REL-UPDATE-WIRE (decision 0065, decision 0013 amendment
         # 2026-11-21): the daily release check, only while web data is on
@@ -1186,10 +1192,16 @@ class Core:
         config ("contact"), cleaned; None when unset or unusable."""
         return webfetch.clean_contact(self._config().get(webfetch.CONTACT_KEY))
 
+    def effective_contact(self):
+        """DATA-CONTACT-DEFAULT: the contact requests send: the typed one
+        (contact()), else the project's issues page; None when neither."""
+        return webfetch.effective_contact(self._config().get(webfetch.CONTACT_KEY),
+                                          self._contact_default)
+
     def web_blocked_reason(self):
         """Why poe.ninja fetches are off now ("web data off",
         "contact not set") or None."""
-        return webfetch.blocked_reason(self.web_data_enabled, self.contact)
+        return webfetch.blocked_reason(self.web_data_enabled, self.effective_contact)
 
     def league_setting(self):
         """The "league" key of the local config as the player set it (the
@@ -1934,7 +1946,7 @@ class Core:
             "last_line_at": tl.get("last_line_at"),
             "idle": bool(tl.get("idle")), "character_seen": bool(sf["character"]),
             "lang": sf["lang"],
-            "web_data": self.web_data_enabled(), "contact_set": self.contact() is not None,
+            "web_data": self.web_data_enabled(), "contact_set": self.effective_contact() is not None,
             "book_checked_at": sf["book_checked_at"] or sf["rates_checked_at"],
             "book_error": rates.get("last_error"),
             "calc_on": calc_on, "calc_status": self.calc_status() if calc_on else None,
@@ -1967,7 +1979,7 @@ class Core:
             # staged version and last update result; read only
             "install": self._install_facts(),
             "_log_path": str(log) if log else None,
-            "_contact": self.contact(), "_character": sf["character"],
+            "_contact": self.effective_contact(), "_character": sf["character"],
         })
         return dict(diag_data.facts(self, plug.collect_facts(self, now)), **built)
 
