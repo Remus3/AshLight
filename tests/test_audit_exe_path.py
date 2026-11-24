@@ -208,11 +208,7 @@ SPAWN_CALL = re.compile(
 # Known open item, not part of this package: setAutostart still names
 # powershell.exe bare because app/test/autostart_switch.test.js pins that
 # literal. The list may only shrink; a fixed line must be removed from it.
-BARE_SPAWN_KNOWN = {
-    ("app/client/launcher.js",
-     'const child = run("powershell.exe", psArgs(path.join(repo, "scripts", '
-     '"autostart.ps1"), [flag]), {'),
-}
+BARE_SPAWN_KNOWN = set()
 
 
 def _app_js():
@@ -244,7 +240,8 @@ def test_no_bare_spawn_names_in_app():
 def test_launcher_runs_powershell_and_python_by_absolute_path():
     text = (APP / "client" / "launcher.js").read_text(encoding="utf-8")
     # TC-CALC-OPTIN-BUTTON (ruling W16-2): the calc setup spawn too
-    for fn in ("function startCore", "function stopAll", "function setupCalc"):
+    for fn in ("function startCore", "function stopAll", "function setupCalc",
+               "function setAutostart"):
         body = text[text.index(fn):]
         body = body[:body.index("\n}\n")]
         assert "run(psExe(env)," in body, fn
