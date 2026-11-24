@@ -71,4 +71,4 @@ changed template is edited in both places together.
     (`RESTARTS_FIX`): `AshLight keeps running by itself. To help find
     the cause, copy this report and send it to the project.`
 
-- setup card facts line (`SETUP_PROMISE`, web/setupcard.js the same): `Read only. Play in Windowed Fullscreen.` One row, at most 52 characters; it drops with the promise line where the setup budget is tight.
+- setup card facts line (`SETUP_PROMISE`, web/setupcard.js the same): `Read only. Play in Windowed Fullscreen.` One row, at most 52 characters; it drops with the promise line where the setup budget is tight. Replaces "Read only. AshLight never touches the game."; the no-touch promise lives in the ask line (SETUP_ASK), the README and About.
