@@ -248,3 +248,43 @@ def test_a_bad_gems_body_keeps_the_cached_file(tmp_path):
     rows = snapprobe.diag_rows({snapprobe.FACT: doc["sources"]}, NOW)
     assert [r["id"] for r in rows] == ["snap_probe_gems"]
     assert "skill gem list" in rows[0]["detail"]
+
+
+# --- ITEM-INFO-UNIQUES-PROBE: the uniques probe ---------------------------
+
+UNIQUES_URL = snapshot.SOURCES["uniques"]
+
+
+def _uniques(n=120, named=True, classed=True):
+    out = {}
+    for i in range(n):
+        e = {"name": f"Unique {i}"} if named else {"tags": ["x"]}
+        if classed:
+            e["item_class"] = "Body Armour"
+        out[f"Metadata/Items/Uniques/U{i}"] = e
+    return out
+
+
+def test_uniques_probe_passes_and_fails():
+    res = snapprobe.probe("uniques", _uniques())
+    assert res["verdict"] == snapprobe.PASS and res["count"] == 120
+    res = snapprobe.probe("uniques", _uniques(named=False))
+    assert res["verdict"] == snapprobe.FAIL and "name" in res["reason"]
+    res = snapprobe.probe("uniques", _uniques(classed=False))
+    assert res["verdict"] == snapprobe.FAIL and "item_class" in res["reason"]
+    res = snapprobe.probe("uniques", _uniques(n=10))
+    assert res["verdict"] == snapprobe.FAIL and "entries" in res["reason"]
+    assert snapprobe.probe("uniques", [])["verdict"] == snapprobe.FAIL
+    assert snapprobe.SOURCE_WORDS["uniques"] == "unique item list"
+
+
+def test_a_bad_uniques_body_keeps_the_cached_file(tmp_path):
+    def run(fake, now):
+        return snapshot.run(tmp_path / "cache", fetch=fake, sources={"uniques": UNIQUES_URL},
+                            probes=snapprobe.PROBES, runtime=tmp_path / "rt",
+                            log_dir=tmp_path / "logs", force=True, now=now)
+    good = _body(_uniques())
+    assert run(Fake({UNIQUES_URL: good}), NOW) == {"uniques": "fetched"}
+    out = run(Fake({UNIQUES_URL: _body(_uniques(named=False))}), NOW + 5)
+    assert out["uniques"].startswith("error: probe:")
+    assert (tmp_path / "cache" / "uniques.json").read_bytes() == good

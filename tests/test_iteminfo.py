@@ -324,10 +324,11 @@ def test_book_info_by_exact_name(tmp_path):
 # --- the snapshot source --------------------------------------------------
 
 def test_snapshot_fetches_the_uniques_source_by_default(tmp_path):
-    assert snapshot.ITEM_SOURCES["uniques"] == "https://repoe-fork.github.io/poe2/uniques.json"
-    snapshot._check_url(snapshot.ITEM_SOURCES["uniques"])
+    assert snapshot.SOURCES["uniques"] == "https://repoe-fork.github.io/poe2/uniques.json"
+    snapshot._check_url(snapshot.SOURCES["uniques"])
     assert "uniques" in snapshot.SOURCE_CAPS
-    assert set(snapshot.default_sources()) == set(snapshot.SOURCES) | {"uniques"}
+    assert set(snapshot.default_sources()) == set(snapshot.SOURCES)
+    assert "uniques" in snapshot.SOURCES
     seen = []
 
     def fetch(url, headers):
@@ -335,7 +336,7 @@ def test_snapshot_fetches_the_uniques_source_by_default(tmp_path):
         raise snapshot.FetchError("network: offline (stub)")
     snapshot.main(["--dir", str(tmp_path), "--opt-in"], environ={}, fetch=fetch,
                   contact="", web_data=False)
-    assert snapshot.ITEM_SOURCES["uniques"] in seen
+    assert snapshot.SOURCES["uniques"] in seen
     seen.clear()
     snapshot.main(["--dir", str(tmp_path)], environ={}, fetch=fetch, contact="",
                   web_data=False)

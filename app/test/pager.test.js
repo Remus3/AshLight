@@ -220,3 +220,20 @@ test("UMD, ASCII and LF, no inline style", () => {
   assert.doesNotMatch(SRC, /[^\x0a\x20-\x7e]/);
   assert.doesNotMatch(SRC, /\.style\b|innerHTML/);
 });
+
+/* RUN-CARDS-PAGE-FIT: a full list page of the Run tab's Acts, Maps and
+   Deaths cards fits the list block measured under their page buttons: the
+   rows plus the Run cards' 24 px pager row (web/app.css #panel-run
+   .al-pager) are at most 244 px at 1280x760 and 204 px at 1024x700, at
+   s = 1. tests/test_play_fit.py proves it in the browser with a state that
+   fills 10 rows on each card (rows10). */
+test("a full Run card page fits the measured 244 / 204 px list block", () => {
+  const RUN_PAGER_PX = 24;
+  const BUDGET = { full: 244, compact: 204 };
+  ["full", "compact"].forEach((k) => {
+    const used = P.LIST_ROWS[k] * P.ROW_PX + RUN_PAGER_PX;
+    assert.ok(used <= BUDGET[k], k + ": " + used + " px of " + BUDGET[k]);
+    // one more row would not fit: the page is as large as the block allows
+    assert.ok(used + P.ROW_PX > BUDGET[k], k + ": a page could hold another row");
+  });
+});

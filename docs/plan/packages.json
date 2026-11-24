@@ -23507,9 +23507,13 @@
     "tests/test_kindler_templates.py",
     "tests/test_kindler_engine.py",
     "tests/test_kindler_live.py",
-    "tests/kindler_fixtures.py"
+    "tests/kindler_fixtures.py",
+    "docs/design/copy/kindler.md",
+    "tests/test_structure.py"
    ],
-   "new_files": [],
+   "new_files": [
+    "server/al/text/kindler.py"
+   ],
    "integrator_edits": [
     {
      "file": "ROADMAP.md",
@@ -23534,10 +23538,10 @@
    "agent": "general-purpose",
    "isolation": "worktree",
    "lane": "data",
-   "design_review": false,
+   "design_review": true,
    "blocked": null,
    "operator_act": "",
-   "notes": "Live finding: warrior_mace_slam Boneshatter dps 0. Schema addition to archetypes.json; never guessed bases. test_kindler_live.py is a calc test (CALC_TESTS) and skips without the calc.",
+   "notes": "Live finding: warrior_mace_slam Boneshatter dps 0. Schema addition to archetypes.json; never guessed bases. test_kindler_live.py is a calc test (CALC_TESTS) and skips without the calc. Widened 2026-11-24 (ORCH-46): reverted from wave 47 batch 2 (merge 1b904c8 reverted by 2edb02b) because tests/test_structure.py copy gate found player sentences in archetypes.py and kindler.py outside server/al/text/; carried into wave 48: new server/al/text/kindler.py holds them, the kindler copy sheet lists them, tests/test_structure.py may adjust the kindler sheet entry; design review on.",
    "wave": 47,
    "owner": "session"
   },
