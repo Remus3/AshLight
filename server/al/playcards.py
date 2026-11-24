@@ -68,7 +68,7 @@ SETUP_TITLE = "Set up AshLight"
 SETUP_ASK = "Let AshLight read the game's log, read only:"
 SETUP_NO_PATH = "Client.txt not found yet. Start the game once."
 SETUP_BUTTON = "Allow reading Client.txt"  # the floor's opt-in words, unchanged
-SETUP_PROMISE = "Read only. AshLight never touches the game."
+SETUP_PROMISE = "Read only. Play in Windowed Fullscreen."
 SETUP_STEPS = (
     ("build", "Your build", "loaded", "not set, optional"),
     ("prices", "Prices", "on", "off, optional"),
