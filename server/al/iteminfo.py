@@ -11,7 +11,7 @@ on this computer; nothing goes on the network:
   base a full stack becomes), "description" and "directions" (markup like
   "[ItemRarity|Rare]" read as its plain text), "release_state" (only when
   it is not "released");
-- the repoe-fork uniques snapshot (snapshot.ITEM_SOURCES): "rarity"
+- the repoe-fork uniques snapshot (in snapshot.SOURCES): "rarity"
   "Unique", its "item_class" and a "release_state" that is not "released".
   Rarity is never given to anything else (currency has none);
 - the poe.ninja price book (decision 0026: the Currency rates, then the

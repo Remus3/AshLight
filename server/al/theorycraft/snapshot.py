@@ -36,7 +36,7 @@ AL_NO_SNAPSHOT=1 skips it always (AUDIT-SNAPSHOT-OPTIN).
 ITEM-INFO-CORE (decision 0083): SOURCES holds repoe-fork's uniques.json
 (same licence, opt-in and cache as base_items, decision 0009) for the item
 info popover (server/al/iteminfo.py). ITEM-INFO-UNIQUES-PROBE: it joined
-SOURCES (ITEM_SOURCES is gone; default_sources() is SOURCES) and has a probe
+SOURCES (default_sources() is SOURCES, no separate item list) and has a probe
 (snapprobe.PROBES "uniques": name and item_class).
 
 DATA-GEMS-SNAP: SOURCES adds repoe-fork's gems.json (same MIT export,
