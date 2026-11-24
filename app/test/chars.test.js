@@ -103,6 +103,11 @@ function fakeDoc(size) {
     get textContent() { return this._text + this.children.map((c) => c.textContent).join(""); },
     set textContent(v) { this.children = []; this._text = String(v); },
     appendChild(c) { c.parentNode = this; this.children.push(c); return c; },
+    insertBefore(c, ref) {
+      const i = this.children.indexOf(ref);
+      if (i < 0) { return this.appendChild(c); }
+      c.parentNode = this; this.children.splice(i, 0, c); return c;
+    },
     removeChild(c) { this.children = this.children.filter((x) => x !== c); return c; },
     replaceChildren(...kids) { this.children = []; this._text = ""; kids.forEach((k) => this.appendChild(k)); },
     setAttribute(k, v) { this.attrs[k] = String(v); if (k === "id") { doc.els[v] = this; } },
@@ -145,7 +150,7 @@ function charsCard(size) {
   const d = fakeDoc(size);
   mk(d, "section", { id: "charsbox", class: "card grid-card chars" }, [
     mk(d, "div", { class: "card-page", "data-page": "main" }, [
-      mk(d, "p", { id: "char-pick-box", hidden: true }, [mk(d, "select", { id: "char-pick" })]),
+      mk(d, "p", { id: "char-pick-box", hidden: true }, [mk(d, "label", { for: "char-pick" }), mk(d, "select", { id: "char-pick" })]),
       mk(d, "p", { id: "chars-empty" }), mk(d, "div", { id: "chars-rows", hidden: true })])]);
   return d;
 }
@@ -191,15 +196,15 @@ test("chars paint: the picker shows with 2+ characters, the rows page at 8 (6 co
   assert.equal(d.getElementById("char-pick-box").hidden, true);
   assert.equal(d.getElementById("chars-rows").hidden, true);
   assert.equal(d.getElementById("chars-empty").hidden, false);
-  // 12 names: 8 rows a page (6 compact)
+  // 12 names: 5 rows a page (4 compact; CP-1, the wrapped picker)
   const by = {};
   for (let i = 0; i < 12; i += 1) { by["C" + i] = { best: [] }; }
   ["full", "compact"].forEach((size) => {
     const c = charsCard(size);
     ch.paint(c, { characters: [], run_history: { by_character: by } }, "");
-    assert.equal(listOf(c, "chars-rows").children.length, size === "full" ? 8 : 6, size);
+    assert.equal(listOf(c, "chars-rows").children.length, size === "full" ? 5 : 4, size);
   });
-  assert.deepEqual(ch.ROWS, { full: 8, compact: 6 });
+  assert.deepEqual(ch.ROWS, { full: 5, compact: 4 });
 });
 
 test("the Characters card in the markup: the picker and its rows, after Recent", () => {
@@ -225,6 +230,9 @@ test("chars pin: one click pins the shown character, a click on the pressed pin 
   const pin = d.getElementById("char-pin");
   assert.ok(pin, "the pin is in the picker line");
   assert.equal(pin.parentNode, d.getElementById("char-pick-box"));
+  // CP-1: DOM (= visual and Tab) order label, pin, select, failure line
+  assert.deepEqual(d.getElementById("char-pick-box").children.map((c) => c.tagName + (c.getAttribute("id") ? "#" + c.getAttribute("id") : "")),
+    ["LABEL", "BUTTON#char-pin", "SELECT#char-pick", "SPAN#char-pin-said"]);
   assert.equal(pin.tagName, "BUTTON");
   assert.equal(pin.getAttribute("type"), "button");
   assert.equal(pin.textContent, ch.PIN_LABEL);

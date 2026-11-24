@@ -10,12 +10,12 @@
    PLAY-TD-20B-RUN-CARDS (plan 03 section 4): the Run grid's Characters
    card holds the picker (looking at another character is a review act)
    and one row per character: who is playing, class, level, deaths and the
-   best act times from run history, paged at 8 (6 compact) under the
-   picker through web/acts.js's pager. The picker moved here from the Acts
+   best act times from run history, paged at 5 (4 compact; CP-1) under
+   the picker through web/acts.js's pager. The picker moved here from the Acts
    card's pace page; web/acts.js still reads its choice (#char-pick).
 
    RUN-CHARACTER-PIN (F-157): a 'This is my character' toggle button
-   (#char-pin, aria-pressed) after the picker pins the character the
+   (#char-pin, aria-pressed) in the picker line pins the character the
    picker shows (the picked one, else the one being played): one click
    posts POST /api/character, which writes the same "character" setting a
    player could type into config/local.json; a click on the pressed pin
@@ -29,7 +29,11 @@
    the page's one shared polite line, the header's #tab-news, through
    ALTabs.say (design 0001 N6, as SAVE-FAIL-SAY; a region of its own would
    breach the 6-region cap of tests/test_a11y.py), so it is heard while
-   focus has left the button. */
+   focus has left the button.
+
+   CP-1: the pin is made between the label and the select, so it shares
+   the label's line and the select takes a line of its own (web/app.css);
+   DOM order is the visual and Tab order (no CSS order, test_ux_b8). */
 (function (root, factory) {
   "use strict";
   var common = typeof module === "object" && module.exports;
@@ -75,10 +79,13 @@
   var PLAYING = " (playing now)";
   var NOT_PLAYING = " (not playing)";
   var HISTORY_ONLY = " (history only)";
-  /* rows a page under the picker: 32 + 4 + 8 x 22 + pager 24 = 236 of the
-     244 px under the title at 1280x760 (compact 32 + 4 + 6 x 22 + 24 = 192
-     of 204 at 1024x700) */
-  var ROWS = { full: 8, compact: 6 };
+  /* rows a page under the picker (CP-1): the picker at its tallest is 85 px
+     (label and pin 24, 4, the select's own line 33, 4, the pin's failure
+     line 20; web/app.css), so 85 + 4 + 5 x 22 + pager 24 = 223 of the 244 px
+     under the title at 1280x760 (compact 85 + 4 + 4 x 22 + 24 = 201 of 204
+     at 1024x700); tests/test_play_fit.py measures the picker and reads
+     these numbers */
+  var ROWS = { full: 5, compact: 4 };
   var PIN_LABEL = "This is my character";
   var PIN_FAILED = "AshLight couldn't save the pin. Try again.";
   var PIN_PATH = "/api/character";
@@ -204,7 +211,8 @@
       shownName(snap, picked) === snap.character);
   }
 
-  /* The pin button, made once after the picker in its line. */
+  /* The pin button, made once in the picker line before the select (CP-1:
+     the label's line); its failure line goes last. */
   function pinButton(doc, box) {
     var b = doc.getElementById("char-pin");
     if (b) { return b; }
@@ -216,7 +224,8 @@
     b.setAttribute("aria-pressed", "false");
     b.setAttribute("aria-describedby", "char-pin-said");
     b.textContent = PIN_LABEL;
-    box.appendChild(b);
+    var sel = doc.getElementById("char-pick");
+    if (sel && sel.parentNode === box) { box.insertBefore(b, sel); } else { box.appendChild(b); }
     var said = doc.createElement("span");
     said.setAttribute("id", "char-pin-said");
     said.className = "muted";
