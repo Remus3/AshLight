@@ -122,3 +122,41 @@ only"); include the file in the export (deferred, cheap to add later).
 Reverses if: the operator wants the browser to collapse cards or the
 layout exported; or players ask for the layout to be cleared with run
 history.
+
+## Amendment 2026-11-23 (UI-CARD-COLLAPSE build: PUT plug routes, pager fit)
+
+Ruled by an adjudicator agent the same day, while UI-CARD-COLLAPSE was
+built. The state lines and layout lines above stand.
+
+- The plug seam accepts PUT (server/al/plug ROUTE_VERBS gains "PUT").
+  Handler.do_PUT falls through to the plug when PUT_ROUTES has no entry;
+  the guard runs before the plug call, and a PUT path neither holds stays
+  405 before the token check. GET and PUT /api/ui/layout are token-gated
+  plug routes in server/al/plug/uilayout.py; the PUT body is a partial
+  {"collapsed": {"<card id>": bool}} map capped at MAX_BODY (4096).
+  Alternatives: POST (a wording change to this decision); a built-in
+  PUT_ROUTES entry delegating to the plug (a fixed table depending on an
+  optional module, against decision 0056). Why: the record and the code
+  match with a minimal, tested seam change. Reverses if: a plug PUT route
+  is found to bypass the handler guard, token, Host / Origin or CSP
+  checks, or the operator rules PUT must stay built-in only.
+- The rows that fit: web/pager.js fitRows(node, sizeClass, base, rowPx)
+  gives a card marked data-fit="tall" (an open card whose column-mate is
+  collapsed in the cockpit grid, set by web/collapse.js) a fixed extra
+  number of rows per size class (264 px full, 236 px compact at s = 1, at
+  the row height), never a measurement; refit() re-renders the pagers
+  build() made, and web/search.js rowPager sizes through fitRows and
+  relayout() re-renders on a fit change. Alternative: only build()
+  pagers grow, rowPager deferred to a later row. Why: most cards page
+  through rowPager; the figure is deterministic, so no flicker. Reverses
+  if: the fixed extra shows visible slack or overflow at scale 1 with
+  real strings, a re-render flickers a pager in play, or a later package
+  takes web/search.js with a conflicting change.
+- Cards are keyed by their section id; the Recent card on Run has none
+  and is keyed eventsbox, found by its class (web/collapse.js BY_CLASS),
+  so the page markup and the card-order test stay as they are. An alert
+  opens its card for that alert without changing the saved state: a new
+  build alert opens Build, a new death opens Deaths, a new trade request
+  opens Recent. It stays open until the player's click (nothing collapses
+  by itself); a reconnect does not reopen a Build card the player
+  collapsed while the same alert showed.

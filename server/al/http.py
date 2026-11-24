@@ -26,7 +26,7 @@ Security floor (CLAUDE.md "Stack and ports", research 0008):
   run _guard (PUT: after its 405 test) and then look the path up in one
   table per verb (GET_ROUTES, POST_ROUTES, PUT_ROUTES); a new endpoint is
   a table entry, never a new dispatch arm;
-- RUN-SEAMS (decision 0056): a GET or POST path no built-in route takes
+- RUN-SEAMS (decision 0056): a GET, POST or PUT path no built-in route takes
   falls through to plug.route (server/al/plug/), after _guard, and only
   for an exact path under /api/, so a plug route always needs the token;
 - SEC-SSE-TAP (F-106): /events sends state frames only; a bus event just
@@ -660,14 +660,17 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_PUT(self):
         path, query = self._url()
-        # an unknown PUT path is 405 before the token check, as it always
-        # was; a known one runs only after _guard
+        # an unknown PUT path (no table entry, no plug route) is 405 before
+        # the token check, as it always was; a known one runs only after
+        # _guard. UI-CARD-COLLAPSE: a plug PUT route is the fall-through.
         fn = route_for(PUT_ROUTES, path)
-        if fn is None:
+        if fn is None and plug.route("PUT", path) is None:
             return self._not_allowed()
         extra = self._guard(path, query, self._needs_token(path))
         if extra is None:
             return None
+        if fn is None:
+            return self._plug("PUT", path, query, extra)
         return fn(self, path, query, extra)
 
     def _not_allowed(self):
@@ -1359,8 +1362,8 @@ def route_for(table, path):
 # TEST-HTTP-ROUTES (F-193): the built-in routes, one table per verb. Each
 # function is called as fn(handler, path, query, extra) after _guard; HEAD
 # runs the GET table. A path no table holds falls through to plug.route
-# (GET / POST, decision 0056) or is 405 (PUT). tests/test_security_surface.py
-# reads these keys and pins them.
+# (GET / POST / PUT, decision 0056); a PUT path neither holds is 405.
+# tests/test_security_surface.py reads these keys and pins them.
 GET_ROUTES = {
     "/": Handler._get_index,
     "/index.html": Handler._get_index,

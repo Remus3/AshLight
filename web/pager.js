@@ -44,7 +44,18 @@
      the row's full text (default String), sizeClass ("full" | "compact"
      or a function giving one; anything else counts as full), label (the
      card's name, for the button labels). Returns {node, list, bar, prev,
-     next, toggle, set(rows), press(which), state(), render()}. */
+     next, toggle, set(rows), press(which), state(), render()}.
+   - fitRows(node, sizeClass, base, rowPx) (UI-CARD-COLLAPSE, decision
+     0082 part 3): the list rows that fit. base, unless the card around
+     node carries data-fit="tall" (web/collapse.js sets it on an open card
+     whose column-mate is collapsed in the cockpit grid): then base plus
+     the rows of FREED_PX (the height the collapsed card gave up, at s = 1:
+     the open card less its title row) at rowPx (default ROW_PX) each. A
+     fixed figure per size class, never a measurement, so a page never
+     flickers.
+   - refit(): every pager build() made that is still in the page renders
+     again when its rows a page changed (a card collapsed or opened); the
+     page is clamped as on a data change. No timer, no request. */
 (function (root, factory) {
   "use strict";
   var api = factory();
@@ -66,6 +77,11 @@
   };
   var ROW_PX = 22;
   var PAGER_PX = 28;
+  // UI-CARD-COLLAPSE: px a tall card gains at s = 1 (open card 322 / 292
+  // less its 52 px title row, a few px kept as slack); every px is a rem
+  // step, so the row count holds at every scale step
+  var FREED_PX = { full: 264, compact: 236 };
+  var live = []; // build() pagers: {node, rows(), render, last}
   var CLS = {
     host: "al-pager-host",
     list: "al-pager-list",
@@ -144,6 +160,30 @@
     return el;
   }
 
+  /* The card around node is tall (web/collapse.js data-fit="tall"). */
+  function isTall(node) {
+    for (var n = node; n; n = n.parentNode) {
+      if (isFn(n.getAttribute) && n.getAttribute("data-fit") === "tall") { return true; }
+    }
+    return false;
+  }
+
+  function fitRows(node, sizeClass, base, rowPx) {
+    var b = Math.max(1, toInt(base, 1));
+    var px = FREED_PX[sizeClass];
+    if (!px || !isTall(node)) { return b; }
+    var r = toInt(rowPx, ROW_PX);
+    return b + Math.floor(px / (r > 0 ? r : ROW_PX));
+  }
+
+  function refit() {
+    live = live.filter(function (p) { return p.node.isConnected !== false; });
+    live.forEach(function (p) {
+      var n = p.rows();
+      if (n !== p.last) { p.render(); }
+    });
+  }
+
   function el(doc, tag, cls) {
     var n = doc.createElement(tag);
     if (cls) { n.className = cls; }
@@ -190,9 +230,13 @@
       return v === "compact" ? "compact" : "full";
     }
 
-    function size() {
+    function listRows() {
       var k = sizeClass();
-      return mode === "text" ? TEXT[k].entries : LIST_ROWS[k];
+      return fitRows(node, k, LIST_ROWS[k], ROW_PX);
+    }
+
+    function size() {
+      return mode === "text" ? TEXT[sizeClass()].entries : listRows();
     }
 
     function state() {
@@ -207,7 +251,10 @@
       if (on) { b.removeAttribute("aria-disabled"); } else { b.setAttribute("aria-disabled", "true"); }
     }
 
+    var mine = { node: node, rows: listRows, render: function () { render(); }, last: null };
+
     function render() {
+      mine.last = listRows();
       var p = state();
       var k = p.sizeClass;
       clear(list);
@@ -270,6 +317,7 @@
     }
 
     render();
+    live.push(mine);
     return {
       node: node, list: list, bar: bar, count: count, prev: prev, next: next,
       toggle: toggle, set: set, press: press, state: state, render: render
@@ -278,6 +326,7 @@
 
   return {
     LIST_ROWS: LIST_ROWS, TEXT: TEXT, ROW_PX: ROW_PX, PAGER_PX: PAGER_PX, CLS: CLS,
-    page: page, wrap: wrap, rowRule: rowRule, build: build
+    FREED_PX: FREED_PX, page: page, wrap: wrap, rowRule: rowRule, build: build,
+    fitRows: fitRows, refit: refit
   };
 }));
