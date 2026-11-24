@@ -471,8 +471,12 @@ def test_trial_rehashes_pob2_files_and_records_old_new_and_rows(tmp_path):
     # review lines name old, new and the parsed row count
     assert (root / "config" / "tc_pins.json").read_bytes() == pins_before
     lines = tc_drift.pob2_files_review(st["trial"])
-    assert len(lines) == 1 and pin["sha256"] in lines[0] and new_sha in lines[0]
-    assert "2 rows parsed" in lines[0]
+    # ITEM-INFO-POB-TEXT: one line per pinned entry (the others are MISSING
+    # in this fake candidate); the TradeSiteStats line is picked by path
+    assert len(lines) == len(json.loads(pins_before)["pob2_files"]) - 1  # less _doc
+    trade = [line for line in lines if POB_REL in line]
+    assert len(trade) == 1 and pin["sha256"] in trade[0] and new_sha in trade[0]
+    assert "2 rows parsed" in trade[0]
     assert tc_drift.apply(root) == "v0.24.0"
     moved = json.loads((root / "config" / "tc_pins.json").read_text(encoding="ascii"))
     assert moved["pob2_files"][POB_REL]["sha256"] == new_sha
@@ -480,7 +484,8 @@ def test_trial_rehashes_pob2_files_and_records_old_new_and_rows(tmp_path):
     # an unchanged file reads "unchanged"; a missing one keeps the old entry
     # so the static guard reports it, and the review says MISSING
     same = {"pob2_files": {POB_REL: dict(row, old_sha256=new_sha, changed=False)}}
-    assert "unchanged" in tc_drift.pob2_files_review(same)[0]
+    assert any("unchanged" in line and POB_REL in line
+               for line in tc_drift.pob2_files_review(same))
     (tmp_path / "b").mkdir()
     root2 = _root(tmp_path / "b")
     res, seen = _trial(root2, JUNIT_GREEN,
@@ -488,7 +493,8 @@ def test_trial_rehashes_pob2_files_and_records_old_new_and_rows(tmp_path):
     row = res["pob2_files"][POB_REL]
     assert row["new_sha256"] is None and row["rows"] is None and row["changed"] is True
     assert seen["cand"][0]["pob2_files"][POB_REL]["sha256"] == pin["sha256"]
-    assert "MISSING" in tc_drift.pob2_files_review(res)[0]
+    assert any("MISSING" in line and POB_REL in line
+               for line in tc_drift.pob2_files_review(res))
 
     # a checkout not extracted from the candidate archive is an error, not a pass
     (tmp_path / "c").mkdir()
