@@ -1302,6 +1302,13 @@ of the HALT check.
   cockpit, and in the compact class the Build panel shows two equal
   columns while a plan shows (full keeps editor in column 1, plan in
   columns 2-3).
+  KINDLER-GEM-VARIANT: skill gem variant ids come only from the pinned
+  PoB-PoE2 src/Data/Gems.lua, read as text (never run as Lua) under its
+  pob2_files sha256 and the checkout marker; an id is composed only when
+  PoB holds the gem name under several variants and the template's
+  checked weapon class picks exactly one of them (Mace Strike with a one
+  hand mace is Melee1HMacePlayer); otherwise the gem is written by name,
+  byte-identical to before, never guessed; the result key is unchanged.
   Reverses if: PoB drift makes route XML unreliable,
   12 candidates in 60 s breach the 0024 / 0028 budgets,
   automatic regeneration is wanted and shown to cost no FPS, 6 tabs prove
@@ -1317,8 +1324,9 @@ of the HALT check.
   line as its base, a template needs a weapon per stage, a stale
   cached result is seen after a base_items refresh, the plan or editor
   card gains rows that break the measured slack, the compact two-column
-  split feels cramped in use, or `@media not (...)` fails in the pinned
-  Electron.
+  split feels cramped in use, `@media not (...)` fails in the pinned
+  Electron, or PoB renames its gem skill ids or drops Gems.lua
+  (KINDLER-GEM-VARIANT).
 - DATA-GEMS-SNAP: snapshot.SOURCES adds repoe-fork's poe2 gems.json, cached
   as the gems.json that theorycraft/archetypes.py reads (GEMS_FILE), with
   the same web_data opt-in, cache, User-Agent and attribution as base_items
@@ -1336,7 +1344,9 @@ of the HALT check.
   /api/iteminfo; the visible "AshLight" header text goes (mark
   decorative, sr-only h1, document.title kept) and "Version <x.y.z>,
   build <12 hex>" shows in the footer and Settings > About and data by
-  widening RUN-BUILD-STAMP-UI; cards on Build and items and Run collapse
+  widening RUN-BUILD-STAMP-UI (WEB-PLAY-FOOT-ONE-ROW, 2026-11-24: the
+  footer shows the build cut to 7 hex so it keeps one 32 px row at
+  1024 px; Settings > About and data keeps the full 12); cards on Build and items and Run collapse
   to their title row, open cards share the freed height by grid fr
   tracks, Play and Settings never collapse, an alert expands its card
   (decision 0082; amended 2026-11-19: collapse buttons only in the

@@ -1,0 +1,1 @@
+ -- done 2026-11-24 (session wave 53; verified; design review fix round TCVF-1 (sentences lead with the reason) and TCVF-2 (copy sheet line))

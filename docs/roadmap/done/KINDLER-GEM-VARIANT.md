@@ -1,0 +1,1 @@
+ -- done 2026-11-24 (session wave 53; verified; ids from pinned PoB Gems.lua, not the gems snapshot (not cached on the dev host))

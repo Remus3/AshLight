@@ -1,0 +1,1 @@
+ -- done 2026-11-24 (session wave 53; verified in part: footer 32 px and G1 enforced, g.txt kept for the G5 totals, follow-up PLAY-FIT-G5-TOTALS)
