@@ -175,32 +175,12 @@ function webVersionText(name) {
 
 /* WEB-PLAY-FOOT-ONE-ROW: the footer's short form, the same line with the
    build cut to 7 hex so the footer keeps one row at 1024 px. */
-test("dashboard footerParts: the version line with a 7-hex build", () => {
-  const parts = webVersionText("footerParts");
-  const vt = webVersionText();
+test("dashboard footerText: the version line with the build cut to 7 hex", () => {
+  const short = webVersionText("footerText");
   for (const [doc, want] of LINES) {
-    const p = parts(doc);
-    if (!want) { assert.equal(p, null, JSON.stringify(doc)); continue; }
-    const full = vt(doc);
-    if (full.includes(", build ")) {
-      assert.equal(p.hash, SHA.slice(0, 7), JSON.stringify(doc));
-      assert.equal(p.head + SHA + p.tail, full, JSON.stringify(doc));
-    } else {
-      assert.deepEqual({ ...p }, { head: full, hash: "", tail: "" }, JSON.stringify(doc));
-    }
+    assert.equal(short(doc), want.replace(SHA, SHA.slice(0, 7)), JSON.stringify(doc));
   }
-  const dev = parts({ build: "0.1.0+" + SHA + ".dev" });
-  assert.equal(dev.head + dev.hash + dev.tail, "Version 0.1.0, build 0123456, dev");
-});
-
-test("dashboard footer fills its line with text nodes and one fixed-width hash", () => {
-  const js = web.source("version.js");
-  const fill = /function fillFooter\(line, parts\) \{([\s\S]*?)\n  \}/.exec(js);
-  assert.ok(fill, "fillFooter in web/panels/version.js");
-  assert.ok(!/innerHTML|insertAdjacentHTML|outerHTML/.test(fill[1]), "no markup");
-  assert.match(fill[1], /hash\.className = "foot-hash";/);
-  const css = web.source("app.css");
-  assert.match(css, /\.foot-hash \{ font-family: var\(--al-font-mono\); \}/);
+  assert.equal(short({ build: "0.1.0+" + SHA + ".dev" }), "Version 0.1.0, build 0123456, dev");
 });
 
 test("dashboard versionText says exactly what the About text says", () => {
@@ -231,7 +211,7 @@ test("Settings > About and data carries the full line of the footer's short form
   assert.ok(!settings.includes('id="about-fold"'), "no About fold left");
   assert.match(about, /<p id="about-version" class="muted">/);
   const js = web.source("version.js");
-  assert.match(js, /var ver = versionText\(doc\);\s*if \(ver\) \{\s*fillFooter\(\$\("build-line"\), footerParts\(doc\)\);\s*\$\("build-line"\)\.hidden = false;\s*\$\("about-version"\)\.textContent = ver;/);
+  assert.match(js, /var ver = versionText\(doc\);\s*if \(ver\) \{\s*\$\("build-line"\)\.textContent = footerText\(doc\);\s*\$\("build-line"\)\.hidden = false;\s*\$\("about-version"\)\.textContent = ver;/);
 });
 
 /* PUB-GUIDE-DOWNLOAD-PLACE (F-126): the one download place, the releases
