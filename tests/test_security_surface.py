@@ -81,8 +81,7 @@ ROUTES = {
     # (server/al/plug/report.py); the report built on the click
     ("GET", "/api/report"): (HEADER, None),
     ("GET", "/events"): (QUERY, None),
-    # token POST (19)
-    ("POST", "/api/clipboard-read"): (HEADER, None),  # a 501 stub (decision 0003)
+    # token POST (20)
     ("POST", "/api/consent"): (HEADER, 4096),
     ("POST", "/api/overlay-layout"): (HEADER, 4096),
     ("POST", "/api/trade-dismiss"): (HEADER, 4096),
@@ -351,7 +350,7 @@ def test_route_table_matches_http_py():
         counts[(method, rule)] = counts.get((method, rule), 0) + 1
     assert counts == {("GET", NONE): 5, ("GET", PROOF): 1, ("GET", HEADER): 17,
                       ("GET", QUERY): 1,
-                      ("POST", HEADER): 21, ("PUT", HEADER): 1,
+                      ("POST", HEADER): 20, ("PUT", HEADER): 1,
                       ("DELETE", REFUSED): 1, ("PATCH", REFUSED): 1,
                       ("OPTIONS", REFUSED): 1}
     # the token rule in the source is the one the table assumes
