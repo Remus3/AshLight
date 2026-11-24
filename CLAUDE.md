@@ -462,7 +462,12 @@ of the HALT check.
   2; phase 2 stays serial. The interim bound reverses if a soak median
   after the packages is at or under 125 s (restore 120 s), the calc split
   shows under 90 s (tighten), or a soak median exceeds 145 s (bisect, do
-  not move the number). Reverses if: subset runs cause machine
+  not move the number). Amended 2026-11-24 (TEST-XDIST-GROUP-RESTORE):
+  tests/conftest.py restores xdist_group under pytest 9.2.0 with xdist
+  3.8.0 (pins unchanged) and the test_shots render runs first; soaks
+  135.6 / 137.7 / 136.9 s, median 136.9 s, the 145 s bound does not
+  move; reverses if a fixed xdist sets the group through Node._id (drop
+  the wrapper). Reverses if: subset runs cause machine
   contention or missed regressions, or MAIN's kit changes item 16c to
   forbid ungated file-named runs.
 - Clipboard / screen only per AshLight hotkey press, never a watcher, never
