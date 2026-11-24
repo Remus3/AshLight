@@ -43,7 +43,7 @@
   var LABEL = "Best checks";
   // play.kept is null until BUILD-LIVE has a list; the core's own empty
   // line wins whenever it sends one
-  var EMPTY_NONE = "Items you check rank here, best first.";
+  var EMPTY_NONE = "Check items to rank them.";
   var CLASSES = ["full", "compact", "flow"];
 
   function isObj(v) { return v !== null && typeof v === "object" && !Array.isArray(v); }
@@ -107,7 +107,8 @@
   function setAttr(n, k, v) { if (n.getAttribute(k) !== v) { n.setAttribute(k, v); } }
 
   // the region's nodes, made once by wire() (or the first paint): the
-  // label, the list of 3 reserved rows and the empty line
+  // the list of 3 reserved rows and the empty line (the label is the
+  // region's own visible heading in web/index.html, PLAY-FIT-G5-TOTALS)
   var nodes = { doc: null, root: null, list: null, rows: [], empty: null };
   var state = { cls: null, snap: null, listening: false };
 
@@ -115,9 +116,12 @@
     if (nodes.doc === doc && nodes.root) { return nodes; }
     var slot = slotOf(doc);
     if (!slot || typeof doc.createElement !== "function") { return null; }
-    var rootEl = el(doc, "div", "kc", "kc");
-    var label = el(doc, "p", "kc-label row-meta one-line", "kc-label");
-    label.textContent = LABEL;
+    // the slot is the kept-checks box itself (PLAY-FIT-G5-TOTALS: no wrapper)
+    var rootEl = slot;
+    if ((" " + rootEl.className + " ").indexOf(" kc ") < 0) {
+      rootEl.className = rootEl.className ? rootEl.className + " kc" : "kc";
+    }
+    rootEl.id = "kc";
     var list = el(doc, "ol", "kc-list", "kc-list");
     var rows = [];
     for (var i = 0; i < 3; i++) {
@@ -128,10 +132,8 @@
     }
     var empty = el(doc, "p", "kc-empty row-meta muted one-line", "kc-empty");
     empty.hidden = true;
-    rootEl.appendChild(label);
     rootEl.appendChild(list);
     rootEl.appendChild(empty);
-    slot.appendChild(rootEl);
     nodes = { doc: doc, root: rootEl, list: list, rows: rows, empty: empty };
     return nodes;
   }

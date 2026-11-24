@@ -51,7 +51,7 @@
   var LABEL_CAP = 12;            // plan 03 3.4: an action label is at most 12 characters
   var HIDE = "Hide";
   // N14-3: the empty state says what the slot is for (one 16 px line)
-  var EMPTY_TITLE = "none - tips and setup steps show here";
+  var EMPTY_TITLE = "none - tips show here";
   /* Server action labels (server/al/playview.py) -> what the click does. */
   var ACTIONS = { "Open Checks": "checks", "Settings": "settings" };
   var TONES = { "needs-operator": "warn", "failed": "bad" };
@@ -163,16 +163,16 @@
 
   var state = { box: null, ctx: null, cls: null, snap: null };
 
-  /* The one box in the slot: the polite live region. */
+  /* The one box: the slot itself is the polite live region
+     (PLAY-FIT-G5-TOTALS: no wrapper of its own). */
   function boxOf(doc) {
-    if (state.box && state.box.parentNode) { return state.box; }
     var slot = slotOf(doc);
     if (!slot) { return null; }
-    var box = el(doc, "div", "notice");
-    box.setAttribute("aria-live", "polite");
-    slot.appendChild(box);
-    state.box = box;
-    return box;
+    if (state.box === slot) { return slot; }
+    slot.className = "slot notice";
+    slot.setAttribute("aria-live", "polite");
+    state.box = slot;
+    return slot;
   }
 
   /* Draw a model into the box (only when its key changed). */
@@ -182,16 +182,17 @@
     box.setAttribute("data-kind", String(m.kind));
     box.setAttribute("data-state", m.state);
     box.setAttribute("data-tone", m.tone);
-    box.className = "notice edge" + (m.empty ? " notice-empty" : "");
+    box.className = "slot notice edge" + (m.empty ? " notice-empty" : "");
     // N14-1: the polite region says a notice that arrives, never "Notices
     // none" when one leaves: it is off while empty, set before the swap
     box.setAttribute("aria-live", m.empty ? "off" : "polite");
     box.textContent = "";
-    var head = el(doc, "div", "notice-head");
+    // the head row's parts sit in the box itself (no head wrapper); the
+    // body rows take a full line each below them (web/notice.css)
+    var head = box;
     if (m.empty) {
       head.appendChild(el(doc, "p", "notice-label row-title muted", m.word));
       head.appendChild(el(doc, "p", "notice-none row-body one-line muted", m.title));
-      box.appendChild(head);
       return true;
     }
     var word = el(doc, "p", "notice-word row-title one-line");
@@ -216,7 +217,6 @@
       b.addEventListener("click", function () { onAction(m.action.does); });
       head.appendChild(b);
     }
-    box.appendChild(head);
     m.rows.forEach(function (r) {
       var p = el(doc, "p", "notice-row row-body one-line", r);
       p.setAttribute("title", r);

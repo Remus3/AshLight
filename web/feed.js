@@ -51,9 +51,11 @@
   var NEW_S = 60;         // the word "new" this long after arrival
   var ROWS = 5;
   var ELLIPSIS = "...";
-  var EMPTY = "Nothing yet. Trades and events show up here as you play.";
+  var EMPTY = "Nothing yet. Trades and events show here.";
   var NOT_DISMISSED = "Not dismissed. Try again.";
-  var TAGS = { trade: "Trade", death: "Death", level: "Level", zone: "Zone" };
+  // a trade row has no tag (PLAY-FIT-G5-TOTALS, design 0001 ruling 2026-11-24:
+  // the head "Trades N", the verb, the price and Dismiss already say it)
+  var TAGS = { death: "Death", level: "Level", zone: "Zone" };
   var LADDER_TOP = 9;
 
   function isObj(v) { return v !== null && typeof v === "object"; }
@@ -180,7 +182,7 @@
       if (row.kind === "trade") {
         var p = splitLead(it.lead, it.from);
         var w = splitWhere(it.where);
-        return { kind: "trade", key: "t" + it.id, id: it.id, tag: TAGS.trade,
+        return { kind: "trade", key: "t" + it.id, id: it.id, tag: "",
                  from: it.from, buyer: p.buyer, verb: p.verb, item: p.item, price: p.price,
                  isNew: fresh, tab: w.tab, pos: w.pos,
                  age: age !== null && age >= NEW_S ? Math.floor(age / 60) + "m" : "",
@@ -288,7 +290,11 @@
       var slot = doc.querySelector("#play-t > [data-slot=\"t\"]");
       if (!region || !slot) { return; }
       var h = doc.getElementById("play-t-h");
-      var box = el(doc, "div", "feed");
+      // the slot is the feed box itself (PLAY-FIT-G5-TOTALS: no wrapper)
+      var box = slot;
+      if ((" " + box.className + " ").indexOf(" feed ") < 0) {
+        box.className = box.className ? box.className + " feed" : "feed";
+      }
       var head = el(doc, "div", "feed-head");
       if (!h) { h = el(doc, "h2"); h.id = "play-t-h"; }
       h.className = "region-h feed-h";
@@ -310,7 +316,6 @@
       box.appendChild(head);
       box.appendChild(list);
       box.appendChild(empty);
-      slot.appendChild(box);
       ui = { doc: doc, region: region, h: h, status: status, all: all, list: list, empty: empty };
     }
 
@@ -357,11 +362,10 @@
 
     function tradeNode(doc, r) {
       var li = el(doc, "li", "feed-row feed-trade edge edge-accent");
+      // flat (PLAY-FIT-G5-TOTALS): the row's parts sit in the row itself;
+      // the verb leads the item span ("wants Grim Bane Ruby Ring")
       var parts = {
-        tag: el(doc, "span", "feed-tag"),
-        lead: el(doc, "span", "feed-lead"),
         buyer: el(doc, "span", "feed-buyer"),
-        verb: el(doc, "span", "feed-verb"),
         item: el(doc, "span", "feed-item"),
         price: el(doc, "span", "feed-price"),
         right: el(doc, "span", "feed-right"),
@@ -369,12 +373,9 @@
       };
       parts.btn.type = "button";
       parts.btn.addEventListener("click", function (ev) { dismiss(doc, r.id, keyboard(ev)); });
-      parts.lead.appendChild(parts.buyer);
-      parts.lead.appendChild(parts.verb);
-      parts.lead.appendChild(parts.item);
-      parts.lead.appendChild(parts.price);
-      li.appendChild(parts.tag);
-      li.appendChild(parts.lead);
+      li.appendChild(parts.buyer);
+      li.appendChild(parts.item);
+      li.appendChild(parts.price);
       li.appendChild(parts.right);
       li.appendChild(parts.btn);
       li.feedParts = parts;
@@ -385,13 +386,11 @@
       var li = el(doc, "li", "feed-row feed-event feed-" + r.kind);
       var parts = {
         tag: el(doc, "span", "feed-tag"),
-        lead: el(doc, "span", "feed-lead"),
         text: el(doc, "span", "feed-text"),
         right: el(doc, "span", "feed-right")
       };
-      parts.lead.appendChild(parts.text);
       li.appendChild(parts.tag);
-      li.appendChild(parts.lead);
+      li.appendChild(parts.text);
       li.appendChild(parts.right);
       li.feedParts = parts;
       return li;
@@ -399,16 +398,14 @@
 
     function fill(li, r) {
       var p = li.feedParts;
-      setText(p.tag, r.tag);
+      if (p.tag) { setText(p.tag, r.tag); }
       setText(p.right, r.right);
       setHidden(p.right, !r.right);
       setAttr(li, "title", r.title || null);
       if (r.kind === "trade") {
         setText(p.buyer, r.buyer);
         setHidden(p.buyer, !r.buyer);
-        setText(p.verb, r.verb);
-        setHidden(p.verb, !r.verb);
-        setText(p.item, r.item);
+        setText(p.item, [r.verb, r.item].filter(Boolean).join(" "));
         setText(p.price, r.price);
         setHidden(p.price, !r.price);
         setAttr(p.btn, "aria-label", "Dismiss trade request from " + (r.from || "unknown player"));

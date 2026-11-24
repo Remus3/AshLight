@@ -207,42 +207,44 @@
     if (nodes && nodes.doc === doc) { return nodes; }
     var slot = slotOf(doc);
     if (!slot || typeof doc.createElement !== "function") { return null; }
-    var root = el(doc, "div", "st");
+    // the slot is the strip itself and each cell holds its rows straight
+    // (PLAY-FIT-G5-TOTALS: no wrapper elements)
+    var root = slot;
+    if ((" " + root.className + " ").indexOf(" st ") < 0) {
+      root.className = root.className ? root.className + " st" : "st";
+    }
     var out = { doc: doc, root: root, cells: {} };
     CELLS.forEach(function (c) {
       var cell = el(doc, "div", "st-cell st-" + c.key);
       cell.setAttribute("data-cell", c.key);
       var label = el(doc, "p", "st-label row-title muted");
       label.textContent = c.label;
-      var row = el(doc, "div", "st-row");
       var value = el(doc, "p", c.key === "zone" ? "st-value st-name row-glance one-line"
         : "st-value st-num row-hero");
       // the value text sits straight in its line box (no inline child, so
       // the glyphs never add scroll height); the screen-reader words of an
       // empty cell are a sibling, visually hidden
       var shown = value;
-      row.appendChild(value);
       var said = null;
       if (c.sr) {
         said = el(doc, "span", "st-said");
         said.textContent = c.sr;
         said.hidden = true;
-        row.appendChild(said);
       }
       var time = null;
       if (c.key === "zone") {
         time = el(doc, "p", "st-time row-title");
-        row.appendChild(time);
       }
       var sub = el(doc, "p", "st-sub row-title muted one-line");
       cell.appendChild(label);
-      cell.appendChild(row);
+      cell.appendChild(value);
+      if (said) { cell.appendChild(said); }
+      if (time) { cell.appendChild(time); }
       cell.appendChild(sub);
       root.appendChild(cell);
       out.cells[c.key] = { cell: cell, value: value, shown: shown, said: said, time: time,
                            sub: sub };
     });
-    slot.appendChild(root);
     nodes = out;
     return nodes;
   }

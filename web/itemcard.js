@@ -19,11 +19,12 @@
      "I wear this" only while snap.play.item.can_wear is set (TC cluster,
      F-070) and posts /api/wear (no clipboard read: the core files the
      last checked item).
-   Empty (no press yet): 4 muted rows that teach the press with the bound
+   Empty (no press yet): 3 muted rows that teach the press with the bound
    item key (snap.hotkeys.eval.key; with none bound, the words "the item
    check key", never a default the client may not have bound: F-026) and
-   say that this card stays while the overlay card leaves after its card
-   time (snap.overlay_layout.card_s, else 20 s) - the F-151 correction.
+   say that this check stays here (the F-151 correction; PLAY-FIT-G5-TOTALS
+   cut the overlay card time from this card to meet design 0001 G5).
+   The links and the actions share one row (at most 2 of each).
 
    The words come composed from the core (snap.play.item, server/al/
    playcards.py item_view). One exception: the item's own asking price
@@ -67,6 +68,8 @@
   var WEAR_PATH = "/api/wear";
   var EMPTY_WORD = "Nothing checked yet";
   var EMPTY_GLYPH = "[ ]";
+  var EMPTY_ROWS = 3;
+  var STAYS = "The check stays here.";
   var LINK_HINT = " (opens in your browser)";
   // kit state of play.item -> the word's tone (design 0001 section 6:
   // glyph and word carry the verdict, the colour is never alone)
@@ -106,15 +109,12 @@
     return CARD_TIMES.indexOf(s) >= 0 ? s : DEFAULT_CARD_S;
   }
 
-  /* The 4 rows of the empty card: 2 teach the press, 2 say where the
-     check stays (F-151: the dashboard card stays, the overlay card leaves
-     after its card time). */
+  /* The 3 rows of the empty card: 2 teach the press, 1 says the check
+     stays here (F-151; PLAY-FIT-G5-TOTALS cut the overlay card's time from
+     this card: Settings names it). */
   function emptyRows(snap) {
-    var teach = "Hover an item in game, press " + COPY_KEY + ", then press " +
-      (itemKey(snap) || NO_KEY) + ".";
-    var stays = "The check stays here; the overlay card leaves after " +
-      cardTime(snap) + " seconds.";
-    return wrapRows(teach, ROW_CHARS, 2).concat(wrapRows(stays, ROW_CHARS, 2));
+    var teach = "Press " + COPY_KEY + " on an item, then " + (itemKey(snap) || NO_KEY) + ".";
+    return wrapRows(teach, ROW_CHARS, 2).concat([STAYS]);
   }
 
   function num(n) {
@@ -211,7 +211,8 @@
   function blankNodes() {
     return { doc: null, root: null, head: null, glyph: null, wordText: null, name: null,
       body: null, sent: [], label: null, rows: [], pval: null, psrc: null, links: null,
-      acts: null, details: null, wear: null, empty: null, emptyRows: [] };
+      acts: null, details: null, wear: null, empty: null, emptyRows: [], pvalText: null,
+      linkNodes: [] };
   }
 
   // the region's nodes, made once by wire() (or the first paint)
@@ -224,7 +225,13 @@
     if (!slot || typeof doc.createElement !== "function") { return null; }
     var n = blankNodes();
     n.doc = doc;
-    n.root = el(doc, "div", "ic", "ic");
+    // the region's slot is the card itself, with no wrapper of its own
+    // (PLAY-FIT-G5-TOTALS: design 0001's visible-element budget)
+    n.root = slot;
+    if ((" " + slot.className + " ").indexOf(" ic ") < 0) {
+      slot.className = slot.className ? slot.className + " ic" : "ic";
+    }
+    slot.id = "ic";
     n.root.hidden = true;
     // head: the one polite, atomic live region (the verdict and the item)
     n.head = el(doc, "p", "ic-head", "ic-head");
@@ -234,7 +241,7 @@
     var word = el(doc, "span", "ic-word", "ic-word");
     n.glyph = el(doc, "span", "glyph");
     n.glyph.setAttribute("aria-hidden", "true");
-    n.wordText = el(doc, "span", "ic-word-text", "ic-word-text");
+    n.wordText = doc.createTextNode("");
     word.appendChild(n.glyph);
     word.appendChild(doc.createTextNode(" "));
     word.appendChild(n.wordText);
@@ -244,27 +251,25 @@
     n.root.appendChild(n.head);
     // the full card's rows, each in its fixed place
     n.body = el(doc, "div", "ic-body", "ic-body");
-    var sent = el(doc, "div", "ic-sent");
     for (var i = 0; i < SENTENCE_ROWS; i++) {
-      n.sent.push(sent.appendChild(el(doc, "p", "ic-row row-body one-line")));
+      n.sent.push(n.body.appendChild(el(doc, "p", "ic-row ic-sent row-body one-line")));
     }
-    n.body.appendChild(sent);
-    var cmp = el(doc, "div", "ic-cmp");
-    n.label = cmp.appendChild(el(doc, "p", "ic-label row-meta muted one-line", "ic-label"));
-    var list = cmp.appendChild(el(doc, "ul", "ic-rows"));
+    n.label = n.body.appendChild(el(doc, "p", "ic-label row-meta muted one-line", "ic-label"));
+    var list = n.body.appendChild(el(doc, "ul", "ic-rows"));
     for (var j = 0; j < COMPARE_ROWS; j++) {
-      var li = list.appendChild(el(doc, "li", "ic-cmp-row row-body"));
-      var t = li.appendChild(el(doc, "span", "ic-cmp-text one-line"));
+      // one row: its points float to the right, its text takes the ellipsis
+      var li = list.appendChild(el(doc, "li", "ic-cmp-row row-body one-line"));
       var v = li.appendChild(el(doc, "span", "ic-cmp-value"));
+      var t = li.appendChild(doc.createTextNode(""));
       n.rows.push({ li: li, text: t, value: v });
     }
-    n.body.appendChild(cmp);
-    var price = el(doc, "p", "ic-price", "ic-price");
-    n.pval = price.appendChild(el(doc, "span", "ic-pval row-title one-line", "ic-pval"));
-    n.psrc = price.appendChild(el(doc, "span", "ic-psrc row-meta muted one-line", "ic-psrc"));
-    n.body.appendChild(price);
+    // the price row is one element: its value as text, then its source
+    n.pval = n.body.appendChild(el(doc, "p", "ic-price ic-pval row-title one-line", "ic-pval"));
+    n.pvalText = n.pval.appendChild(doc.createTextNode(""));
+    n.psrc = n.pval.appendChild(el(doc, "span", "ic-psrc row-meta muted", "ic-psrc"));
+    // one row holds the links (at most 2) and then the actions (at most 2)
     n.links = n.body.appendChild(el(doc, "p", "ic-links", "ic-links"));
-    n.acts = n.body.appendChild(el(doc, "p", "ic-acts", "ic-acts"));
+    n.acts = n.links;
     n.details = n.acts.appendChild(el(doc, "button", "ic-details secondary btn-28", "ic-details"));
     n.details.setAttribute("type", "button");
     n.details.textContent = DETAILS_LABEL;
@@ -274,13 +279,12 @@
     n.wear.textContent = WEAR_LABEL;
     n.wear.hidden = true;
     n.root.appendChild(n.body);
-    // the empty card: 4 muted rows that teach the press
+    // the empty card: 3 muted rows that teach the press
     n.empty = el(doc, "div", "ic-empty", "ic-empty");
-    for (var k = 0; k < 4; k++) {
+    for (var k = 0; k < EMPTY_ROWS; k++) {
       n.emptyRows.push(n.empty.appendChild(el(doc, "p", "ic-row row-body muted one-line")));
     }
     n.root.appendChild(n.empty);
-    slot.appendChild(n.root);
     if (typeof n.details.addEventListener === "function") {
       n.details.addEventListener("click", function () { showDetails(doc, wired.tabs); });
       n.wear.addEventListener("click", function () { wear(wired.api, n.wear); });
@@ -328,7 +332,9 @@
     var key = links.map(function (l) { return l.label + "\n" + l.url; }).join("\n");
     if (n.links.getAttribute("data-key") === key) { return; }
     n.links.setAttribute("data-key", key);
-    n.links.replaceChildren();
+    // only the links are replaced; the action buttons after them stay
+    n.linkNodes.forEach(function (a) { n.links.removeChild(a); });
+    n.linkNodes = [];
     links.forEach(function (l) {
       var a = el(doc, "a", "ic-link");
       a.setAttribute("href", l.url);
@@ -336,7 +342,8 @@
       a.setAttribute("rel", "noopener noreferrer");
       a.setAttribute("aria-label", l.label + LINK_HINT);
       a.textContent = l.label;
-      n.links.appendChild(a);
+      n.links.insertBefore(a, n.details);
+      n.linkNodes.push(a);
     });
   }
 
@@ -378,10 +385,10 @@
     n.rows.forEach(function (r, i) {
       var row = m.rows[i];
       setText(r.text, row.text);
-      setTitle(r.text, row.text);
+      setTitle(r.li, row.text);
       setText(r.value, row.value);
     });
-    setText(n.pval, m.price.value);
+    setText(n.pvalText, m.price.value);
     setTitle(n.pval, m.price.value);
     setText(n.psrc, m.price.source);
     show(n.psrc, !!m.price.source);

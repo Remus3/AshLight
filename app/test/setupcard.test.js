@@ -49,6 +49,10 @@ function makeDoc() {
     return n;
   }
   doc.createElement = elem;
+  // a text node: no element of its own (a glyph row's words follow its glyph)
+  doc.createTextNode = (t) => ({ nodeType: 3, tagName: "", className: "", children: [],
+    hidden: false, parentNode: null, _text: String(t), get textContent() { return this._text; },
+    getAttribute() { return null; } });
   doc.getElementById = (id) => doc.byId[id] || null;
   doc.querySelector = (sel) => {
     assert.equal(sel, '#play-c [data-slot="c"]');
@@ -96,14 +100,16 @@ function shownText(doc) { return find(doc, () => true).map((n) => n._text).join(
 
 /* the line box of each rendered row (px at s = 1, design 0001 section 3) */
 function rowPx(n) {
-  if (hasClass(n, "su-act")) { return 36; }
+  if (hasClass(n, "su-act") || hasClass(n, "su-btn")) { return 36; }
   if (hasClass(n, "row-meta")) { return 20; }
   return 22;
 }
 function contentPx(doc, compact) {
   const pane = byClass(doc, "ctx-pane")[0];
   let px = 26;
-  byClass(doc, "su-rows")[0].children.forEach((r) => { px += rowPx(r); });
+  // the rows sit in the pane after its title (PLAY-FIT-G5-TOTALS: no wrapper)
+  pane.children.filter((n) => !hasClass(n, "su-title") && !hasClass(n, "su-facts"))
+    .forEach((r) => { px += rowPx(r); });
   const facts = pane.children.filter((n) => hasClass(n, "su-facts"));
   facts.forEach((f) => { if (!(compact && hasClass(f, "su-promise"))) { px += 20; } });
   return px;
@@ -339,7 +345,8 @@ test("region C fits its track in setup, error and idle modes (full and compact)"
   assert.equal(S.trackSet("full").setupPromise, true);
   assert.equal(S.trackSet("compact").setupPromise, false);
   assert.match(CSS, /min-height: 2\.25rem;/, "the button row is 36 px");
-  assert.match(CSS, /gap: 0;/);
+  // the rows sit in the context pane, a grid with no gap (web/context.css)
+  assert.match(CTXCSS, /#play-c \.ctx, #play-c \.ctx-pane \{[^}]*gap: 0;/);
   assert.match(CTXCSS, /--region-pad: var\(--al-space-2\);/);
   // the compact class drops the promise line exactly where app.css's
   // track tokens switch to compact

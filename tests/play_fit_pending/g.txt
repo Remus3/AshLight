@@ -1,1 +1,0 @@
-Region G passes and page overflow (G1) is enforced since WEB-PLAY-FOOT-ONE-ROW; this marker holds only the G5 word and element totals until their row lands, then git rm it.

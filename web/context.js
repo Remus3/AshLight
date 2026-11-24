@@ -297,10 +297,13 @@
     if (nodes.doc === doc && nodes.root) { return nodes; }
     var slot = slotOf(doc);
     if (!slot || !isFn(doc.createElement)) { return null; }
-    var root = el(doc, "div", "ctx");
+    // the slot is the context card itself (PLAY-FIT-G5-TOTALS: no wrapper)
+    var root = slot;
+    if ((" " + root.className + " ").indexOf(" ctx ") < 0) {
+      root.className = root.className ? root.className + " ctx" : "ctx";
+    }
     root.id = "ctx";
     root.hidden = true;
-    slot.appendChild(root);
     nodes = { doc: doc, slot: slot, root: root, panes: {} };
     return nodes;
   }
@@ -386,8 +389,8 @@
     h.textContent = v.title;
     h.setAttribute("title", v.full || v.title);
     p.appendChild(h);
+    // the rows sit in the pane itself, after the title (no list wrapper)
     if (v.rows.length) {
-      var list = el(doc, "div", "ctx-rows");
       v.rows.forEach(function (r, i) {
         var n;
         if (r.kind === "copy") {
@@ -401,9 +404,8 @@
         }
         n.setAttribute("data-kind", r.kind);
         if (i === v.drop) { n.className += " ctx-drop"; }
-        list.appendChild(n);
+        p.appendChild(n);
       });
-      p.appendChild(list);
     }
     if (v.facts) {
       var f = el(doc, "p", "ctx-facts row-meta muted one-line");

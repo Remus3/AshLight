@@ -75,13 +75,13 @@ function snapWith(rows, extra) {
 }
 
 function shown(doc) {
-  const kc = doc.slot.children[0];
-  const list = kc.children[1];
+  const kc = doc.slot;
+  const list = kc.children[0];
   return list.hidden ? [] : list.children.filter((li) => !li.hidden).map((li) => li.textContent);
 }
 
 function emptyLine(doc) {
-  const e = doc.slot.children[0].children[2];
+  const e = doc.slot.children[1];
   return e.hidden ? null : e.textContent;
 }
 
@@ -99,10 +99,12 @@ test("full class: label and the 3 rows best first, full text in title", () => {
   const doc = makeDoc("full");
   KC.wire(doc);
   KC.paint(doc, snapWith(ROWS));
-  const kc = doc.slot.children[0];
-  assert.equal(kc.children[0].textContent, "Best checks");
+  const kc = doc.slot;
+  // the label is the region's visible h2 in the page (PLAY-FIT-G5-TOTALS)
+  assert.match(HTML, /<h2 id="play-u-h" class="region-h kc-label row-meta one-line">Best checks<\/h2>/);
+  assert.equal(KC.LABEL, "Best checks");
   assert.deepEqual(shown(doc), ROWS.map((r) => r.text));
-  assert.equal(kc.children[1].children[0].getAttribute("title"), ROWS[0].full);
+  assert.equal(kc.children[0].children[0].getAttribute("title"), ROWS[0].full);
   assert.equal(emptyLine(doc), null);
   assert.equal(kc.getAttribute("data-rows"), "3");
   for (const t of shown(doc)) { assert.ok(t.length <= CAP_KEPT, t); }
@@ -139,7 +141,8 @@ test("a build change re-orders the rows from the next state push", () => {
   const next = [ROWS[2], ROWS[0]];
   KC.spec.paint(doc, snapWith(next));
   assert.deepEqual(shown(doc), next.map((r) => r.text));
-  assert.equal(doc.slot.children.length, 1, "the nodes are made once");
+  // the slot is the box (PLAY-FIT-G5-TOTALS): the list and the empty line
+  assert.equal(doc.slot.children.length, 2, "the nodes are made once");
 });
 
 test("empty: one muted line, the core's text first", () => {
@@ -148,7 +151,7 @@ test("empty: one muted line, the core's text first", () => {
   KC.paint(doc, snapWith([]));
   assert.deepEqual(shown(doc), []);
   assert.equal(emptyLine(doc), "None of your checks is an upgrade now.");
-  const e = doc.slot.children[0].children[2];
+  const e = doc.slot.children[1];
   assert.match(e.className, /\bmuted\b/);
   KC.paint(doc, { build: { loaded: false },
                   play: { kept: { rows: [], empty: "Load a build to rank your checks.", checked: 0 } } });
@@ -189,7 +192,7 @@ test("page wiring: pre-linked files, the U section and its slot", () => {
 
 test("css: meta rows, no margins, the label at 600", () => {
   assert.match(SRC, /kc-row row-meta one-line/);
-  assert.match(SRC, /kc-label row-meta one-line/);
+  assert.match(HTML, /kc-label row-meta one-line/);
   assert.match(CSS, /\.kc-label \{[^}]*font-weight: 600/);
   assert.match(CSS, /\.kc-list \{[^}]*margin: 0; padding: 0; list-style: none/);
   assert.doesNotMatch(CSS, /font-size/);

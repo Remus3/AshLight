@@ -6,7 +6,7 @@
    content 200 px in the full class, 178 in the compact one. The line boxes
    come from the shared row classes of web/app.css (.row-title, .row-body,
    .row-meta, .one-line, .edge, .btn-28). */
-#play-c .ctx, #play-c .ctx-pane, #play-c .ctx-rows {
+#play-c .ctx, #play-c .ctx-pane {
   display: grid;
   align-content: start;
   gap: 0;

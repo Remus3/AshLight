@@ -89,3 +89,31 @@ The [C] check of plan 03 3.4 (52 characters at 16 px: 349 px, 477 px with
 the override) measured 388 px and 503 px with real words here: real text
 runs about 0.47em a character, still under the 0.5em budget, so every cap
 of the table holds with 27 px or more to spare. The caps stand.
+
+## G5 totals on the cockpit (PLAY-FIT-G5-TOTALS, 2026-11-24)
+
+Words and visible elements on Play at 1280x760 (the full class, the
+heaviest size; the compact class hides the notice rows), before and
+after the package, from `python tests/test_play_fit.py --figures` (13
+states x 7 sizes in about 13 s). The element maximum is 100 plus 6 per
+open trade row; the word maxima are 250, 110 in state a and 153 in
+state b (design 0001 section 4, G5 totals ruling).
+
+| State | Open trades | Words before | Words after | Elements before | Elements after | Element max |
+|---|---|---|---|---|---|---|
+| a | 0 | 127 | 104 | 93 | 73 | 100 |
+| a2 | 0 | 115 | 95 | 80 | 64 | 100 |
+| b | 0 | 169 | 153 | 98 | 79 | 100 |
+| c | 2 | 217 | 214 | 143 | 110 | 112 |
+| c2 | 2 | 198 | 185 | 117 | 92 | 112 |
+| d | 2 | 169 | 156 | 115 | 90 | 112 |
+| e | 0 | 139 | 129 | 108 | 83 | 100 |
+| f | 1 | 155 | 150 | 128 | 98 | 106 |
+| g | 1 | 156 | 151 | 128 | 98 | 106 |
+| map | 2 | 147 | 131 | 111 | 86 | 112 |
+| long | 5 | 213 | 214 | 155 | 116 | 130 |
+| c5 | 5 | 213 | 214 | 155 | 116 | 130 |
+| rows10 | 0 | 118 | 102 | 87 | 69 | 100 |
+
+The feed spends the words its cut tags freed on longer item names (its
+own 50-word ladder), so long and c5 read one word more than before.

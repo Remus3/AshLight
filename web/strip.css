@@ -16,24 +16,29 @@
 /* flow: the Zone cell takes a full row, Level, Deaths and Session share
    the next one (plan 03 section 3.9) */
 #play-g .st-zone { grid-column: 1 / -1; }
-#play-g .st-cell { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; }
-#play-g .st-label, #play-g .st-sub { min-height: var(--al-lh-title); }
-#play-g .st-row {
-  display: flex;
+/* a cell is a grid of its own rows with no wrapper (PLAY-FIT-G5-TOTALS):
+   label, then the value (with the zone timer in a second column on the
+   value's baseline), then the sub line */
+#play-g .st-cell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: baseline;
-  gap: 0 var(--al-space-2);
+  column-gap: var(--al-space-2);
   min-width: 0;
-  min-height: var(--al-lh-hero);
 }
-#play-g .st-value { flex: 0 1 auto; }
+#play-g .st-label, #play-g .st-sub { grid-column: 1 / -1; min-height: var(--al-lh-title); }
+#play-g .st-value { grid-column: 1; min-width: 0; min-height: var(--al-lh-hero); }
+#play-g .st-cell:not(.st-zone) .st-value { grid-column: 1 / -1; }
 /* the numbers are short and never clipped. The 32 px glyphs reach about
    3 px under their 36 px line box (font ascent + descent): 4 px of bottom
-   padding taken back by a negative margin hold them inside the value and
-   its row (no scroll height, G1) while the row stays 36 px in the layout
+   padding taken back by a negative margin hold them inside the value (no
+   scroll height, G1) while its grid row stays 36 px in the layout
    (the 4 px overlap the top half-leading of the sub line) */
-#play-g .st-num { white-space: nowrap; }
-#play-g .st-num,
-#play-g .st-row:has(> .st-num) { padding-bottom: var(--al-space-1); margin-bottom: calc(-1 * var(--al-space-1)); }
+#play-g .st-num {
+  white-space: nowrap;
+  padding-bottom: var(--al-space-1);
+  margin-bottom: calc(-1 * var(--al-space-1));
+}
 /* the zone name takes the ellipsis (full text in title); its 28 px glyphs
    sit in the 36 px value box so its clipping box adds no scroll height */
 #play-g .st-name { line-height: var(--al-lh-hero); }
@@ -50,8 +55,7 @@
 }
 /* the zone or map timer, right-aligned in the value row, never clipped */
 #play-g .st-time {
-  flex: 0 0 auto;
-  margin-left: auto;
+  grid-column: 2;
   font-weight: 600;
   white-space: nowrap;
 }

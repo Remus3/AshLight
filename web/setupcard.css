@@ -5,12 +5,6 @@
    Setup 190 px (170 compact, where the promise line leaves), error 172,
    idle 178, inside region C's content box (210 px full, 194 compact, with
    the 8 px padding of web/context.css). */
-#play-c .su-rows {
-  display: grid;
-  align-content: start;
-  gap: 0;
-  min-width: 0;
-}
 #play-c .su-title { font-weight: 600; }
 #play-c .su-act {
   display: flex;
@@ -19,8 +13,10 @@
   min-height: 2.25rem;
   min-width: 0;
 }
+/* a lone button is its own row: it keeps its width, not the pane's */
 #play-c .su-btn {
   flex: 0 0 auto;
+  justify-self: start;
   min-height: 2.25rem;
   padding: 0 var(--al-space-3);
   line-height: var(--al-lh-body);
