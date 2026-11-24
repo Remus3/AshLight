@@ -467,6 +467,95 @@ def test_generate_scores_with_the_weapon_composed():
         assert ET.fromstring(xml).find("Items/Item").text.strip().endswith("Oak Mallet")
 
 
+def _variant_inputs(**over):
+    from server.al.theorycraft import pobtext
+    data, graph = _tree()
+    table = archetypes.validate(fx.table_doc(fx.template(**over)))
+    view = archetypes.resolve(table, tree=graph, bases=archetypes.base_index(fx.bases_doc()),
+                              variants=pobtext.parse_gem_variants(fx.gems_lua_text()))
+    return {"view": view, "table_sha": "t" * 64, "tree": data,
+            "tree_version": "v" * 64, "pin": PIN}
+
+
+def test_compose_xml_names_the_checked_skill_id_of_a_variant_gem():
+    """KINDLER-GEM-VARIANT: a gem name PoB holds under several weapon
+    variants is composed with the one skill id the weapon class picks."""
+    t = _variant_inputs()["view"]["templates"][0]
+    root = ET.fromstring(kindler.compose_xml(t, 0, 0, (0, "Warrior1")))
+    gems = root.find("Skills/SkillSet/Skill").findall("Gem")
+    assert gems[0].get("nameSpec") == "Hammer Swing"
+    assert gems[0].get("skillId") == "TestHammerTwoHand"
+    assert gems[1].get("nameSpec") == "Brute Force" and gems[1].get("skillId") is None
+    mid = ET.fromstring(kindler.compose_xml(t, 1, 0, (0, "Warrior1")))
+    assert mid.find("Skills/SkillSet/Skill/Gem").get("skillId") is None  # one variant
+
+
+def test_compose_xml_without_a_variant_id_is_byte_identical():
+    plain = _weapon_inputs()["view"]["templates"][0]
+    with_v = _variant_inputs()["view"]["templates"][0]
+    for si in range(len(plain["stages"])):
+        a = kindler.compose_xml(plain, si, 0, (0, "Warrior1"))
+        b = kindler.compose_xml(with_v, si, 0, (0, "Warrior1"))
+        # only the variant gem's line gains its id; the rest is unchanged
+        assert b == a.replace('nameSpec="Hammer Swing"',
+                              'nameSpec="Hammer Swing" skillId="TestHammerTwoHand"')
+        assert (b != a) == (plain["stages"][si]["skills"][0]["gem"]["name"]
+                            == "Hammer Swing")
+    assert ' skillId=' not in kindler.compose_xml(plain, 0, 0, (0, "Warrior1"))
+
+
+def _checkout(tmp_path, gems_text, sha=None):
+    import hashlib
+    root = tmp_path / "pob"
+    (root / "src" / "Data").mkdir(parents=True)
+    raw = gems_text.encode("ascii")
+    (root / "src" / "Data" / "Gems.lua").write_bytes(raw)
+    (root / ".al-extracted.json").write_text(json.dumps({"archive_sha256": "c" * 64}),
+                                             encoding="ascii")
+    pins = tmp_path / "pins.json"
+    pins.write_text(json.dumps({
+        "pob2": {"commit": PIN, "archive_sha256": "c" * 64, "top_dir": "pob"},
+        "pob2_files": {"src/Data/Gems.lua": {
+            "sha256": sha or hashlib.sha256(raw).hexdigest()}}}), encoding="ascii")
+    return root, pins
+
+
+def test_sources_read_the_pinned_gem_variants(tmp_path):
+    from server.al.theorycraft import pobtext
+    table = tmp_path / "archetypes.json"
+    table.write_text(json.dumps(fx.table_doc()), encoding="ascii")
+    gems = tmp_path / "gems.json"
+    gems.write_text(json.dumps(fx.gems_doc()), encoding="ascii")
+    (tmp_path / archetypes.BASES_FILE).write_text(json.dumps(fx.bases_doc()),
+                                                  encoding="ascii")
+    root, pins = _checkout(tmp_path, fx.gems_lua_text())
+    v = pobtext.GemVariants(pins, root=root)
+    got = kindler.Sources(table, tmp_path / "no.json", gems, pins, variants=v).inputs()
+    gem = got["view"]["templates"][0]["stages"][0]["skills"][0]["gem"]
+    assert gem["skill_id"] == "TestHammerTwoHand"
+    assert v.get() is v.get()  # parsed once per pin
+    # a file that misses its pin gives nothing; the name lookup stays PoB's
+    root2, pins2 = _checkout(tmp_path / "b", fx.gems_lua_text(), sha="0" * 64)
+    v2 = pobtext.GemVariants(pins2, root=root2)
+    assert v2.get() == {}
+    got = kindler.Sources(table, tmp_path / "no.json", gems, pins2, variants=v2).inputs()
+    assert "skill_id" not in got["view"]["templates"][0]["stages"][0]["skills"][0]["gem"]
+
+
+def test_gem_variants_need_the_marker_and_the_pin(tmp_path):
+    from server.al.theorycraft import pobtext
+    root, pins = _checkout(tmp_path, fx.gems_lua_text())
+    doc = json.loads(pins.read_text(encoding="ascii"))
+    assert pobtext.load_gem_variants(root, doc)["hammer swing"]
+    (root / ".al-extracted.json").write_text(json.dumps({"archive_sha256": "d" * 64}),
+                                             encoding="ascii")
+    assert pobtext.load_gem_variants(root, doc) == {}
+    assert pobtext.load_gem_variants(root, {"pob2": {}}) == {}
+    assert pobtext.load_gem_variants(tmp_path / "none", doc) == {}
+    # the where-found rows do not read the gem file
+    assert pobtext.GEMS not in dict(pobtext.pinned_files(doc))
+
+
 def test_sources_read_the_bases_beside_the_gems_file(tmp_path):
     table = tmp_path / "archetypes.json"
     table.write_text(json.dumps(fx.table_doc()), encoding="ascii")

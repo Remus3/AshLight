@@ -25,7 +25,12 @@ one tab of the Kindler store (theorycraft.genstore). The engine:
    (KINDLER-WEAPON-BASE), a plain normal item in WEAPON_SLOT, and only when
    the cached base_items snapshot names it as a weapon base (checked by
    archetypes.resolve; never guessed). Without it an attack skill has no
-   weapon and PoB scores 0 DPS. No other item is composed.
+   weapon and PoB scores 0 DPS. No other item is composed. A skill gem
+   whose name PoB holds under several weapon variants (Mace Strike) also
+   carries PoB's skillId attribute when archetypes.resolve found the one
+   variant of the weapon's class in the pinned PoB Gems.lua
+   (KINDLER-GEM-VARIANT, theorycraft.pobtext); otherwise the gem is
+   written by name only, never guessed.
 4. Scores them one at a time through the calc callable of decision 0024
    (calcwire: the bridge's load_build then outputs; no new bridge command)
    inside BUDGET_S. Past the budget the rest are left out and the result
@@ -58,7 +63,7 @@ from xml.sax.saxutils import escape, quoteattr
 
 from .. import hotreload, paths
 from ..text import kindler as words
-from . import archetypes, delta, genstore, treedata
+from . import archetypes, delta, genstore, pobtext, treedata
 
 MAX_CANDIDATES = genstore.MAX_CANDIDATES  # decision 0081 point 3
 BUDGET_S = 60.0
@@ -131,7 +136,7 @@ class Sources:
     0042), the last good copy kept."""
 
     def __init__(self, table_path=None, tree_path=None, gems_file=None, pins_path=None,
-                 bases_file=None):
+                 bases_file=None, variants=None):
         self._table = hotreload.Watched(table_path or archetypes.PATH, _load_table,
                                         name=words.ENGINE_TABLE_NAME,
                                         default=None, registry=False)
@@ -146,6 +151,9 @@ class Sources:
                                         name=words.ENGINE_BASES_NAME,
                                         default=None, registry=False)
         self._pins = pins_path
+        # KINDLER-GEM-VARIANT: the pinned PoB Gems.lua, read as text
+        self._variants = variants if variants is not None else \
+            pobtext.GemVariants(pins_path)
 
     def inputs(self):
         """{"view", "table_sha", "tree", "tree_version", "pin"}; view is the
@@ -156,7 +164,8 @@ class Sources:
         doc, table_sha = table if table else ({}, "")
         data, graph, tree_sha = tree if tree else (None, None, "")
         return {"view": archetypes.resolve(doc, tree=graph, gems=gems,
-                                           bases=self._bases.get()),
+                                           bases=self._bases.get(),
+                                           variants=self._variants.get()),
                 "table_sha": table_sha, "tree": data, "tree_version": tree_sha,
                 "pin": pob_pin(self._pins)}
 
@@ -264,8 +273,11 @@ def tree_ids(tree, template):
     return idx, asc_id
 
 
-def _gem(name):
-    return (f'\t\t\t\t<Gem nameSpec={quoteattr(name)} level="{FULL_GEM_LEVEL}" '
+def _gem(name, skill_id=None):
+    """One Gem line by name; with a checked skill id (KINDLER-GEM-VARIANT)
+    PoB loads that exact variant (its own skillId attribute)."""
+    sid = f" skillId={quoteattr(skill_id)}" if skill_id else ""
+    return (f'\t\t\t\t<Gem nameSpec={quoteattr(name)}{sid} level="{FULL_GEM_LEVEL}" '
             f'quality="0" enabled="true" count="1"/>')
 
 
@@ -308,7 +320,7 @@ def compose_xml(template, stage, variant, ids):
         full = "true" if i == variant else "false"
         lines.append(f'\t\t\t<Skill enabled="true" includeInFullDPS="{full}" '
                      'mainActiveSkill="1" mainActiveSkillCalcs="1" label="">')
-        lines.append(_gem(sk["gem"]["name"]))
+        lines.append(_gem(sk["gem"]["name"], sk["gem"].get("skill_id")))
         lines.extend(_gem(s["name"]) for s in sk["supports"])
         lines.append("\t\t\t</Skill>")
     lines += ["\t\t</SkillSet>", "\t</Skills>", '\t<Tree activeSpec="1">',

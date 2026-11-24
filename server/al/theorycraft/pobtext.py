@@ -21,6 +21,13 @@ into the sidecar Cache (the optional calc component, decision 0018):
   pinned checkout; nothing is read for it until a pin move brings it and
   a parser for its real shape lands.
 
+- src/Data/Gems.lua (KINDLER-GEM-VARIANT, for Kindler's composer, not the
+  popover): the `name`, `grantedEffectId` and `weaponRequirements` lines
+  of each top-level `\t["<id>"] = {` block, so a gem name PoB holds under
+  several weapon variants (Mace Strike) can be composed by the one skill id
+  the template's weapon class picks (theorycraft.archetypes.skill_id). It is
+  read by load_gem_variants / GemVariants only; pinned_files() leaves it out.
+
 Conditions (decision 0083 point 3): a file is read only when it has a
 config/tc_pins.json "pob2_files" entry, the checkout marker names the
 pinned archive sha256 and the file's sha256 equals its entry; a file
@@ -60,6 +67,11 @@ _AREA_CLOSE = re.compile(r"^\}\s*,?\s*$")
 _AREA_FIELD = re.compile(r'^\t(name|baseName)\s*=\s*"([^"\\]*)",\s*$')
 _AREA_MAP = re.compile(r"^\tisMap\s*=\s*(true|false),\s*$")
 _SUFFIX = re.compile(r"\s+\((?:Act \d+|Map)\)$")
+GEMS = "src/Data/Gems.lua"
+_GEM_OPEN = re.compile(r'^\t\["[^"\\]+"\]\s*=\s*\{\s*$')
+_GEM_CLOSE = re.compile(r"^\t\}\s*,?\s*$")
+_GEM_FIELD = re.compile(r'^\t\t(name|grantedEffectId|weaponRequirements)\s*=\s*"([^"\\]*)",\s*$')
+_SKILL_ID = re.compile(r"^[A-Za-z0-9_]{1,80}$")
 
 
 def key(value):
@@ -159,6 +171,40 @@ def parse_world_areas(text):
     return {k: (next(iter(v)) if len(v) == 1 else None) for k, v in seen.items()}
 
 
+def parse_gem_variants(text):
+    """{name key: [{"skill_id", "weapons": [weapon class]}]} from the text of
+    PoB's Gems.lua, in file order: one row per top-level gem block with a
+    readable name and grantedEffectId (a plain id); weapons is the block's
+    comma list of weaponRequirements ([] without one). Over MAX_LINES lines,
+    or not a string, gives {}."""
+    out = {}
+    if not isinstance(text, str):
+        return out
+    lines = text.replace("\r\n", "\n").split("\n")
+    if len(lines) > MAX_LINES:
+        return {}
+    cur = None
+    for line in lines:
+        if _GEM_OPEN.match(line):
+            cur = {}
+            continue
+        if cur is None:
+            continue
+        if _GEM_CLOSE.match(line):
+            name, sid = _name(cur.get("name")), cur.get("grantedEffectId")
+            if name is not None and isinstance(sid, str) and _SKILL_ID.match(sid):
+                weapons = [w for w in (_name(p) for p in
+                                       (cur.get("weaponRequirements") or "").split(","))
+                           if w]
+                out.setdefault(key(name), []).append({"skill_id": sid, "weapons": weapons})
+            cur = None
+            continue
+        m = _GEM_FIELD.match(line)
+        if m:
+            cur.setdefault(m.group(1), m.group(2))
+    return out
+
+
 def pinned_files(pins):
     """[(rel, sha256)] of the pob2_files entries this module reads (the
     Uniques slot files and WorldAreas.lua), sorted; bad entries skipped."""
@@ -201,18 +247,37 @@ def _read_pinned(root, rel, want):
         return None
 
 
+def _marker_ok(root, pins):
+    """True when the checkout marker at root names the pinned archive sha256."""
+    try:
+        archive = pins["pob2"]["archive_sha256"]
+        marker = json.loads(Path(root, MARKER).read_text(encoding="ascii"))
+    except (OSError, ValueError, KeyError, TypeError):
+        return False
+    return bool(isinstance(archive, str) and _HEX64.match(archive)
+                and isinstance(marker, dict) and marker.get("archive_sha256") == archive)
+
+
+def load_gem_variants(root, pins):
+    """parse_gem_variants of the pinned checkout's Gems.lua; {} unless the
+    marker names the pinned archive and the file matches its pob2_files
+    sha256. Never raises."""
+    try:
+        want = pins["pob2_files"][GEMS]["sha256"]
+    except (KeyError, TypeError):
+        return {}
+    if not (isinstance(want, str) and _HEX64.match(want)) or not _marker_ok(root, pins):
+        return {}
+    text = _read_pinned(root, GEMS, want)
+    return parse_gem_variants(text) if text is not None else {}
+
+
 def load(root, pins):
     """{"uniques": {key: entry}, "areas": {zone key: bool or None},
     "files": [rel read]} from the pinned checkout at root; empty unless the
     marker names the pinned archive sha256. Never raises."""
     out = {"uniques": {}, "areas": {}, "files": []}
-    try:
-        archive = pins["pob2"]["archive_sha256"]
-        marker = json.loads(Path(root, MARKER).read_text(encoding="ascii"))
-    except (OSError, ValueError, KeyError, TypeError):
-        return out
-    if not (isinstance(archive, str) and _HEX64.match(archive)) \
-            or not isinstance(marker, dict) or marker.get("archive_sha256") != archive:
+    if not _marker_ok(root, pins):
         return out
     for rel, want in pinned_files(pins):
         text = _read_pinned(root, rel, want)
@@ -295,3 +360,44 @@ class WhereFound:
     def lookup(self, name_key):
         """field() for one item key (iteminfo.key form)."""
         return field(self.get(), name_key)
+
+
+class GemVariants:
+    """KINDLER-GEM-VARIANT: load_gem_variants of the pinned checkout, read
+    once per pin (the pins file re-read only when its mtime changes), {}
+    while it cannot be read. Same arguments as WhereFound."""
+
+    def __init__(self, pins_path=None, root=None, environ=None):
+        self.pins_path = Path(pins_path) if pins_path else paths.tc_pins_file(environ)
+        self.root = Path(root) if root else None
+        self.environ = environ
+        self._lock = threading.Lock()
+        self._stamp = None
+        self._pin_key = None
+        self._index = {}
+
+    def get(self):
+        with self._lock:
+            try:
+                stamp = self.pins_path.stat().st_mtime_ns
+            except OSError:
+                stamp = None
+            if stamp == self._stamp:
+                return self._index
+            self._stamp = stamp
+            try:
+                pins = json.loads(self.pins_path.read_text(encoding="ascii"))
+            except (OSError, ValueError):
+                pins = None
+            if not isinstance(pins, dict):
+                self._pin_key, self._index = None, {}
+                return self._index
+            files = pins.get("pob2_files")
+            pin_key = (json.dumps(pins.get("pob2"), sort_keys=True),
+                       json.dumps(files.get(GEMS) if isinstance(files, dict) else None,
+                                  sort_keys=True))
+            if pin_key != self._pin_key:
+                root = self.root or checkout_root(pins, self.environ)
+                self._index = load_gem_variants(root, pins) if root else {}
+                self._pin_key = pin_key
+            return self._index
