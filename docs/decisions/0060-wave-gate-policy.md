@@ -93,3 +93,37 @@ kit changes item 16c to forbid ungated file-named runs.
   (restore the 120 s bound), the split demonstrates under 90 s
   (tighten), or a soak median exceeds 145 s (regression: bisect, do
   not move the number).
+
+## Note 2026-11-24 (GATE-HOLD-BISECT soak record)
+
+- Soak: six exclusive runs of python tools/suite_run.py through the
+  suite gate on main eaa74d7 (wave 53 merged), 16 CPUs, 12 workers,
+  5904 tests. Pytest-reported phase sums 146.5, 138.5 and 140.8 s;
+  then gate-child wall times 140.1, 142.5 and 139.3 s (median 140.1 s).
+  The 145 s interim bound holds without a code change, so nothing in
+  this decision moves. The 125 s restore condition is not met.
+- Where the time goes: phase 1 is throughput-bound, about 950
+  worker-seconds over 12 workers (each busy about 78 s, ending 81 to
+  84 s), plus a 3 s start. Phase 2 is 47 to 50 s of serial calc and
+  budget calls. The one tail in phase 1 is
+  tests/test_shots.py::test_real_render_from_a_real_demo_core (about
+  24 s). As a single test late in file order it starts at 63 to 66 s
+  and ends 6 to 8 s after every other worker, in all six runs.
+- Finding: the pinned pytest 9.2.0 with pytest-xdist 3.8.0 ignores
+  xdist_group. Pytest 9 builds nodeid from Node._id, and xdist 3.8
+  still writes item._nodeid, so no "@group" suffix reaches the
+  scheduler. A minimal repro with 8 tests in one group on 4 workers
+  spread them over all 4 workers. In the soaks the calc-a, calc-b and
+  supervisor groups also spread across workers. --dist loadgroup
+  therefore runs as plain load: the calc group split and the
+  supervisor group are not in force. A test-side fix (an xdist_group
+  on test_shots to start the render in the first wave) measured no
+  effect for this reason and was dropped.
+- Next: a row to restore grouping (pin a pytest / xdist pair that
+  honours xdist_group, or set the group in tests/conftest.py), then
+  re-soak. Re-pinning the calc groups may lengthen phase 1 (research
+  0063). Starting the render first is worth about 6 s of phase 1 once
+  grouping or ordering works.
+- Reverses if: a soak median exceeds 145 s (bisect, do not move the
+  number), or grouping is restored and the soak median changes by more
+  than 5 s (record the new figures here).
