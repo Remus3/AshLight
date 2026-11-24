@@ -118,6 +118,21 @@
     loadRates();
   }
 
+  /* DATA-CONTACT-CLEAR (design DCC-1): a failed contact Save or Clear is
+     written in #webdata-status (not a live region) and said once on the
+     header's polite #tab-news through ALTabs.say, as web/autostart.js and
+     web/panels/weights.js do; a page without tabs says only the line. */
+  var NOT_SAVED = "Not saved. Try again.";
+  var NOT_CLEARED = "Not cleared. Try again.";
+
+  function failed(text) {
+    $("webdata-status").textContent = text;
+    var t = window.ALTabs;
+    if (t && typeof t.say === "function" && typeof document !== "undefined") {
+      t.say(document, text);
+    }
+  }
+
   /* DATA-CONTACT-UI: the Save click (the form's submit). The value goes
      only to POST /api/web-data {contact}; the answer says contact_set,
      never the value. The field is cleared after a save; a refused value
@@ -139,8 +154,11 @@
       renderPrice(getSnap() ? getSnap().price : null, true);
       loadRates();
     }).catch(function (e) {
-      $("webdata-status").textContent = e && e.message === "HTTP 400"
-        ? P.CONTACT_REFUSED : "Not saved. Try again.";
+      if (e && e.message === "HTTP 400") {
+        $("webdata-status").textContent = P.CONTACT_REFUSED;
+      } else {
+        failed(NOT_SAVED);
+      }
     }).then(function () { webBusy = false; });
   }
 
@@ -156,13 +174,14 @@
       var box = $("webdata-contact");
       box.value = "";
       fillWebData(doc);
-      $("webdata-status").textContent = P.contactClearedText(doc);
+      var said = P.contactClearedText(doc);
+      if (said === NOT_CLEARED) { failed(said); } else { $("webdata-status").textContent = said; }
       var clr = $("webdata-contact-clear");
       if (!clr || clr.hidden) { box.focus(); }
       renderPrice(getSnap() ? getSnap().price : null, true);
       loadRates();
     }).catch(function () {
-      $("webdata-status").textContent = "Not cleared. Try again.";
+      failed(NOT_CLEARED);
     }).then(function () { webBusy = false; });
   }
 

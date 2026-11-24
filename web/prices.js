@@ -138,8 +138,7 @@
   function contactClearedText(doc) {
     if (!doc || doc.contact_set !== false) { return "Not cleared. Try again."; }
     if (doc.web_data === true && blockedOf(doc) === NO_CONTACT) {
-      return "Contact removed. This copy has no default contact, so prices need one more step: " +
-             STEP_CONTACT + " below.";
+      return "Contact removed. No default contact here, so add your own below.";
     }
     if (doc.web_data === true && !blockedOf(doc)) {
       return "Contact removed. AshLight now sends its project issues page to poe.ninja.";

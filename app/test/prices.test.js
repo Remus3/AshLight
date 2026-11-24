@@ -455,8 +455,11 @@ test("contact Clear answer: honest per state, never a value", () => {
     "Contact removed. AshLight now sends its project issues page to poe.ninja.");
   // a fork with no default: the one step comes back
   assert.equal(p.contactClearedText(BLOCKED_WEB),
-    "Contact removed. This copy has no default contact, so prices need one more step: " +
-    "add your contact for poe.ninja below.");
+    "Contact removed. No default contact here, so add your own below.");
+  // design DCC-2: every Clear answer fits the one-line status
+  for (const doc of [BLOCKED_WEB, { web_data: true, contact_set: false, blocked: null }]) {
+    assert.ok(p.contactClearedText(doc).length <= 80, p.contactClearedText(doc));
+  }
   // web data off, or a release build: nothing is promised
   assert.equal(p.contactClearedText({ web_data: false, contact_set: false, blocked: "web data off" }),
     "Contact removed from this computer.");
@@ -579,14 +582,18 @@ test("Clear posts contact \"\" only, keeps the row and never echoes a value", as
     $: (id) => nodes[id] || null,
     api: (method, path, body) => {
       calls.push([method, path, body]);
-      return fail ? Promise.reject(new Error("HTTP 500")) : Promise.resolve(answers[method + " " + path]);
+      if (fail) { return Promise.reject(new Error(fail === "refused" ? "HTTP 400" : "HTTP 500")); }
+      return Promise.resolve(answers[method + " " + path]);
     },
     getSnap: () => null, getRatesDoc: () => null, renderRates() {}, renderPrice() {},
     loadRates() {}, webLink: {}, onConnect: (f) => reads.push(f)
   };
   const reg = R.create({ warn: (t) => { throw new Error(t); } });
   reg.host = host;
-  const sandbox = { ALApp: reg, ALTc: TC, ALPrices: p, console };
+  const polite = [];
+  const page = {};
+  const sandbox = { ALApp: reg, ALTc: TC, ALPrices: p, console, document: page,
+    ALTabs: { say: (d, text) => { assert.equal(d, page); polite.push(text); } } };
   sandbox.window = sandbox;
   vm.runInNewContext(web.source("webdata.js"), sandbox, { filename: "webdata.js" });
   reg.start();
@@ -614,11 +621,25 @@ test("Clear posts contact \"\" only, keeps the row and never echoes a value", as
   assert.equal(nodes["webdata-contact-note"].textContent, p.contactView(CLEARED).note);
   assert.equal(nodes["webdata-status"].textContent, p.contactClearedText(CLEARED));
   assert.equal(focused, "webdata-contact");
-  // a failed clear says so and changes nothing else
+  assert.deepEqual(polite, [], "a clear that worked is not said on the polite line");
+  // a failed clear says so, on the polite line too (design DCC-1)
   fail = true;
   nodes["webdata-form"].fire("click", nodes["webdata-contact-clear"]);
   await tick();
   assert.equal(calls.length, 3);
   assert.equal(nodes["webdata-status"].textContent, "Not cleared. Try again.");
+  assert.deepEqual(polite, ["Not cleared. Try again."]);
   assert.equal(nodes["webdata-contact-row"].hidden, false);
+  // a failed Save says "Not saved" on both lines; a refused value only in the status
+  nodes["webdata-contact"].value = "someone";
+  nodes["webdata-form"].fire("submit");
+  await tick();
+  assert.equal(nodes["webdata-status"].textContent, "Not saved. Try again.");
+  assert.deepEqual(polite, ["Not cleared. Try again.", "Not saved. Try again."]);
+  assert.equal(nodes["webdata-contact"].value, "someone", "kept for another try");
+  fail = "refused";
+  nodes["webdata-form"].fire("submit");
+  await tick();
+  assert.equal(nodes["webdata-status"].textContent, p.CONTACT_REFUSED);
+  assert.equal(polite.length, 2);
 });

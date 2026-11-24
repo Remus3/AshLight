@@ -44,11 +44,12 @@ a new or changed price template is edited here, not in design 0001.
   computer and is not shown here. Type a new one and click Save to change
   it, or click Clear to remove it.`; Clear answers in the status line
   `Contact removed. AshLight now sends its project issues page to
-  poe.ninja.` (web data on, nothing blocked), `Contact removed. This copy
-  has no default contact, so prices need one more step: add your contact
-  for poe.ninja below.` (a fork with no default), `Contact removed from
+  poe.ninja.` (web data on, nothing blocked), `Contact removed. No default
+  contact here, so add your own below.` (a fork with no default; short
+  enough for the one-line status, design DCC-2), `Contact removed from
   this computer.` (web data off or a release build), `Not cleared. Try
-  again.` (it did not go)
+  again.` (it did not go; a failed Save or Clear is also said on the
+  polite line, design DCC-1)
 - poe.ninja price (PRICE-UNIQUE / PRICE-STACKABLES, `ninja_text`):
   overlay line `About <amount> <unit>` (`Under 0.001 <unit>` for dust);
   over 26 characters it reads `~<amount> <unit>`; within 24 h of a
