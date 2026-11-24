@@ -68,8 +68,11 @@
 <body>
 <header class="bar">
   <!-- PLAY-TD-09C-BAR (F-190): AshLight's own mark (docs/design/0005,
-       no GGG art) in a 20 px box left of the name; decorative, so empty alt -->
-  <h1 class="brand"><img class="brand-mark" src="/web/favicon.svg" alt="" width="20" height="20">AshLight</h1>
+       no GGG art) in a 20 px box; decorative, so empty alt and aria-hidden.
+       UI-HEADER-TEXT (decision 0082 part 2): the visible name left of the
+       tabs is gone; the h1 keeps "AshLight" visually hidden for screen
+       readers and the heading order; document.title stays "AshLight". -->
+  <h1 class="brand"><img class="brand-mark" src="/web/favicon.svg" alt="" aria-hidden="true" width="20" height="20"><span class="sr-only">AshLight</span></h1>
   <!-- UI-GLANCE: a few tabs instead of one long column; Play is the glance
        tab and fits one screen. web/tabs.js: remembered per viewer, arrow
        keys move between tabs, a new item check, trade or build alert shows
@@ -192,7 +195,7 @@
     </div>
     <div class="card-page" data-page="paste" data-label="Paste a build" hidden>
       <!-- while the link offer's sentence shows, it takes the place of the
-           paste box (web/app.js linkOffer); the status line stays -->
+           paste box (web/panels/build.js linkOffer); the status line stays -->
       <div id="paste-form">
         <p id="build-empty" class="row-meta muted">No build yet.</p>
         <label class="paste row-body" for="build-paste"><span id="build-paste-label">Paste a build</span></label>
@@ -612,7 +615,7 @@
        no edge), trade accepted / cancelled and party lines too. The chips
        All, Deaths and Trades filter the list (aria-pressed); they are an
        optional review act, the list fills from the log by itself. The rows
-       page at 8 (6 compact) under the chip row (web/app.js renderEvents). -->
+       page at 8 (6 compact) under the chip row (web/panels/events.js renderEvents). -->
   <section class="card grid-card events" aria-labelledby="events-title">
     <div class="card-head">
       <h2 id="events-title" tabindex="-1">Recent</h2>

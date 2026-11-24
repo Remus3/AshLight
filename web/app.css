@@ -97,8 +97,9 @@ body {
 [hidden] { display: none !important; }
 
 /* PLAY-TD-09C-BAR: the bar row is a grid placed by area only (never CSS
-   order): mark and name, the character name and the one status word on
-   the brand row, the tabs wrapping under it; one row once wide enough
+   order): the mark (UI-HEADER-TEXT: its name is visually hidden), the
+   character name and the one status word on the brand row, the tabs
+   wrapping under it; one row once wide enough
    (design plan 03, section 3.4 and the flow rules). */
 .bar {
   display: grid;
@@ -115,7 +116,8 @@ body {
 .bar > .bar-char { grid-area: char; justify-self: end; }
 .bar > #reading { grid-area: status; justify-self: end; }
 .brand { font-size: var(--al-fs-body); margin: 0; display: inline-flex; align-items: center; gap: var(--al-space-2); }
-/* F-190: AshLight's own mark in a 20 px box left of the name */
+/* F-190: AshLight's own mark in a 20 px box; the h1 text beside it is .sr-only
+   (UI-HEADER-TEXT, decision 0082 part 2) */
 .brand-mark { display: block; flex: 0 0 auto; width: 20px; height: 20px; }
 .bar-char { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis;
   white-space: nowrap; font-size: var(--al-fs-body); }

@@ -110,6 +110,23 @@ def test_headings_start_at_one_and_never_skip_a_level():
         assert cur <= prev + 1, (prev, cur)
 
 
+def test_the_page_heading_is_a_hidden_name_beside_a_decorative_mark():
+    """UI-HEADER-TEXT (decision 0082 part 2): the one h1 sits in the header
+    and still names the page "AshLight" for a screen reader, but every word
+    of it is inside a .sr-only span (no visible name left of the tabs); the
+    mark beside it is decorative (empty alt and aria-hidden)."""
+    h1 = nodes("h1")[0]
+    assert any(a.tag == "header" for a in h1.ancestors())
+    assert h1.all_text().strip() == "AshLight"
+    assert h1.text.strip() == ""
+    words = [c for c in h1.children if c.all_text().strip()]
+    assert [(c.tag, c.attrs.get("class")) for c in words] == [("span", "sr-only")]
+    imgs = [c for c in h1.walk() if c.tag == "img"]
+    assert len(imgs) == 1
+    assert imgs[0].attrs.get("alt") == "" and imgs[0].attrs.get("aria-hidden") == "true"
+    assert re.search(r"<title>AshLight</title>", HTML)
+
+
 def test_every_labelled_section_points_at_its_own_heading():
     for s in nodes("section"):
         ref = s.attrs.get("aria-labelledby")
