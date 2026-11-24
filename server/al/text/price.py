@@ -66,9 +66,9 @@ PRICE_TEXT = {
             "poe.ninja prices need web data, which is off. Turn it on under "
             "Settings, Reading and web data."),
     "contact not set": ("Contact not set", "See Prices and web data",
-                        "poe.ninja prices need a contact, such as an email or a name. Add "
-                        "it under Settings, Reading and web data, then press the "
-                        "hotkey again."),
+                        "This copy of AshLight has no default contact, so poe.ninja "
+                        "prices need yours, such as an email or a name. Add it under "
+                        "Settings, Reading and web data, then press the hotkey again."),
     "not an item": ("Not an item", "Copy an item in game first",
                     "The clipboard did not hold an item. Hover an item in game, press "
                     "Ctrl+C, then press the hotkey."),

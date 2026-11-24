@@ -16,16 +16,22 @@
    reads the record again a few times (RECHECK_MS, bounded), so it follows
    the recorded state by itself once the script has run. No clipboard, no
    live region (the box points at its answer line), no request to the
-   core. */
+   core. SAVE-FAIL-SAY (design finding AS-1): a save that fails ("Not
+   saved") is also said in the page's one shared polite line, the header's
+   #tab-news, through ALTabs.say (design 0001 N6; a region of its own would
+   breach the 6-region cap of tests/test_a11y.py). */
 (function (root, factory) {
   "use strict";
-  var api = factory();
-  if (typeof module === "object" && module.exports) {
+  var common = typeof module === "object" && module.exports;
+  var api = factory(function () {
+    return common ? require("./tabs.js") : root.ALTabs;
+  });
+  if (common) {
     module.exports = api;
   } else {
     root.ALAutostart = api;
   }
-}(typeof self !== "undefined" ? self : this, function () {
+}(typeof self !== "undefined" ? self : this, function (tabs) {
   "use strict";
 
   var LABEL = "Start with Windows";
@@ -69,6 +75,19 @@
       line: rec.enabled === true ? T.on : T.off };
   }
 
+  /* Say a line in the header's polite #tab-news (ALTabs.say); a page
+     without tabs says nothing. */
+  function say(doc, text) {
+    var t = tabs();
+    if (t && typeof t.say === "function") { t.say(doc, text); }
+  }
+
+  /* The visible "Not saved" line, said on the polite line as well. */
+  function notSaved(doc) {
+    doc.getElementById("autostart-said").textContent = T.notSaved;
+    say(doc, T.notSaved);
+  }
+
   /* Show a model in #autostart-row. */
   function paint(doc, m) {
     var box = doc.getElementById("autostart-on");
@@ -109,7 +128,7 @@
           // the script did not change the record: say so, keep the record
           held.want = null;
           show();
-          doc.getElementById("autostart-said").textContent = T.notSaved;
+          notSaved(doc);
           return;
         }
         show();
@@ -133,7 +152,7 @@
       } catch (e) {
         held.want = null;
         show();
-        doc.getElementById("autostart-said").textContent = T.notSaved;
+        notSaved(doc);
         return;
       }
       show();

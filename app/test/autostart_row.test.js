@@ -163,3 +163,54 @@ test("the page: one 32 px row with a label in Appearance and tools, the script b
   assert.ok(s > 0 && s < HTML.indexOf("/web/app.js"));
   for (const t of Object.values(A.TEXT)) { assert.ok(t.length <= 94, t); }
 });
+
+test("SAVE-FAIL-SAY: a failed save is also said in the header's polite #tab-news", async () => {
+  // the record never follows the click
+  const doc = fakeDoc();
+  const news = el("tab-news");
+  const get = doc.getElementById;
+  doc.getElementById = (id) => (id === "tab-news" ? news : get(id));
+  const c = fakeClient(false);
+  const t = fakeTimers();
+  A.wire(doc, c, t);
+  await tick();
+  const box = doc.getElementById("autostart-on");
+  box.checked = true;
+  box.fire("change");
+  assert.equal(news.textContent, "", "saving says nothing");
+  for (let i = 0; i < A.RECHECK_MS.length; i++) {
+    t.due.shift()[1]();
+    await tick();
+  }
+  assert.equal(doc.getElementById("autostart-said").textContent, A.TEXT.notSaved);
+  assert.equal(news.textContent, A.TEXT.notSaved);
+  // the client's action throws
+  const d2 = fakeDoc();
+  const n2 = el("tab-news");
+  const g2 = d2.getElementById;
+  d2.getElementById = (id) => (id === "tab-news" ? n2 : g2(id));
+  const c2 = fakeClient(false);
+  c2.autostartOn = () => { throw new Error("x"); };
+  A.wire(d2, c2, fakeTimers());
+  await tick();
+  d2.getElementById("autostart-on").checked = true;
+  d2.getElementById("autostart-on").fire("change");
+  assert.equal(d2.getElementById("autostart-said").textContent, A.TEXT.notSaved);
+  assert.equal(n2.textContent, A.TEXT.notSaved);
+  // a save that the record follows says nothing on the polite line
+  const d3 = fakeDoc();
+  const n3 = el("tab-news");
+  const g3 = d3.getElementById;
+  d3.getElementById = (id) => (id === "tab-news" ? n3 : g3(id));
+  const c3 = fakeClient(false);
+  const t3 = fakeTimers();
+  A.wire(d3, c3, t3);
+  await tick();
+  d3.getElementById("autostart-on").checked = true;
+  d3.getElementById("autostart-on").fire("change");
+  c3.rec = true;
+  t3.due.shift()[1]();
+  await tick();
+  assert.equal(d3.getElementById("autostart-said").textContent, A.TEXT.on);
+  assert.equal(n3.textContent, "");
+});
