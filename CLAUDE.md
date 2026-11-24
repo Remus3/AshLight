@@ -1195,31 +1195,33 @@ of the HALT check.
   0073). Reverses if: the operator rules that milestones may publish
   themselves, or the remote is removed. Amended 2026-11-21: release.yml
   scopes as in the 0064 entry (DEP-15).
-- KINDLER: the build generator "Kindler" ranks AshLight-authored
-  archetype templates (server/al/data/archetypes.json, JSON never run as
-  code, src and checked, hot reloaded, nothing copied) scored only by
-  Path of Building through the bridge: at most 12 candidates in 60 s on
-  the Generate click only, a partial labelled; calc off shows one
-  unscored template with no DPS or EHP; tree node ids checked against the
-  cached tree export, never guessed; up to 6 tabs in
-  ops/runtime/gen_builds.json (0036 bounds, cleared by Clear run history,
-  exported, no item text); tri-state toggles; no own calc, tree search or
-  optimiser (decision 0081, amends 0004; amended 2026-11-19: Pasted build
-  tab fixed, Kindler tabs move left / right, rename (32 characters) and
-  close with an inline confirm; one result key, PoB-ranked by the 0024
-  blend, ties by template id then variant, byte-identical repeats, a
-  partial never cached as final; stages from levelling to maps with
-  skills, support links, gem timing from the gems snapshot, ordered
-  passives, ascendancy and per-slot item focus; per-tab "follow Play
-  guidance" on by default, reading only published zone, act and level,
-  never claiming a step done). KINDLER-DATA:
-  theorycraft/archetypes.py checks archetypes.json (schema 1, fixed key
-  allow-lists, src and checked per template and stage, hot reloaded);
-  resolve() only looks up and drops tree node ids missing from the cached
-  export with a note, gems unchecked until a gems snapshot exists; the
-  validator check() (connectivity from class and ascendancy start, order,
-  point budget (level - 1) + bonus_points, gem and zone ids) runs only in
-  tests and KINDLER-TEMPLATES. Reverses if: PoB drift makes route XML
+- KINDLER: the build generator "Kindler" ranks AshLight-authored archetype
+  templates (server/al/data/archetypes.json, JSON never run as code, src
+  and checked, hot reloaded, nothing copied) scored only by Path of
+  Building through the bridge: at most 12 candidates in 60 s on the
+  Generate click only, a partial labelled; calc off shows one unscored
+  template with no DPS or EHP; tree node ids checked against the cached
+  tree export, never guessed; up to 6 tabs in ops/runtime/gen_builds.json
+  (0036 bounds, cleared by Clear run history, exported, no item text);
+  tri-state toggles; no own calc, tree search or optimiser (decision 0081,
+  amends 0004; amended 2026-11-19: Pasted build tab fixed, Kindler tabs
+  move left / right, rename (32 characters) and close with an inline
+  confirm; one result key, PoB-ranked by the 0024 blend, ties by template
+  id then variant, byte-identical repeats, a partial never cached as
+  final; stages from levelling to maps with skills, support links, gem
+  timing from the gems snapshot, ordered passives, ascendancy and per-slot
+  item focus; per-tab "follow Play guidance" on by default, reading only
+  published zone, act and level, never claiming a step done).
+  KINDLER-DATA: theorycraft/archetypes.py checks archetypes.json (schema
+  1, fixed key allow-lists, src and checked per template and stage, hot
+  reloaded); resolve() only looks up and drops tree node ids missing from
+  the cached export with a note, gems unchecked until a gems snapshot
+  exists; the validator check() (connectivity from class and ascendancy
+  start, order, point budget (level - 1) + bonus_points, gem and zone ids)
+  runs only in tests and KINDLER-TEMPLATES. KINDLER-TEMPLATES: 4 authored
+  templates (melee, spell, minion, bow), 7 stages from G1_1 to early maps;
+  gem names from cached base_items until DATA-GEMS-SNAP, no gem levels or
+  bonus points authored. Reverses if: PoB drift makes route XML
   unreliable, 12 candidates in 60 s breach the 0024 / 0028 budgets,
   automatic regeneration is wanted and shown to cost no FPS, 6 tabs prove
   too few, a name collision or GGG use of the word is found, the operator
@@ -1255,17 +1257,29 @@ of the HALT check.
   monster drop lists, NPC prices or disenchant yields (no permitted
   source); "where found" only from PoB-PoE2's CurrencyNames.lua,
   WorldAreas.lua and Uniques Source lines, text-parsed under sha256 pins
-  while the calc component is installed, never run as Lua, repoe-fork
-  wins (amends 0037); no GGG exchange call; a "More on poe2db" link
-  opens only on the player's click (decision 0083; amended 2026-11-19:
-  AshLight keeps Apache-2.0, link only to poe2db / wiki, no text or
-  data fetched, bundled or snapshotted until a source permits app use,
-  then only by decision 0009's opt-in sidecar route with any community
-  figure labelled "community estimate"). Reverses if: a permitted source
-  for drops, vendor or disenchant data appears, a source publishes an
-  API or app-use terms or gives written permission, GGG opens
-  registration, PoB relicenses or a Source line proves wrong in play,
-  poe2db objects to deep links or leaves config/link_hosts.json, or the
+  while the calc component is installed, never run as Lua, repoe-fork wins
+  (amends 0037); no GGG exchange call; a "More on poe2db" link opens only
+  on the player's click (decision 0083; amended 2026-11-19: AshLight keeps
+  Apache-2.0, link only to poe2db / wiki, no text or data fetched, bundled
+  or snapshotted until a source permits app use, then only by decision
+  0009's opt-in sidecar route with any community figure labelled
+  "community estimate"). GET /api/iteminfo (ITEM-INFO-CORE) is a
+  token-gated plug route: an exact name (at most 120 characters) over
+  cached base_items, the cached uniques snapshot (snapshot.ITEM_SOURCES,
+  same opt-in) and the price book while web_data is on; an unknown name is
+  200 with empty fields; price entries keep only https poecdn.com icons;
+  its words live in server/al/text/iteminfo.py (copy sheet
+  docs/design/copy/iteminfo.md). ITEM-INFO-POB-TEXT: where_found rows come
+  only from PoB-PoE2 Uniques/<slot>.lua Source lines and WorldAreas.lua
+  isMap, read as text (theorycraft/pobtext.py) under one pob2_files sha256
+  per file with the marker check, parsed once per pin and only for the
+  core's default lookup; CurrencyNames.lua is absent from the pin and
+  Special/ is not read; credited by source id path-of-building. Reverses
+  if: a permitted source for drops, vendor or disenchant data appears, a
+  source publishes an API or app-use terms or gives written permission,
+  GGG opens registration, PoB relicenses or a Source line proves wrong in
+  play, poe2db objects to deep links or leaves config/link_hosts.json, PoB
+  reshapes its Source lines, a pin brings CurrencyNames.lua, or the
   operator asks for drop_level.
 - Updates: one read of the project's releases/latest per 24 h inside the
   web-data opt-in; verified by size, SHA-256 against SHA256SUMS and the API
