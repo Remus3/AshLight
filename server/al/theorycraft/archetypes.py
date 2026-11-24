@@ -64,6 +64,7 @@ from collections import deque
 from pathlib import Path
 
 from .. import hotreload
+from ..text import kindler as words
 from . import datacredit, model, treedata
 
 PATH = Path(__file__).resolve().parent.parent / "data" / "archetypes.json"
@@ -93,16 +94,14 @@ TOGGLES = ("melee", "spell", "minion", "bow", "crit")
 DEFENCES = ("life", "es", "hybrid")
 ACTIONS = ("pick", "swap", "drop")
 # KINDLER-WEAPON-BASE: the toggles whose skills attack with a weapon, and
-# the base_items item classes that fit each one (repoe-fork class names).
-# Only attack weapon classes are indexed; a caster weapon (wand, staff,
-# sceptre) is no attack template's base.
+# the base_items item classes that fit each one (repoe-fork class names,
+# server/al/text/kindler.py). Only attack weapon classes are indexed; a
+# caster weapon (wand, staff, sceptre) is no attack template's base.
 ATTACK_TOGGLES = ("melee", "bow")
-MELEE_CLASSES = ("One Hand Mace", "Two Hand Mace", "One Hand Sword",
-                 "Two Hand Sword", "One Hand Axe", "Two Hand Axe", "Dagger",
-                 "Claw", "Spear", "Flail", "Warstaff")
-RANGED_CLASSES = ("Bow", "Crossbow")
+MELEE_CLASSES = words.MELEE_CLASSES
+RANGED_CLASSES = words.RANGED_CLASSES
 WEAPON_CLASSES = MELEE_CLASSES + RANGED_CLASSES
-TOGGLE_CLASSES = {"melee": MELEE_CLASSES, "bow": ("Bow",)}
+TOGGLE_CLASSES = {"melee": MELEE_CLASSES, "bow": (words.BOW_CLASS,)}
 TRIGGER_KINDS = ("level", "act", "zone", "area_level")
 
 _DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -343,7 +342,7 @@ def load(path=PATH):
 
 def watch(path=PATH, registry=None):
     """A hot-reloaded table for `path` (registry None: the core's)."""
-    return hotreload.Watched(path, load, name="Kindler templates", default=dict,
+    return hotreload.Watched(path, load, name=words.TABLE_NAME, default=dict,
                              registry=registry)
 
 
@@ -558,8 +557,7 @@ def _weapon(name, bases, notes, where):
     hit = bases.get(name.lower()) if bases is not None else None
     if hit is None:
         if bases is not None:
-            notes.append(f"{where}: weapon {name} is not a weapon base in the "
-                         f"base_items snapshot; not composed")
+            notes.append(words.weapon_unknown(where, name))
         return {"name": name, "item_class": None, "level": None, "checked": False}
     return {"name": hit["name"], "item_class": hit["item_class"],
             "level": hit["level"], "checked": True}
@@ -609,13 +607,13 @@ class Sources:
         self._table = watch(path, registry=registry) if path != PATH else _watch
         self._tree = hotreload.Watched(
             tree_path or treedata.default_path(), self._load_tree,
-            name="Passive tree (Kindler)", default=None, registry=False)
+            name=words.TREE_NAME, default=None, registry=False)
         self._gems = hotreload.Watched(
             gems_file or gems_path(), self._load_gems_strict,
-            name="Gems snapshot", default=None, registry=False)
+            name=words.GEMS_NAME, default=None, registry=False)
         self._bases = hotreload.Watched(
             bases_file or default_bases(gems_file), self._load_bases_strict,
-            name="Weapon bases (Kindler)", default=None, registry=False)
+            name=words.BASES_NAME, default=None, registry=False)
 
     @staticmethod
     def _load_tree(path):

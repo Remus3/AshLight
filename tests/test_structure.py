@@ -300,7 +300,8 @@ def check_text(root, exempt):
 COPY_DIR = "docs/design/copy"
 DESIGN_0001 = "docs/design/0001-design-system.md"
 COPY_SKIP = ("__init__", "common")
-# Sheets whose words live in a web module, not server/al/text/ (KT-8).
+# Sheets whose words live in a web module, not server/al/text/ (KT-8); a
+# sheet may also have a text module (kindler: the server words).
 WEB_SHEETS = {"kindler": "web/kindler.js"}
 
 
@@ -474,8 +475,11 @@ def test_web_sheet_needs_its_web_module(tmp_path):
         "docs/design/copy/kindler.md: web module web/kindler.js is missing"]
     (root / "web" / "kindler.js").write_text("//", encoding="ascii")
     assert check_copy_sheets(root) == []
+    # KINDLER-WEAPON-BASE: server/al/text/kindler.py holds the server
+    # words, so the sheet is needed for the text module too
     (root / COPY_DIR / "kindler.md").unlink()
-    assert check_copy_sheets(root) == []
+    assert check_copy_sheets(root) == [
+        "server/al/text/kindler.py: no copy sheet docs/design/copy/kindler.md"]
 
 
 def test_copy_sheet_link_must_sit_in_section_9(tmp_path):

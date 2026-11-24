@@ -57,6 +57,7 @@ from pathlib import Path
 from xml.sax.saxutils import escape, quoteattr
 
 from .. import hotreload, paths
+from ..text import kindler as words
 from . import archetypes, delta, genstore, treedata
 
 MAX_CANDIDATES = genstore.MAX_CANDIDATES  # decision 0081 point 3
@@ -132,17 +133,17 @@ class Sources:
     def __init__(self, table_path=None, tree_path=None, gems_file=None, pins_path=None,
                  bases_file=None):
         self._table = hotreload.Watched(table_path or archetypes.PATH, _load_table,
-                                        name="Kindler templates (engine)",
+                                        name=words.ENGINE_TABLE_NAME,
                                         default=None, registry=False)
         self._tree = hotreload.Watched(tree_path or treedata.default_path(), _load_tree,
-                                       name="Passive tree (Kindler engine)",
+                                       name=words.ENGINE_TREE_NAME,
                                        default=None, registry=False)
         self._gems = hotreload.Watched(gems_file or archetypes.gems_path(), _load_gems,
-                                       name="Gems snapshot (Kindler engine)",
+                                       name=words.ENGINE_GEMS_NAME,
                                        default=None, registry=False)
         self._bases = hotreload.Watched(bases_file or archetypes.default_bases(gems_file),
                                         _load_bases,
-                                        name="Weapon bases (Kindler engine)",
+                                        name=words.ENGINE_BASES_NAME,
                                         default=None, registry=False)
         self._pins = pins_path
 

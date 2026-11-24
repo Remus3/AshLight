@@ -560,3 +560,36 @@ def test_view_reads_the_bases_beside_the_gems_file(tmp_path):
     view = ar.Sources(p, cache / "none.json", cache / "gems.json",
                       bases_file=other).view()
     assert view["templates"][0]["weapon"]["checked"] is False
+
+
+def test_server_words_are_pinned_exactly():
+    """KINDLER-WEAPON-BASE: the server words live in server/al/text/kindler.py
+    (docs/design/copy/kindler.md, Server words) and both modules use them."""
+    from server.al.text import kindler as words
+    from server.al.theorycraft import kindler as engine
+    assert (words.TABLE_NAME, words.TREE_NAME, words.GEMS_NAME, words.BASES_NAME) == (
+        "Kindler templates", "Passive tree (Kindler)", "Gems snapshot",
+        "Weapon bases (Kindler)")
+    assert (words.ENGINE_TABLE_NAME, words.ENGINE_TREE_NAME, words.ENGINE_GEMS_NAME,
+            words.ENGINE_BASES_NAME) == (
+        "Kindler templates (engine)", "Passive tree (Kindler engine)",
+        "Gems snapshot (Kindler engine)", "Weapon bases (Kindler engine)")
+    assert words.MELEE_CLASSES == (
+        "One Hand Mace", "Two Hand Mace", "One Hand Sword", "Two Hand Sword",
+        "One Hand Axe", "Two Hand Axe", "Dagger", "Claw", "Spear", "Flail", "Warstaff")
+    assert words.RANGED_CLASSES == ("Bow", "Crossbow") and words.BOW_CLASS == "Bow"
+    assert words.weapon_unknown("t1", "Glass Mallet") == (
+        "t1: weapon Glass Mallet is not a weapon base in the base_items snapshot; "
+        "not composed")
+    assert ar.MELEE_CLASSES is words.MELEE_CLASSES
+    assert ar.TOGGLE_CLASSES["bow"] == (words.BOW_CLASS,)
+    sheet = (ROOT / "docs" / "design" / "copy" / "kindler.md").read_text(encoding="ascii")
+    flat = " ".join(sheet.split())
+    for word in (words.TABLE_NAME, words.TREE_NAME, words.GEMS_NAME, words.BASES_NAME,
+                 words.ENGINE_TABLE_NAME, words.ENGINE_TREE_NAME, words.ENGINE_GEMS_NAME,
+                 words.ENGINE_BASES_NAME) + words.MELEE_CLASSES + words.RANGED_CLASSES:
+        assert f"`{word}`" in flat, word
+    for path in ("server/al/theorycraft/archetypes.py", "server/al/theorycraft/kindler.py"):
+        src = (ROOT / path).read_text(encoding="ascii")
+        assert "from ..text import kindler as words" in src, path
+    assert engine.words is words
