@@ -1,7 +1,7 @@
 {
- "files": 59,
+ "files": 86,
  "fixture": "tests/fixtures/demo",
- "inputs": "2fae963d19c0990eb117e200a22eacf6e82ae1c69ea69a0591ade4b27a003fe0",
+ "inputs": "43ead5a4ec4a79d61b8b04d35ed5c202f1d9e959297a4b73fb1c80b50fc2504f",
  "pending": [],
  "schema": 1,
  "shots": [
