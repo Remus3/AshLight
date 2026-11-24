@@ -1256,19 +1256,6 @@ of the HALT check.
   parts of at most 10 rows, gem and stat names open the shared item info
   popover, a Follow Play guidance chip with a Now badge and a why line, no
   weight or score number, plan read only via op plan.
-  KINDLER-WEAPON-BASE: an attack template (toggle melee or bow) names one
-  authored weapon base, the optional template field "weapon" in
-  archetypes.json (schema 1, key allow-list widened);
-  archetypes.base_index reads only released bases of attack weapon
-  classes from the cached repoe-fork base_items snapshot; a weapon is
-  checked only when that index names it, else checked=False with a note
-  and nothing is composed (never guessed); kindler.compose_xml puts a
-  checked weapon in "Weapon 1" as a plain item ("Rarity: NORMAL" plus the
-  base name), and with no weapon the empty item set stays byte-identical;
-  check() refuses an attack template with no weapon and, with the
-  snapshot, a base it does not name, a class that does not fit the
-  toggle, or a base needing a higher level than the first stage; the
-  result key keeps decision 0081's inputs.
   Reverses if: PoB drift makes route XML unreliable,
   12 candidates in 60 s breach the 0024 / 0028 budgets,
   automatic regeneration is wanted and shown to cost no FPS, 6 tabs prove
@@ -1278,10 +1265,8 @@ of the HALT check.
   non-identical, the follow default annoys players in play, PoB stops
   reporting support applicability through the bridge, attack scoring
   needs items (KINDLER-WEAPON-BASE), a review rules another rank
-  baseline, per-slot local mods change the focus ranking in play, the
-  stage priority misfires in play, PoB stops reading a normal item's name
-  line as its base, a template needs a weapon per stage, or a stale
-  cached result is seen after a base_items refresh.
+  baseline, per-slot local mods change the focus ranking in play, or the
+  stage priority misfires in play.
 - DATA-GEMS-SNAP: snapshot.SOURCES adds repoe-fork's poe2 gems.json, cached
   as the gems.json that theorycraft/archetypes.py reads (GEMS_FILE), with
   the same web_data opt-in, cache, User-Agent and attribution as base_items
