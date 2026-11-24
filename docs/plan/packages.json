@@ -23242,7 +23242,9 @@
    "title": "Copy sheet for the Kindler card words",
    "goal": "docs/design/copy/kindler.md lists the Kindler sub-tab labels, editor heading and buttons, toggle group names, Generate, status, not-scored, refusal, result ready and Out of date lines word for word as web/kindler.js has them.",
    "units": [],
-   "files": [],
+   "files": [
+    "tests/test_structure.py"
+   ],
    "new_files": [
     "docs/design/copy/kindler.md"
    ],
@@ -23275,7 +23277,7 @@
    "design_review": true,
    "blocked": null,
    "operator_act": "",
-   "notes": "Design finding KT-8 (wave 42). Form of the other docs/design/copy sheets; also covers the KINDLER-UI-RESULT plan card words.",
+   "notes": "Design finding KT-8 (wave 42). Form of the other docs/design/copy sheets; also covers the KINDLER-UI-RESULT plan card words. Widened 2026-11-24 (ORCH-46): tests/test_structure.py; rule 3 (one copy sheet per text module) fails for a sheet whose words live in web/kindler.js with no server/al/text/kindler.py; deferred from wave 46 batch 2 (merge 952a0f5 reverted by 5eb6d5d), carried into wave 47.",
    "wave": 46,
    "owner": "session"
   },

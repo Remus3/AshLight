@@ -65,7 +65,7 @@
   var SETUP_TITLE = "Set up AshLight";
   var SETUP_ASK = "Let AshLight read the game's log, read only:";
   var SETUP_NO_PATH = "Client.txt not found yet. Start the game once.";
-  var SETUP_PROMISE = "Read only. AshLight never touches the game.";
+  var SETUP_PROMISE = "Read only. Play in Windowed Fullscreen.";
   var NOT_SAVED = "Not saved. Try again.";
   var CHECKS_BUTTON = "Open Checks";
   var IDLE_TITLE = "Last session";

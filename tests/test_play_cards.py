@@ -140,7 +140,7 @@ def test_setup_block_rows():
         ("step", "[ ]", "Prices: off, optional"),
         ("step", "[ ]", "Overlay: not running, optional"),
     ]
-    assert b["facts"] == "Read only. AshLight never touches the game."
+    assert b["facts"] == "Read only. Play in Windowed Fullscreen."
     path = "Games/" + "Steam Library/" * 6 + "logs/Client.txt"
     done = pc.setup_block({"tailer": {"consented": False, "path": path},
                            "build": {"loaded": True},

@@ -1267,6 +1267,17 @@ of the HALT check.
   needs items (KINDLER-WEAPON-BASE), a review rules another rank
   baseline, per-slot local mods change the focus ranking in play, or the
   stage priority misfires in play.
+- DATA-GEMS-SNAP: snapshot.SOURCES adds repoe-fork's poe2 gems.json, cached
+  as the gems.json that theorycraft/archetypes.py reads (GEMS_FILE), with
+  the same web_data opt-in, cache, User-Agent and attribution as base_items
+  (decision 0009), a 64 MB cap (the reader's GEMS_MAX_BYTES) and no contact;
+  its snapprobe probe "gems" needs an object of at least 150 entries and at
+  least 100 gem names counted by archetypes.gem_index (name at the top or
+  under base_item / active_skill), never one named field; a failing body
+  keeps the cached copy and shows the "skill gem list" Checks row; no second
+  credit line (the repoe-fork sentence of datacredit.ATTRIBUTION covers it).
+  Reverses if: repoe-fork drops or renames gems.json, its terms forbid this
+  use, or real files trip the 150 / 100 thresholds.
 - UI 0082: item names are link-like buttons opening one shared,
   fixed-position item info popover (web/iteminfo.js, one open, Escape
   returns focus, never resizes a card) over a cache-only token-gated GET
