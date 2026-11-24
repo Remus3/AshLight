@@ -135,8 +135,8 @@
 
   /* A pager for a list whose rows may carry controls. opts: rows, label
      (the list's name for the button labels), text(row) -> the row's whole
-     text (title and Full text page), parts(row) -> [{text, cls}] shown in
-     the list row (default: the whole text), controls(doc, row, list) ->
+     text (title and Full text page), parts(row) -> [{text, cls}] or [{node}]
+     shown in the list row (default: the whole text), controls(doc, row, list) ->
      nodes after the row text (list page only), rowClass(row) -> extra
      class, empty (the one row shown for no rows), size {full, compact}
      (rows a page), sizeClass (a function or a string, as web/pager.js).
@@ -217,7 +217,9 @@
       if (isFn(o.parts)) {
         clear(span);
         (o.parts(r) || []).forEach(function (part) {
-          span.appendChild(el(doc, "span", part.cls || null, str(part.text)));
+          // ITEM-INFO-UI: a part may be a ready node (an item name button)
+          span.appendChild(part && part.node ? part.node
+            : el(doc, "span", part.cls || null, str(part.text)));
         });
       }
       if (span !== li) { li.className = "al-row-ctl"; }

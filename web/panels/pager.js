@@ -158,12 +158,16 @@
       var pg = buildPagers[slotId];
       if (!pg) {
         var full = typeof opts.full === "function" ? opts.full : null;
-        pg = window.ALSearch.rowPager(document, {
+        var po = {
           label: label, size: size, sizeClass: sizeClass, text: full || opts.text,
           parts: full ? function (r) { return [{ text: opts.text(r) }]; } : undefined,
           rowClass: opts.rowClass,
           controls: function (d, r) { return r.link ? [linkOut(r.link, r.linkName)] : []; }
-        });
+        };
+        // ITEM-INFO-UI: opts.parts(row), when given, builds the list row
+        // (an item name button and the rest of the line)
+        if (typeof opts.parts === "function") { po.parts = opts.parts; }
+        pg = window.ALSearch.rowPager(document, po);
         buildPagers[slotId] = pg;
         $(slotId).replaceChildren(pg.node);
       }

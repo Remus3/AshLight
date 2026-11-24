@@ -75,13 +75,25 @@
   var rateRows = [];
   var trendRows = [];
 
+  /* ITEM-INFO-UI (decision 0082 part 1): each row is {text, item}; the
+     item's name in the row is a button that opens the shared item info
+     popover (web/iteminfo.js), plain text while that file is absent. */
+  function itemParts(r) {
+    var I = window.ALItemInfo;
+    return I ? I.parts(document, r.text, r.item) : [{ text: r.text }];
+  }
+
   function paintPricesList() {
     var snap = getSnap();
-    var watch = window.ALPriceWatch ? window.ALPriceWatch.rows(snap ? snap.price_watch : null) : [];
+    var pw = window.ALPriceWatch;
+    var watch = pw ? pw.items(snap ? snap.price_watch : null) : [];
     linkPager("prices-list", "prices", PRICE_ROWS, {
-      rows: watch.concat(rateRows, trendRows).map(textRow),
-      text: function (r) { return r.text; }
+      rows: watch.concat(rateRows, trendRows),
+      text: function (r) { return r.text; },
+      parts: itemParts
     });
+    // a re-render that took the open popover's button away closes it
+    if (window.ALItemInfo) { window.ALItemInfo.sync(); }
   }
 
   function renderRates() {
@@ -95,14 +107,14 @@
     $("rates-credit-line").setAttribute("title", $("rates-credit-line").textContent);
     $("rates-attrib").textContent = v.attribution;
     rateRows = v.rows.map(function (r) {
-      return r.name + ": " + r.value + (r.per ? " (" + r.per + ")" : "");
+      return { text: r.name + ": " + r.value + (r.per ? " (" + r.per + ")" : ""), item: r.name };
     });
     renderMovers();
   }
 
   /* UTIL-MOVERS: the week's biggest moves from the same /api/rates doc */
   function renderMovers() {
-    trendRows = P.trendRows(ratesDoc);
+    trendRows = P.trendList(ratesDoc);
     paintPricesList();
   }
 

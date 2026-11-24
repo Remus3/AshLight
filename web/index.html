@@ -33,6 +33,7 @@
 <script src="/web/history.js" defer></script>
 <script src="/web/chars.js" defer></script>
 <script src="/web/pricewatch.js" defer></script>
+<script src="/web/iteminfo.js" defer></script>
 <script src="/web/settingsio.js" defer></script>
 <script src="/web/hotkeys.js" defer></script>
 <script src="/web/overlayparts.js" defer></script>
@@ -1108,5 +1109,19 @@
        core reports, read on every connect; hidden until it has answered -->
   <p id="build-line" class="muted" hidden></p>
 </footer>
+
+<!-- ITEM-INFO-UI (decision 0082 part 1, decision 0083): the one shared
+     item info popover. web/iteminfo.js opens it beside an item name button
+     (fixed position, never inside a card, so no card changes size) and
+     fills it from GET /api/iteminfo, the local caches only. The poe2db
+     link (its href set by the script from the name) opens only on the
+     player's click, in the browser. -->
+<div id="iteminfo-pop" class="iteminfo-pop" popover="manual" role="dialog" aria-label="Item info" tabindex="-1">
+  <h2 id="iteminfo-title" class="iteminfo-title" tabindex="-1">Item info</h2>
+  <div id="iteminfo-body"></div>
+  <p id="iteminfo-more" class="iteminfo-more">Drops, vendor and disenchant: see poe2db (community site)</p>
+  <a id="iteminfo-poe2db" class="out" target="_blank" rel="noopener noreferrer"
+     aria-label="More on poe2db (opens in a new tab)">More on poe2db</a>
+</div>
 </body>
 </html>

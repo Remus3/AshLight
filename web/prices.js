@@ -317,9 +317,16 @@
      this week (0.35 Divine Orb)"); the empty sentence while web data is on
      and there is none; nothing while web data is off. */
   function trendRows(doc) {
+    return trendList(doc).map(function (r) { return r.text; });
+  }
+
+  /* ITEM-INFO-UI: the same rows as {text, item}: item is the mover's name
+     (the Prices list makes it the item info button), "" for the empty
+     sentence and an unnamed mover. */
+  function trendList(doc) {
     var m = moversView(doc);
     if (!m.show) { return []; }
-    if (m.empty) { return [m.empty]; }
+    if (m.empty) { return [{ text: m.empty, item: "" }]; }
     var all = m.up.map(function (r, i) { return { r: r, raw: doc.movers.up[i] }; })
       .concat(m.down.map(function (r, i) { return { r: r, raw: doc.movers.down[i] }; }));
     var size = function (x) {
@@ -331,7 +338,8 @@
       var r = x.r;
       var word = r.change === "no change" ? " has not moved" :
         (r.change.indexOf("up ") === 0 ? " is rising: " : " is falling: ") + r.change + " this week";
-      return r.name + word + (r.value ? " (" + r.value + ")" : "");
+      return { text: r.name + word + (r.value ? " (" + r.value + ")" : ""),
+               item: x.raw && typeof x.raw.name === "string" && x.raw.name ? r.name : "" };
     });
   }
 
@@ -479,7 +487,7 @@
            CONTACT_REFUSED: CONTACT_REFUSED, leagueView: leagueView,
            leagueSavedText: leagueSavedText, LEAGUE_REFUSED: LEAGUE_REFUSED,
            ratesPill: ratesPill, ratesView: ratesView, convert: convert, aboutText: aboutText,
-           tradeAbout: tradeAbout, priceView: priceView, trendRows: trendRows,
+           tradeAbout: tradeAbout, priceView: priceView, trendRows: trendRows, trendList: trendList,
            tradeLink: tradeLink, ninjaLink: ninjaLink, upgradeView: upgradeView, moversView: moversView,
            valueView: valueView };
 }));
