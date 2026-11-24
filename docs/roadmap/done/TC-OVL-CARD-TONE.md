@@ -1,1 +1,0 @@
- -- done 2026-11-24 (PLAN-46 re-check, no package: the core's overlay card already takes its verdict from the mark's tone (server/al/text/overlaycard.py "verdict": et["tone"]) and app/shared/render_gate.js slotPart paints snap.card.verdict; app/test/tc_view.test.js pins core word and tone over the local word; stale tag session wave 7)

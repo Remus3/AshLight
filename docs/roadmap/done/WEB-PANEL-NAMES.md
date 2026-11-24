@@ -1,1 +1,0 @@
- -- done 2026-11-24 (session wave 50; verified (a11y table keyed by path, no rename))

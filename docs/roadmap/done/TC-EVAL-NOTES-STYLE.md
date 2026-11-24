@@ -1,1 +1,0 @@
- -- done 2026-11-24 (PLAN-46 re-check, no package: superseded; #eval-notes is now <ul class="sr-only" hidden> in web/index.html (PLAY-TD-19D-ITEMS-GRID), so a visible list style has nothing to style; stale tag session wave 7)
