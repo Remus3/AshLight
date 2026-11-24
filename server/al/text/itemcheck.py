@@ -16,6 +16,9 @@ from .waystone import waystone_text
 # -- TC-EVAL-UI: item check text (design 0001 section 9). The dashboard and
 # the overlay print these; neither builds verdict wording itself.
 VERDICT_WORD = {"upgrade": "Upgrade", "sidegrade": "Sidegrade", "downgrade": "Downgrade"}
+# The word for a verdict the card does not name: one of the design 0001
+# section 9 rule 13 mark words (TC-VERDICT-FALLBACK-WORD).
+VERDICT_FALLBACK = "Not checked"
 # CARD-LINE-LIMIT-COPY: overlay lines are worded to fit common.CARD_LINE
 # (26 since CARD-LINE-LIMIT-FLIP).
 LINE_FIT = CARD_LINE
@@ -90,20 +93,29 @@ def _weapon_type_calc(best):
 
 
 def _compare_sentence(comp):
-    verdict = VERDICT_WORD.get(_key(comp.get("verdict")), "Checked")
+    verdict = VERDICT_WORD.get(_key(comp.get("verdict")), VERDICT_FALLBACK)
     slot = _text(comp.get("slot"), "that slot")
     if _weapon_skill(comp)[0]:
         where = slot if comp.get("empty") else f"{slot} ({_equipped_name(comp)})"
         return f"Downgrade: your main skill can't use this weapon type in {where}."
     delta = comp.get("score_delta") or 0
     if comp.get("empty"):
-        return f"{verdict}: your build has nothing in {slot} ({_signed_points(delta)})."
+        return _lead(verdict, f"your build has nothing in {slot} ({_signed_points(delta)}).")
     name = _equipped_name(comp)
     if comp.get("verdict") == "upgrade":
         return f"{verdict}: {_points(delta)} more than your {slot} ({name})."
     if comp.get("verdict") == "downgrade":
         return f"{verdict}: {_points(delta)} less than your {slot} ({name})."
-    return f"{verdict}: about the same as your {slot} ({name}), {_signed_points(delta)}."
+    return _lead(verdict, f"about the same as your {slot} ({name}), {_signed_points(delta)}.")
+
+
+def _lead(verdict, reason):
+    """"<Verdict>: <reason>"; an unnamed verdict (VERDICT_FALLBACK) leads
+    with the reason alone, since the card word already says Not checked
+    and the sentence reports a real comparison (TCVF-1)."""
+    if verdict == VERDICT_FALLBACK:
+        return reason[:1].upper() + reason[1:]
+    return f"{verdict}: {reason}"
 
 
 def _stat_rows(comp):
@@ -228,7 +240,7 @@ def eval_card_text(card, alert=None):
     elif not card.get("ok"):
         word = "Not checked"
     else:
-        word = VERDICT_WORD.get(_key(card.get("verdict")), "Checked")
+        word = VERDICT_WORD.get(_key(card.get("verdict")), VERDICT_FALLBACK)
     out.update(notes=[], word=word, tone=tone, answers=False)
     cardparts.words(card, out)
     caveat = build_alert_text(alert) if card.get("ok") and not ws else None
@@ -261,6 +273,15 @@ def _delta_head(verdict, score, slot, empty):
     slot empty", then "<Verdict> <delta>")."""
     delta = _signed(score or 0)
     deltas = [delta] + [d for d in (_whole(score),) if d]
+    if verdict == VERDICT_FALLBACK:
+        # TCVF-1: an unnamed verdict's head leads with the reason; the
+        # card word (VERDICT_FALLBACK) stays the mark word.
+        if empty:
+            heads = [f"{d} - {slot} empty" for d in deltas] + [f"{slot} empty",
+                                                               f"{delta} - slot empty"]
+        else:
+            heads = [f"{d} vs {slot}" for d in deltas] + [f"vs {slot}"]
+        return next((h for h in heads if len(h) <= LINE_FIT), delta)
     if empty:
         heads = [f"{verdict} {d} - {slot} empty" for d in deltas]
         heads += [f"{verdict}: {slot} empty", f"{verdict} {delta} - slot empty",
@@ -294,7 +315,7 @@ def _eval_lines(card):
     comps = _dicts(card.get("comparisons"))
     best = next((c for c in comps if c.get("slot") == card.get("slot")),
                 comps[0] if comps else {})
-    verdict = VERDICT_WORD.get(_key(card.get("verdict")), "Checked")
+    verdict = VERDICT_WORD.get(_key(card.get("verdict")), VERDICT_FALLBACK)
     slot = _text(card.get("slot"), "its slot")
     out["head"] = _delta_head(verdict, card.get("score_delta"), slot, best.get("empty"))
     counted = [stat_delta_text(s.get("key"), s.get("delta"))

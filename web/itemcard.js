@@ -169,7 +169,7 @@
       kind: str(it.kind) || "verdict",
       tone: TONES[it.state] || "neutral",
       glyph: str(it.glyph) || "[-]",
-      word: str(it.word) || "Checked",
+      word: str(it.word) || "Not checked",
       name: str(it.name),
       sentence: padList(sentence, SENTENCE_ROWS, ""),
       full: str(it.full) || sentence.join(" "),

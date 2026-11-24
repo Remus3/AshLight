@@ -176,12 +176,33 @@ def test_error_card_text():
         assert "None" not in str(t) and "undefined" not in str(t)
 
 
+def test_unnamed_verdict_sentences_lead_with_the_reason():
+    """TCVF-1 (TC-VERDICT-FALLBACK-WORD): an unnamed verdict keeps the card
+    word Not checked, but the head and sentences that report a real
+    comparison start with the reason, never with "Not checked:"."""
+    from server.al.playcards import _strip_word
+    t = eval_card_text(card(verdict="odd", score_delta=0.4,
+                            comparisons=[comp("Ring 1", "odd", 0.4, name="Old Loop"),
+                                         comp("Ring 2", None, 2, empty=True)]))
+    assert t["word"] == "Not checked"
+    assert t["head"] == "+0.4 vs Ring 1"
+    assert t["sentence"] == "About the same as your Ring 1 (Old Loop), +0.4 points."
+    rows = [c["sentence"] for c in t["comparisons"]]
+    assert rows[1] == "Your build has nothing in Ring 2 (+2 points)."
+    assert not any("Not checked" in x for x in [t["head"], t["sentence"]] + rows)
+    assert _strip_word(t["sentence"], t["word"]) == t["sentence"]
+    assert _strip_word("Not checked: 3 points more", "Not checked") == "3 points more"
+    named = eval_card_text(card(verdict="sidegrade", score_delta=0.4,
+                                comparisons=[comp("Ring 1", "sidegrade", 0.4, name="Old Loop")]))
+    assert named["sentence"].startswith("Sidegrade: about the same as your Ring 1")
+
+
 def test_every_mark_has_a_word():
     """TC-CARD-PARTS (F-043): every verdict mark is paired with a word."""
     down = eval_card_text(card(verdict="downgrade", score_delta=-3))
     assert (down["word"], down["tone"]) == ("Downgrade", "downgrade")
     odd = eval_card_text(card(verdict=None))
-    assert (odd["word"], odd["tone"]) == ("Checked", "")
+    assert (odd["word"], odd["tone"]) == ("Not checked", "")
     risky = {"ok": False, "error": "no gear slot for this item class",
              "waystone": {"tier": 5, "risky": [{"label": "Monsters fire extra projectiles",
                                                 "short": "Extra projectiles"}]}}

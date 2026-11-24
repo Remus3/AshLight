@@ -274,6 +274,30 @@ def _s9_rule13():
     return rule, listed
 
 
+def test_verdict_fallback_is_a_rule_13_mark_word():
+    """TC-VERDICT-FALLBACK-WORD (TCPD-1): every word VERDICT_WORD can give,
+    its fallback included, is a rule 13 mark word; the dashboard twin and
+    the Play reason strip use the same fallback, and the section 10 glance
+    rule's verdict list points at rule 13 and names the same words."""
+    from server.al import playcards
+    from server.al.text import itemcheck
+    _rule, listed = _s9_rule13()
+    words = listed("Mark words:", "; a card part")
+    assert itemcheck.VERDICT_FALLBACK in words
+    assert set(itemcheck.VERDICT_WORD.values()) <= set(words)
+    assert eval_card_text({"ok": True, "verdict": "odd"})["word"] == itemcheck.VERDICT_FALLBACK
+    assert (playcards._strip_word("Not checked: 3 points more", "")
+            == "3 points more")
+    root = Path(__file__).resolve().parents[1]
+    js = (root / "web" / "itemcard.js").read_text(encoding="ascii")
+    assert 'str(it.word) || "%s"' % itemcheck.VERDICT_FALLBACK in js
+    text = (root / "docs" / "design" / "0001-design-system.md").read_text(encoding="ascii")
+    s10 = " ".join(text.split("\n## 10. ", 1)[1].split("\n## 11. ", 1)[0].split())
+    glance = s10.split("Glance rule (", 1)[1]
+    listed10 = glance.split("section 9 rule 13 mark words: ", 1)[1].split("), the price word", 1)[0]
+    assert listed10.split(", ") == words
+
+
 def test_design_section_9_names_the_card_words():
     """The section 9 lists stay equal to the module: the mark words to the
     words a part may pair with the mark (cardparts' contract text and the
