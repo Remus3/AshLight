@@ -272,6 +272,21 @@ def _worst_case_core(tmp_path, tail=True):
     return core
 
 
+def _cpu_clock_unit(samples=3):
+    """The step of time.process_time() as measured: the largest of a few
+    observed changes, capped at 20 ms (TEST-BUDGET-LOOPBODY-NOISE). On
+    Windows it is the 15.6 ms clock tick (get_clock_info's 1e-07 is not the
+    real step); on Linux it is about a microsecond."""
+    step = 0.0
+    for _ in range(samples):
+        t0 = time.process_time()
+        t1 = t0
+        while t1 == t0:
+            t1 = time.process_time()
+        step = max(step, t1 - t0)
+    return min(step, 0.02)  # never more than about one Windows tick
+
+
 @pytest.mark.slow
 def test_real_loop_body_10_s_worst_case_under_half_percent(tmp_path):
     """RUN-BUDGET-TESTS-DET (F-108, research 0048 B1): the core's real loop
@@ -280,12 +295,20 @@ def test_real_loop_body_10_s_worst_case_under_half_percent(tmp_path):
     5.0 s (TEST-LOOP-WINDOW-5S; research 0048 B1 named 10 s, the bound is a
     share, not a total, so the same 0.5 percent holds over the shorter window)
     on the worst-case fixture, with the tailer thread polling, costs under
-    0.5 percent of one core."""
+    0.5 percent of one core.
+
+    TEST-BUDGET-LOOPBODY-NOISE (decision 0002 amendment 2026-11-24): the
+    process CPU clock only moves in whole steps (15.6 ms on Windows), so a
+    5 s window reads 0, 1 or 2 steps (0, 0.31 or 0.62 percent) and the
+    0.5 percent line falls between two of them. The CPU used may exceed the
+    budget by at most one measured clock step; the budget stays 0.5
+    percent."""
     import threading
 
     from server.al import __main__ as entry
     from server.al import hotreload
 
+    unit = _cpu_clock_unit()
     core = _worst_case_core(tmp_path)
     rt = core.runtime
     stop = threading.Event()
@@ -311,9 +334,12 @@ def test_real_loop_body_10_s_worst_case_under_half_percent(tmp_path):
     assert set(core.tick_ms) == {n for n, _ in core.ticks}
     share = cpu / wall
     print(f"loop body {share * 100:.3f} percent of one core over {wall:.1f} s, "
-          f"{passes} passes")
+          f"{passes} passes, CPU clock step {unit * 1000:.3f} ms")
     skip_if_ci_timing("core loop body on the worst case", f"{share * 100:.3f} percent")
-    assert share < 0.005 * fleet_test_guard.load_factor(), f"{share * 100:.3f} percent"
+    # One clock step of rounding (unit / wall) on top of the 0.5 percent share.
+    assert share < 0.005 * fleet_test_guard.load_factor() + unit / wall, (
+        f"{share * 100:.3f} percent ({cpu * 1000:.1f} ms CPU over {wall:.2f} s, "
+        f"clock step {unit * 1000:.3f} ms)")
 
 
 # B5 child: a test core on 10 MB of cached data files plays a four-hour

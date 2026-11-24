@@ -54,7 +54,7 @@ import srcpaths  # noqa: E402
 import synth_client  # noqa: E402
 import fullstack_mocks as fs  # noqa: E402
 from ci_timing import ci_scale  # noqa: E402
-from server.al import runs  # noqa: E402
+from server.al import VERSION, buildinfo, runs  # noqa: E402
 
 pytestmark = pytest.mark.server
 
@@ -94,6 +94,16 @@ RED_FIRST_MIN_PX = 300  # plan 03 3.2: state c at 1280x760 is 380 px over today
 # is not hex, so the page would never connect. The sweep swaps in a hex token
 # for its own stacks and puts the recipe token back afterwards.
 PAGE_TOKEN = "f" * 48
+# WEB-PLAY-FIT-SETTINGS: the footer's version line names the checkout's HEAD
+# commit (and ", dev" while hot reload is on), set in a proportional face, so
+# its width moved with the commit: at 1024x700 one hash fit the footer on one
+# row (32 px) and another wrapped it to two (45 px), and the harness gave a
+# different Settings result per checkout. The sweep's cores answer one fixed
+# build string instead, the long form (a commit and the dev mark) that always
+# takes the second row at 1024 px, so every checkout measures the taller
+# footer.
+PIN_COMMIT = "0123456789ab"
+PIN_BUILD = buildinfo.compose(VERSION, PIN_COMMIT, True)
 
 
 # -- markers ------------------------------------------------------------------
@@ -569,6 +579,8 @@ def run_sweep(root, browser, node):
     t0 = time.monotonic()
     port = None
     recipe_token, ps.TOKEN = ps.TOKEN, PAGE_TOKEN
+    real_build_id = buildinfo.build_id
+    buildinfo.build_id = lambda *a, **k: PIN_BUILD
     try:
         for name in FIT_STATES:
             with _open_state(name, root, port) as st:
@@ -586,6 +598,7 @@ def run_sweep(root, browser, node):
                     sweep["metrics"] = drv.call({"cmd": "metrics", "rows": metric_rows()})["rows"]
     finally:
         ps.TOKEN = recipe_token
+        buildinfo.build_id = real_build_id
         drv.close()
     sweep["seconds"] = round(time.monotonic() - t0, 1)
     return sweep
@@ -766,6 +779,20 @@ def test_the_rows_state_puts_the_core_caps_back(tmp_path):
     with open_rows_state(tmp_path / "rows") as st:
         assert min(rows_counts(st.state())) >= ROWS_MIN
     assert (runs.RECENT_MAPS, runs.RECENT_DEATHS) == before
+
+
+def test_the_footer_is_the_same_in_every_checkout(sweep):
+    """WEB-PLAY-FIT-SETTINGS: the sweep's cores answer the pinned build, so
+    the footer has one height per size in every state, whatever the
+    checkout's commit, and at 1024x700 it is the two-row footer."""
+    assert buildinfo.build_id.__module__ == buildinfo.__name__  # put back after the sweep
+    for key in (size_key(w, h) for w, h in COCKPIT):
+        feet = {name: round(st["sizes"][key]["play"]["frame"]["foot"])
+                for name, st in sweep["states"].items()}
+        assert len(set(feet.values())) == 1, (key, feet)
+    one_row = round(sweep["states"][FIT_STATES[0]]["sizes"]["1280x760"]["play"]["frame"]["foot"])
+    two_rows = round(sweep["states"][FIT_STATES[0]]["sizes"]["1024x700"]["play"]["frame"]["foot"])
+    assert two_rows > one_row, (one_row, two_rows)
 
 
 def test_play_fits_or_is_pending(sweep):

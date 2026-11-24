@@ -23822,7 +23822,9 @@
    "files": [
     "web/app.css",
     "tests/test_play_fit.py",
-    "tests/test_a11y.py"
+    "tests/test_a11y.py",
+    "web/chars.js",
+    "app/test/chars.test.js"
    ],
    "new_files": [],
    "integrator_edits": [
@@ -23855,7 +23857,7 @@
    "design_review": true,
    "blocked": null,
    "operator_act": "",
-   "notes": "Owner of web/app.css, tests/test_play_fit.py and tests/test_a11y.py in wave 49. web/app.css line 930 '#charsbox .char-pick { flex-wrap: nowrap }'.",
+   "notes": "Owner of web/app.css, tests/test_play_fit.py and tests/test_a11y.py in wave 49. web/app.css line 930 '#charsbox .char-pick { flex-wrap: nowrap }'. Widened 2026-11-24 (ORCH-46): web/chars.js and app/test/chars.test.js for design finding CP1-D1 (S2): the Characters card ROWS budget assumes a 32 px picker line while the wrapped picker is about 87 px; fix ROWS and pin it against the card room.",
    "wave": 49,
    "owner": "session"
   },

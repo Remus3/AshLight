@@ -395,7 +395,12 @@ input[type="checkbox"] { width: 24px; height: 24px; vertical-align: middle; }
 /* PLAY-TD-21B-SETTINGS-ABOUT (plan 03 section 3.4): the footer is one
    row, the disclaimer sentence (text colour) and the trademark sentence
    (muted) at the 13 px step, then the version line; it wraps only in a
-   narrow window. Its two folds moved to Settings > About and data. */
+   narrow window. Its two folds moved to Settings > About and data.
+   WEB-PLAY-FIT-SETTINGS: the build hash is set in a proportional face,
+   so the row's width moves with the commit; at 1024 px a hash can push
+   the version line to a second row. The footer never shrinks below its
+   content (a long Settings pane once squeezed it to 32 px and its second
+   row ran 11 px past the window); the pane scrolls instead. */
 .foot {
   display: flex;
   flex-wrap: wrap;
@@ -407,6 +412,7 @@ input[type="checkbox"] { width: 24px; height: 24px; vertical-align: middle; }
   font-size: var(--al-fs-micro);
   line-height: var(--al-lh-micro);
   text-align: center;
+  flex-shrink: 0;
 }
 .foot p { margin: var(--al-space-0) 0; }
 /* UX-ONBOARD-COPY: what AshLight does and never does, open in Settings >
