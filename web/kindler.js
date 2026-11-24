@@ -27,7 +27,28 @@
    request. Text goes in through textContent only; no live region (the
    page's shared polite line, ALTabs.say, says a refused change).
 
-   UMD: CommonJS for node (tests/test_kindler_tabs_ui.py), window.ALKindler
+   The plan card (KINDLER-UI-RESULT, decision 0081 points 10 and 14 to
+   17) is made after the editor card the first time a shown Kindler tab
+   has a result. It reads POST /api/kindler-generate "op": "plan" (never a
+   Generate) and shows the top template's stages, one at a time with
+   Previous stage / Next stage: skills with their support links, gem
+   changes with the level (the gems snapshot's, else AshLight's planned
+   one), the passives in order with the point count, the Ascendancy points
+   as "after your Nth Ascendancy trial" and the per-slot item focus, as
+   three card pages (Skills and gems, Passives, Item focus) in a labelled
+   button group like the sub-tabs. Gem names and focus stats are buttons
+   of the shared item info popover (web/iteminfo.js). No weight or score
+   number is shown, so nothing has a number with the calc off. The per-tab
+   "Follow Play guidance" toggle (aria-pressed, on by default, the store's
+   follow flag) lets the core pick the stage from the zone, act and level
+   the snapshot already publishes: the snapshot paint re-reads the plan
+   when those change, the shown stage moves to it by itself and carries a
+   "Now" badge with why ("This stage matches your act."); it never says a
+   step was done. While Path of Building ranks the item focus ("pending")
+   the plan is re-read on the page's timer, at most PLAN_MAX times.
+
+   UMD: CommonJS for node (tests/test_kindler_tabs_ui.py,
+   tests/test_kindler_result_ui.py), window.ALKindler
    in the page, where it registers itself with window.ALApp
    (web/registry.js) as "kindler", order 175. */
 (function (root, factory) {
@@ -41,7 +62,7 @@
       root.ALApp.register({
         name: api.NAME,
         order: api.ORDER,
-        paint: function () { api.paintLeagues(); },
+        paint: function (snap) { api.paintLeagues(); api.follow(snap); },
         wire: function () {
           var host = root.ALApp.host;
           var store = null;
@@ -102,6 +123,42 @@
     partial: " Time ran out, so this is the best of the builds scored so far."
   };
 
+  /* KINDLER-UI-RESULT (decision 0081 points 10 and 14 to 17): the plan
+     card. Plan parts are pages of the card (design A: a card pages, never
+     scrolls); no weight or other number from Path of Building is shown,
+     only its order, and nothing with the calc off. */
+  var PLAN_PAGES = [["skills", "Skills and gems"], ["passives", "Passives"],
+                    ["items", "Item focus"]];
+  var PLAN_MAX = 20; // plan re-reads while Path of Building ranks the focus
+  var ORDINALS = ["first", "second", "third", "fourth", "fifth", "sixth",
+                  "seventh", "eighth"];
+  var FOCUS_WORDS = {
+    pob: "Stats ranked by Path of Building for this build.",
+    pending: "AshLight's own order for now. Path of Building is ranking these stats.",
+    calc_off: "AshLight's own order (calc off). Turn the calc on in Settings, Checks.",
+    failed: "AshLight's own order. Path of Building could not rank these stats.",
+    no_base: "AshLight's own order. The item data is still loading.",
+    no_tree: "AshLight's own order. The passive tree data is still loading."
+  };
+  var BY_WORDS = { zone: "your zone", act: "your act", area_level: "your area level",
+                   level: "your level", nearest_level: "your level" };
+  var PLAN_WORDS = {
+    reading: "Reading the plan.",
+    none: "No plan for this result. Press Generate to make a new one.",
+    followOn: "Shows the stage that matches where you are.",
+    followOff: "Pick a stage with Previous stage and Next stage.",
+    follow: "Follow Play guidance",
+    now: "Now",
+    noSkills: "No skills planned for this stage.",
+    noGems: "No gem changes at this stage.",
+    noPassives: "No passives added at this stage.",
+    noFocus: "No item focus for this stage.",
+    noApply: "not used by this skill",
+    applyCredit: "Path of Building says which links a skill uses.",
+    failed: "Can't read the plan right now. AshLight tries again when something changes."
+  };
+  var PART_ROWS = 10; // rows a card part holds (design A card, 22 to 24 px rows)
+
   /* -- pure helpers -------------------------------------------------- */
 
   /* A player label as the store keeps it: control characters removed,
@@ -121,6 +178,7 @@
                cls: typeof t["class"] === "string" ? t["class"] : "",
                league: typeof t.league === "string" ? t.league : "",
                toggles: t.toggles && typeof t.toggles === "object" ? t.toggles : {},
+               follow: t.follow !== false,
                result: t.result && typeof t.result === "object" ? t.result : null };
     });
     var ids = tabs.map(function (t) { return t.id; });
@@ -178,6 +236,105 @@
     return { text: text, stale: r.stale === true };
   }
 
+  /* -- the plan card: pure helpers (KINDLER-UI-RESULT) ---------------- */
+
+  function str(v) { return typeof v === "string" ? v : ""; }
+  function int(v) { return typeof v === "number" && isFinite(v) && Math.floor(v) === v ? v : null; }
+  function arr(v) { return Array.isArray(v) ? v : []; }
+  function obj(v) { return v && typeof v === "object" && !Array.isArray(v) ? v : null; }
+
+  /* 2 -> "second" (an Ascendancy trial), "" outside the known words. */
+  function ordinal(n) {
+    return int(n) !== null && n >= 1 && n <= ORDINALS.length ? ORDINALS[n - 1] : "";
+  }
+
+  function gemOf(g) {
+    g = obj(g) || {};
+    return { name: str(g.name), level: int(g.level), checked: g.checked === true };
+  }
+
+  function nodeOf(n) {
+    n = obj(n) || {};
+    var id = int(n.id);
+    var name = str(n.name);
+    return name ? name : (id !== null ? "Unnamed passive" : "");
+  }
+
+  function named(g) { return !!g.name; }
+
+  /* POST /api/kindler-generate "op": "plan" -> the card's model, every
+     field checked; a field the answer lacks stays empty, never guessed.
+     The per-mod weights are left out on purpose (no number shown). */
+  function planView(answer) {
+    var plan = obj(answer && answer.plan);
+    var stages = arr(plan && plan.stages).filter(obj).map(function (st) {
+      var asc = obj(st.ascendancy);
+      return {
+        id: str(st.id), label: str(st.label) || "Stage", trigger: obj(st.trigger) || {},
+        level: int(st.level),
+        skills: arr(st.skills).map(function (sk) {
+          var g = gemOf(sk);
+          g.supports = arr(sk && sk.supports).map(function (x) {
+            var y = gemOf(x);
+            y.applies = x && typeof x.applies === "boolean" ? x.applies : null;
+            return y;
+          }).filter(named);
+          return g;
+        }).filter(named),
+        gems: arr(st.gems).map(function (g) {
+          var x = gemOf(g);
+          x.action = g && ["pick", "swap", "drop"].indexOf(g.action) >= 0 ? g.action : "";
+          x.forName = str(g && g["for"]);
+          return x;
+        }).filter(function (g) { return g.name && g.action; }),
+        passives: arr(st.passives).map(nodeOf).filter(Boolean),
+        points: int(st.points), budget: int(st.budget),
+        ascendancy: asc ? { trial: int(asc.trial), nodes: arr(asc.nodes).map(nodeOf).filter(Boolean) } : null,
+        focus: arr(st.focus).filter(obj).map(function (f) {
+          return { slot: str(f.slot), stats: arr(f.stats).map(function (x) {
+            return str(obj(x) ? x.stat : x);
+          }).filter(Boolean) };
+        }).filter(function (f) { return f.slot && f.stats.length; })
+      };
+    });
+    var cur = obj(answer && answer.current);
+    var at = cur ? int(cur.stage) : null;
+    if (at === null || at < 0 || at >= stages.length) { cur = null; }
+    var focus = str(answer && answer.focus) || str(plan && plan.focus_note) || str(plan && plan.focus);
+    return { plan: stages.length > 0, label: str(plan && plan.label),
+             ascendancy: str(plan && plan.ascendancy),
+             focus: Object.prototype.hasOwnProperty.call(FOCUS_WORDS, focus) ? focus : "",
+             stages: stages, current: cur ? { stage: at, by: str(cur.by) } : null };
+  }
+
+  /* A stage trigger in words ("" for a zone: the stage label names it). */
+  function triggerText(t) {
+    t = obj(t) || {};
+    if ((t.kind === "level" || t.kind === "area_level") && int(t.min) !== null && int(t.max) !== null) {
+      return (t.kind === "level" ? "For character level " : "For area level ") + t.min + " to " + t.max;
+    }
+    if (t.kind === "act" && int(t.act) !== null) { return "For Act " + t.act; }
+    return "";
+  }
+
+  /* One gem step as parts: {text} and {item} (a gem name, a popover
+     button on the page). The level is the gems snapshot's when checked,
+     else AshLight's planned level (decision 0081 point 16). */
+  function gemStep(g) {
+    var lvl = g.level === null ? "" : (g.checked ? ", usable from level " : ", planned for level ") + g.level;
+    if (g.action === "swap" && g.forName) {
+      return [{ text: "Swap " }, { item: g.forName }, { text: " for " }, { item: g.name }, { text: lvl }];
+    }
+    if (g.action === "drop") { return [{ text: "Drop " }, { item: g.name }]; }
+    return [{ text: "Pick up " }, { item: g.name }, { text: lvl }];
+  }
+
+  /* The three values the follow resolver reads from a snapshot, or null. */
+  function hereOf(snap) {
+    if (!obj(snap)) { return null; }
+    return { area_id: str(snap.area_id), area_level: int(snap.area_level), level: int(snap.level) };
+  }
+
   /* The league suggestions: the cached poe.ninja names while web data is
      on (GET /api/web-data, already read by the page), else Standard. */
   function leagueNames(web) {
@@ -211,7 +368,8 @@
     var s = {
       doc: doc, ctl: ctl, $: $, model: view(null), sub: PASTED, reads: {},
       chain: Promise.resolve(), poll: null, buttons: {}, leagueKey: "",
-      mode: "tools"
+      mode: "tools", here: null, plans: {}, planKeys: {}, planSeq: 0, planLeft: 0,
+      stageAt: {}, page: PLAN_PAGES[0][0], bodyKey: "", part: 0, parts: 1, partAt: ""
     };
     S = s;
     try {
@@ -437,7 +595,11 @@
       if (tab) { panel.setAttribute("data-sub", "kindler"); } else { panel.removeAttribute("data-sub"); }
     }
     if (card) { card.hidden = !tab; }
+    var withPlan = !!(tab && tab.result);
+    var plan = withPlan ? buildPlanCard(s) : s.$("kindler-plan");
+    if (plan) { plan.hidden = !withPlan; }
     if (tab) { paintCard(s, tab); }
+    if (withPlan) { paintPlan(s, tab); syncPlan(s, false); }
   }
 
   function paintCard(s, tab) {
@@ -642,6 +804,9 @@
     var tab = current(s);
     if (!tab) { return Promise.resolve(false); }
     delete s.reads[tab.id];
+    delete s.plans[tab.id];
+    delete s.planKeys[tab.id];
+    delete s.stageAt[tab.id];
     return change(s, { op: "close", id: tab.id }).then(function (ok) {
       setMode(s, "tools");
       if (!ok) { return false; }
@@ -748,6 +913,380 @@
 
   function on(n, type, fn) { if (n) { n.addEventListener(type, fn); } }
 
+  /* -- the plan card (KINDLER-UI-RESULT) ------------------------------ */
+
+  function itemInfo() {
+    if (root && root.ALItemInfo) { return root.ALItemInfo; }
+    if (typeof module === "object" && module.exports && typeof require === "function") {
+      try { return require("./iteminfo.js"); } catch (e) { return null; }
+    }
+    return null;
+  }
+
+  function setText(n, text) { if (n && n.textContent !== text) { n.textContent = text; } }
+
+  function shownTab(s) { return s.sub === PASTED ? null : current(s); }
+
+  /* Made after the editor card the first time a shown Kindler tab has a
+     result (dashboard element cap), like buildCard. */
+  function buildPlanCard(s) {
+    var d = s.doc;
+    var panel = s.$("panel-build");
+    if (s.$("kindler-plan") || !panel) { return s.$("kindler-plan"); }
+    var b24 = function (id, text) {
+      return h(d, "button", { id: id, type: "button", "class": "secondary btn-24" }, text);
+    };
+    var pages = PLAN_PAGES.map(function (p) {
+      return h(d, "button", { id: "kindler-page-" + p[0], type: "button", "class": "subtab",
+        "data-page": p[0], "data-label": p[1] }, p[1]);
+    });
+    var card = h(d, "section", { id: "kindler-plan", "class": "card kindler-card kindler-plan",
+      "aria-labelledby": "kindler-plan-title", hidden: true }, [
+      h(d, "div", { "class": "kindler-head" }, [
+        h(d, "h2", { id: "kindler-plan-title", "class": "one-line" }, "Plan"),
+        h(d, "span", { id: "kindler-plan-name", "class": "row-meta muted one-line" })]),
+      h(d, "div", { "class": "kindler-row" }, [
+        h(d, "button", { id: "kindler-follow", type: "button", "class": "chip",
+          "aria-pressed": "true", "data-label": PLAN_WORDS.follow,
+          "aria-describedby": "kindler-follow-why" }, PLAN_WORDS.follow),
+        h(d, "span", { id: "kindler-follow-why", "class": "row-meta muted" })]),
+      h(d, "p", { id: "kindler-plan-empty", "class": "row-body" }),
+      h(d, "div", { id: "kindler-plan-main", "class": "kindler-plan-main", hidden: true }, [
+        h(d, "div", { "class": "kindler-row kindler-stage-nav" }, [
+          b24("kindler-stage-prev", "Previous stage"),
+          h(d, "h3", { id: "kindler-stage-name", "class": "card-h3 one-line" }),
+          b24("kindler-stage-next", "Next stage")]),
+        h(d, "p", { "class": "row-meta kindler-stage-why" }, [
+          h(d, "span", { id: "kindler-here", "class": "badge", hidden: true }, PLAN_WORDS.now),
+          h(d, "span", { id: "kindler-stage-why", "class": "muted" })]),
+        h(d, "div", { id: "kindler-plan-pages", "class": "kindler-row kindler-pages",
+          role: "group", "aria-label": "Plan parts" }, pages),
+        h(d, "div", { id: "kindler-plan-body", "class": "kindler-plan-body" }),
+        h(d, "div", { id: "kindler-parts", "class": "kindler-row kindler-parts", hidden: true }, [
+          b24("kindler-part-prev", "Previous part"),
+          h(d, "span", { id: "kindler-part-label", "class": "row-meta" }),
+          b24("kindler-part-next", "Next part")]),
+        h(d, "p", { id: "kindler-plan-credit", "class": "row-meta muted", hidden: true })])]);
+    panel.appendChild(card);
+    wirePlan(s);
+    var info = itemInfo();
+    if (info && typeof info.attach === "function") { info.attach(card, {}); }
+    return card;
+  }
+
+  function wirePlan(s) {
+    var $ = s.$;
+    on($("kindler-follow"), "click", function () { setFollow(s); });
+    on($("kindler-stage-prev"), "click", function () { moveStage(s, -1); });
+    on($("kindler-stage-next"), "click", function () { moveStage(s, 1); });
+    on($("kindler-part-prev"), "click", function () { movePart(s, -1); });
+    on($("kindler-part-next"), "click", function () { movePart(s, 1); });
+    on($("kindler-plan-pages"), "click", function (e) {
+      var b = e.target && e.target.closest ? e.target.closest("button") : e.target;
+      if (b && b.getAttribute("data-page")) { showPage(s, b.getAttribute("data-page"), false); }
+    });
+    on($("kindler-plan-pages"), "keydown", function (e) {
+      var here = e.target && e.target.getAttribute ? e.target.getAttribute("data-page") : null;
+      var next = here ? step(e.key, PLAN_PAGES.map(function (p) { return p[0]; }), here) : null;
+      if (next === null) { return; }
+      if (e.preventDefault) { e.preventDefault(); }
+      showPage(s, next, true);
+    });
+  }
+
+  /* An item or gem name: the shared popover's button (decision 0082 part
+     1), plain text when the popover script is not there. */
+  function itemNode(s, name) {
+    var info = itemInfo();
+    return info && typeof info.button === "function" ? info.button(s.doc, name) : el(s.doc, "span", "", name);
+  }
+
+  function addParts(s, node, parts) {
+    parts.forEach(function (p) {
+      if (p.item) { node.appendChild(itemNode(s, p.item)); } else if (p.text) {
+        node.appendChild(el(s.doc, "span", "", p.text));
+      }
+    });
+    return node;
+  }
+
+  /* names joined by ", ", each an item button */
+  function itemList(names) {
+    var parts = [];
+    names.forEach(function (n, i) {
+      if (i) { parts.push({ text: ", " }); }
+      parts.push({ item: n });
+    });
+    return parts;
+  }
+
+  /* A page body is a list of rows ({head}, {para}, {li, list, cls, rows});
+     parts() cuts it into card parts of at most PART_ROWS rows, so a page
+     never grows or clips its card (design A); a heading never ends a part,
+     and a list cut in two goes on numbered from where it stopped. */
+  function head(text) { return { head: text, rows: 1 }; }
+  function para(text, cls) { return { para: text, cls: cls || "row-body", rows: 1 }; }
+
+  function parts(rows) {
+    var out = [[]], used = 0;
+    rows.forEach(function (r, i) {
+      var last = out[out.length - 1];
+      var need = r.rows + (r.head && rows[i + 1] ? rows[i + 1].rows : 0);
+      if (last.length && used + need > PART_ROWS) { out.push([]); used = 0; last = out[out.length - 1]; }
+      last.push(r);
+      used += r.rows;
+    });
+    return out;
+  }
+
+  function paintRows(s, body, rows) {
+    var list = null, kind = "", count = 0;
+    rows.forEach(function (r) {
+      if (r.li) {
+        if (!list || kind !== r.list + r.cls) {
+          list = el(s.doc, r.list, r.cls);
+          if (r.list === "ol" && r.n > 1) { list.setAttribute("start", String(r.n)); }
+          body.appendChild(list);
+          kind = r.list + r.cls;
+        }
+        list.appendChild(r.li);
+        count += 1;
+        return;
+      }
+      list = null;
+      kind = "";
+      body.appendChild(r.head ? el(s.doc, "h4", "card-h3", r.head) : el(s.doc, "p", r.cls, r.para));
+    });
+    return count;
+  }
+
+  function bodySkills(s, st) {
+    var rows = [head("Skills")];
+    if (!st.skills.length) { rows.push(para(PLAN_WORDS.noSkills, "row-meta muted")); }
+    st.skills.forEach(function (sk) {
+      var li = addParts(s, el(s.doc, "li"), [{ item: sk.name }]);
+      if (sk.supports.length) {
+        var bits = [{ text: " Links: " }];
+        sk.supports.forEach(function (x, i) {
+          if (i) { bits.push({ text: ", " }); }
+          bits.push({ item: x.name });
+          if (x.applies === false) { bits.push({ text: " (" + PLAN_WORDS.noApply + ")" }); }
+        });
+        li.appendChild(addParts(s, el(s.doc, "span", "row-meta kindler-links"), bits));
+      }
+      rows.push({ li: li, list: "ul", cls: "kindler-list", rows: sk.supports.length > 2 ? 2 : 1 });
+    });
+    rows.push(head("Gem changes"));
+    if (!st.gems.length) { rows.push(para(PLAN_WORDS.noGems, "row-meta muted")); }
+    st.gems.forEach(function (g) {
+      rows.push({ li: addParts(s, el(s.doc, "li"), gemStep(g)), list: "ul", cls: "kindler-list", rows: 1 });
+    });
+    return rows;
+  }
+
+  function nodeRows(s, names) {
+    return names.map(function (n, i) {
+      return { li: el(s.doc, "li", "", n), list: "ol", cls: "kindler-passives", n: i + 1, rows: 0.5 };
+    });
+  }
+
+  function bodyPassives(s, st) {
+    var n = st.passives.length;
+    var line = n ? n + (n === 1 ? " passive" : " passives") + " to take, in this order." : PLAN_WORDS.noPassives;
+    if (st.points !== null && st.budget !== null) {
+      line += " " + st.points + " of " + st.budget + " points planned so far.";
+    }
+    var rows = [para(line)].concat(nodeRows(s, st.passives));
+    if (st.ascendancy && st.ascendancy.nodes.length) {
+      var nth = ordinal(st.ascendancy.trial);
+      rows.push(head("Ascendancy"));
+      rows.push(para(nth ? "After your " + nth + " Ascendancy trial:" : "After an Ascendancy trial:"));
+      rows = rows.concat(nodeRows(s, st.ascendancy.nodes).map(function (r) {
+        r.cls = "kindler-passives kindler-asc";
+        return r;
+      }));
+    }
+    return rows;
+  }
+
+  function bodyItems(s, st) {
+    if (!st.focus.length) { return [para(PLAN_WORDS.noFocus, "row-meta muted")]; }
+    return st.focus.map(function (f) {
+      var li = el(s.doc, "li");
+      li.appendChild(el(s.doc, "span", "kindler-slot", f.slot + ": "));
+      return { li: addParts(s, li, itemList(f.stats)), list: "ul", cls: "kindler-list", rows: 1 };
+    });
+  }
+
+  /* The shown stage: the one the Play guidance matches while follow is
+     on (it moves by itself when that changes), else the player's pick. */
+  function stageIndex(s, tab, pv) {
+    var cur = tab.follow && pv.current ? pv.current.stage : null;
+    var m = s.stageAt[tab.id];
+    if (!m) {
+      m = s.stageAt[tab.id] = { i: cur !== null ? cur : 0, cur: cur };
+    } else if (m.cur !== cur) {
+      m.cur = cur;
+      if (cur !== null) { m.i = cur; }
+    }
+    m.i = Math.max(0, Math.min(m.i, pv.stages.length - 1));
+    return m.i;
+  }
+
+  function ariaOff(n, off) {
+    if (!n) { return; }
+    if (off) { n.setAttribute("aria-disabled", "true"); } else { n.removeAttribute("aria-disabled"); }
+  }
+
+  function paintPlan(s, tab) {
+    var $ = s.$;
+    if (!$("kindler-plan") || !tab || !tab.result) { return; }
+    var follow = $("kindler-follow");
+    if (follow) { follow.setAttribute("aria-pressed", tab.follow ? "true" : "false"); }
+    setText($("kindler-follow-why"), tab.follow ? PLAN_WORDS.followOn : PLAN_WORDS.followOff);
+    var pv = s.plans[tab.id];
+    var ok = !!(pv && pv.plan);
+    var main = $("kindler-plan-main"), empty = $("kindler-plan-empty");
+    if (main) { main.hidden = !ok; }
+    if (empty) {
+      empty.hidden = ok;
+      setText(empty, ok ? "" : (pv ? (pv.failed ? PLAN_WORDS.failed : PLAN_WORDS.none) : PLAN_WORDS.reading));
+    }
+    var nameLine = ok ? pv.label + (pv.ascendancy ? ", " + pv.ascendancy : "") : "";
+    setText($("kindler-plan-name"), nameLine);
+    if ($("kindler-plan-name")) { $("kindler-plan-name").setAttribute("title", nameLine); }
+    if (!ok) { return; }
+    var n = pv.stages.length;
+    var i = stageIndex(s, tab, pv);
+    var st = pv.stages[i];
+    var stageLine = "Stage " + (i + 1) + " of " + n + ": " + st.label;
+    setText($("kindler-stage-name"), stageLine);
+    if ($("kindler-stage-name")) { $("kindler-stage-name").setAttribute("title", stageLine); }
+    ariaOff($("kindler-stage-prev"), i <= 0);
+    ariaOff($("kindler-stage-next"), i >= n - 1);
+    var now = tab.follow && pv.current !== null && pv.current.stage === i;
+    var badge = $("kindler-here");
+    if (badge) { badge.hidden = !now; }
+    var why = triggerText(st.trigger);
+    why = why ? why + "." : "";
+    if (now) {
+      why = (why ? why + " " : "") + "This stage matches " + (BY_WORDS[pv.current.by] || "where you are") + ".";
+    }
+    setText($("kindler-stage-why"), why);
+    PLAN_PAGES.forEach(function (p) {
+      var b = $("kindler-page-" + p[0]);
+      if (!b) { return; }
+      if (p[0] === s.page) { b.setAttribute("aria-current", "true"); } else { b.removeAttribute("aria-current"); }
+      b.setAttribute("tabindex", p[0] === s.page ? "0" : "-1");
+    });
+    var credit = $("kindler-plan-credit");
+    var unused = st.skills.some(function (sk) {
+      return sk.supports.some(function (x) { return x.applies === false; });
+    });
+    var said = s.page === "items" ? FOCUS_WORDS[pv.focus] || ""
+      : s.page === "skills" && unused ? PLAN_WORDS.applyCredit : "";
+    if (credit) { credit.hidden = !said; setText(credit, said); }
+    var where = tab.id + "|" + i + "|" + s.page;
+    if (s.partAt !== where) { s.partAt = where; s.part = 0; }
+    var key = JSON.stringify([tab.id, i, s.page, s.part, st]);
+    var body = $("kindler-plan-body");
+    if (!body || key === s.bodyKey) { return; }
+    s.bodyKey = key;
+    while (body.firstChild) { body.removeChild(body.firstChild); }
+    var cut = parts(s.page === "passives" ? bodyPassives(s, st)
+      : s.page === "items" ? bodyItems(s, st) : bodySkills(s, st));
+    s.parts = cut.length;
+    s.part = Math.max(0, Math.min(s.part, cut.length - 1));
+    paintRows(s, body, cut[s.part]);
+    var nav = $("kindler-parts");
+    if (nav) { nav.hidden = cut.length < 2; }
+    setText($("kindler-part-label"), cut.length < 2 ? "" : "Part " + (s.part + 1) + " of " + cut.length);
+    ariaOff($("kindler-part-prev"), s.part <= 0);
+    ariaOff($("kindler-part-next"), s.part >= cut.length - 1);
+    var info = itemInfo();
+    if (info && typeof info.sync === "function") { info.sync(); }
+  }
+
+  /* Read the shown tab's plan (never a Generate) when its result, its
+     follow flag or the Play guidance it follows changed. The page reads
+     it once it holds a snapshot (the guidance); while Path of Building
+     ranks the item focus it re-reads on the page's timer, at most
+     PLAN_MAX times. */
+  function syncPlan(s, force) {
+    var tab = shownTab(s);
+    if (!tab || !tab.result || !s.here) { return; }
+    var r = tab.result, w = s.here;
+    var key = [tab.id, r.template, r.at, r.key, tab.follow, w.area_id, w.area_level, w.level].join("|");
+    if (!force && s.planKeys[tab.id] === key) { return; }
+    if (!force) { s.planLeft = PLAN_MAX; }
+    s.planKeys[tab.id] = key;
+    var id = tab.id;
+    var seq = ++s.planSeq;
+    s.ctl.request("POST", GEN, { id: id, op: "plan" }).then(function (res) {
+      if (seq !== s.planSeq) { return; }
+      if (!res || res.status !== 200 || !res.body) {
+        s.plans[id] = { plan: false, failed: true };
+        var t0 = shownTab(s);
+        if (t0 && t0.id === id) { paintPlan(s, t0); }
+        return;
+      }
+      s.plans[id] = planView(res.body);
+      var t = shownTab(s);
+      if (t && t.id === id) { paintPlan(s, t); }
+      if (res.body.focus === "pending" && s.planLeft > 0) {
+        s.planLeft -= 1;
+        s.ctl.later(function () { if (s.planKeys[id] === key) { syncPlan(s, true); } }, POLL_MS);
+      }
+    }, function () {
+      if (seq !== s.planSeq) { return; }
+      if (s.planKeys[id] === key) { s.planKeys[id] = ""; } // tried again on the next change
+      s.plans[id] = { plan: false, failed: true };
+      var t1 = shownTab(s);
+      if (t1 && t1.id === id) { paintPlan(s, t1); }
+    });
+  }
+
+  /* The snapshot paint: the Play guidance the follow flag tracks. */
+  function followPlay(s, snap) {
+    var here = hereOf(snap);
+    if (!here) { return; }
+    s.here = here;
+    syncPlan(s, false);
+  }
+
+  function setFollow(s) {
+    var tab = shownTab(s);
+    if (!tab) { return Promise.resolve(false); }
+    return change(s, { op: "set", id: tab.id, follow: !tab.follow });
+  }
+
+  function moveStage(s, dir) {
+    var tab = shownTab(s);
+    var pv = tab ? s.plans[tab.id] : null;
+    var m = tab ? s.stageAt[tab.id] : null;
+    if (!pv || !pv.plan || !m) { return; }
+    var i = m.i + dir;
+    if (i < 0 || i >= pv.stages.length) { return; }
+    m.i = i;
+    paintPlan(s, tab);
+  }
+
+  function movePart(s, dir) {
+    var tab = shownTab(s);
+    var i = s.part + dir;
+    if (!tab || i < 0 || i >= (s.parts || 1)) { return; }
+    s.part = i;
+    paintPlan(s, tab);
+  }
+
+  function showPage(s, id, key) {
+    if (!PLAN_PAGES.some(function (p) { return p[0] === id; })) { return; }
+    s.page = id;
+    var tab = shownTab(s);
+    if (tab) { paintPlan(s, tab); }
+    if (key) { focus(s, "kindler-page-" + id); }
+  }
+
   function wire(s) {
     var $ = s.$;
     on($("kindler-bar"), "click", function (e) {
@@ -841,6 +1380,15 @@
     closeTab: function () { return closeTab(S); },
     setField: function (f) { return setField(S, f); },
     generate: function () { return generate(S); },
+    PLAN_PAGES: PLAN_PAGES, FOCUS_WORDS: FOCUS_WORDS, PLAN_WORDS: PLAN_WORDS,
+    planView: planView, triggerText: triggerText, gemStep: gemStep, ordinal: ordinal,
+    hereOf: hereOf,
+    follow: function (snap) { if (S) { followPlay(S, snap); } },
+    setFollow: function () { return setFollow(S); },
+    stage: function (dir) { moveStage(S, dir); },
+    part: function (dir) { movePart(S, dir); },
+    PART_ROWS: PART_ROWS, parts: parts,
+    planPage: function (id) { showPage(S, id, false); },
     state: function () { return S; }
   };
 }));

@@ -66,9 +66,31 @@ button.subtab::after { display: block; height: 0; overflow: hidden; visibility: 
 .kindler-result { overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 .kindler-result .badge { margin-right: var(--al-space-1); }
 
+/* KINDLER-UI-RESULT: the plan card. Beside the editor in the cockpit
+   (editor in column 1, plan in columns 2 and 3, both rows), below it in
+   the flow class. One stage at a time, its parts as pages of the card (a
+   labelled button group drawn like the sub-tabs), so the card never
+   scrolls; overflow is clipped in the cockpit as the editor's is. The
+   stage the Play guidance matches carries the "Now" badge (a word, never
+   colour alone). Gem and stat names are the popover's link buttons. */
+.kindler-plan-main { display: flex; flex-direction: column; gap: var(--al-space-2); min-height: 0; min-width: 0; }
+.kindler-stage-nav { flex-wrap: nowrap; }
+.kindler-stage-nav h3 { flex: 1 1 auto; min-width: 0; margin: 0; }
+.kindler-stage-nav button { flex: none; }
+.kindler-stage-why .badge { margin-right: var(--al-space-1); }
+.kindler-plan-body { display: flex; flex-direction: column; gap: var(--al-space-1); min-height: 0; min-width: 0; }
+.kindler-plan-body h4 { margin: 0; }
+.kindler-list, .kindler-passives { margin: 0; padding-left: var(--al-space-4); min-width: 0;
+  font-size: var(--al-fs-body); line-height: var(--al-lh-body); overflow-wrap: anywhere; }
+.kindler-passives { columns: 2 12rem; column-gap: var(--al-space-4); }
+.kindler-plan p { margin: 0; }
+.kindler-slot { font-weight: 600; }
+
 @media (min-width: 64em) and (min-height: 43.75em) {
   #panel-build.panel-cards { grid-template-rows: auto repeat(2, minmax(0, 1fr)); }
   #panel-build > .kindler-card { grid-row: 2 / span 2; min-height: 0; overflow: hidden; }
+  #panel-build:has(> #kindler-plan:not([hidden])) > #kindlerbox { grid-column: 1; }
+  #panel-build > #kindler-plan { grid-column: 2 / -1; }
   .kindler-bar { flex-wrap: nowrap; }
   button.subtab { flex: 0 1 auto; min-width: 3rem; }
   .kindler-bar #kindler-full { min-width: 0; }
@@ -76,6 +98,9 @@ button.subtab::after { display: block; height: 0; overflow: hidden; visibility: 
 [data-text-spacing="user"] #panel-build.panel-cards { grid-template-rows: none; }
 [data-text-spacing="user"] #panel-build > .kindler-card { grid-row: auto; overflow: visible; }
 [data-text-spacing="user"] .kindler-bar { flex-wrap: wrap; }
+[data-text-spacing="user"] #panel-build > #kindlerbox,
+[data-text-spacing="user"] #panel-build > #kindler-plan { grid-column: 1 / -1; }
+[data-text-spacing="user"] .kindler-stage-nav { flex-wrap: wrap; }
 @media (forced-colors: active) {
   button.subtab { border-bottom-color: Canvas; }
   button.subtab[aria-current="true"] { border-bottom-color: Highlight; }
