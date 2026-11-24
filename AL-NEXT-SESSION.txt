@@ -1,9 +1,13 @@
 AL NEXT SESSION
 ---------------
-SESSION: 25   (FLEET item 13 counter; /done writes n+1)
+SESSION: 26   (FLEET item 13 counter; /done writes n+1)
 
-WAVE POINTER: wave 52 done, next wave 53
-DEFERRED: GATE-HOLD-D (wave 52): exclusive soak median 146 s over the 125 s accept line (runs 153, 146, about 142 s); its files save about 0.5 s; decision 0060 bound not moved; follow-up row GATE-HOLD-BISECT; branch worktree-w52-GATE-HOLD-D
+WAVE POINTER: wave 54 done, next wave 55
+DEFERRED: GATE-HOLD-D (wave 52): exclusive soak median 146 s over the 125 s accept line (runs 153, 146, about 142 s); its files save about 0.5 s; decision 0060 bound not moved; GATE-HOLD-BISECT closed it to 140.1 s (wave 54) without it; re-plan it with or after TEST-XDIST-GROUP-RESTORE, or drop it; branch worktree-w52-GATE-HOLD-D
+NOTE (session 25 /done): session group waves 53-54 (plan 4309d0f, 5 packages) closed, all merged and pushed (origin/main aecc223): ITEM-INFO-DOC-SOURCES, TC-VERDICT-FALLBACK-WORD (design PASS WITH FINDINGS, TCVF-1/2 fixed; copy sheet docs/design/copy/itemcheck.md added outside its file list), KINDLER-GEM-VARIANT (variant ids from pinned PoB src/Data/Gems.lua, not the gems snapshot, which is not cached here; its live test added to CALC_TESTS by the integrator, eaa74d7), WEB-PLAY-FOOT-ONE-ROW (footer 32 px at 1024x700, build cut to 7 hex; g.txt kept, now G5 totals only; app/test/panels.test.js edited outside its list; design F1-F3 fixed 42d4675), GATE-HOLD-BISECT (decision 0060 soak record only: baseline 146.5/138.5/140.8, after 140.1/142.5/139.3, median 140.1 s; not <=125 s, so 120 s not restored). Fold aecc223 (5 done rows archived; new rows PLAY-FIT-G5-TOTALS and TEST-XDIST-GROUP-RESTORE, both BLOCKED: session). 0087 is still the next free decision number.
+FINDING (session 25, GATE-HOLD-BISECT): the pinned pytest 9.2.0 + pytest-xdist 3.8.0 ignore xdist_group (pytest 9 builds the node id from a new field, xdist 3.8 writes the old one), so --dist loadgroup acts as plain load and the calc-a / calc-b / supervisor groups are not in force; row TEST-XDIST-GROUP-RESTORE. The test_shots real render (~24 s) ends 6-8 s after every other worker in all six soaks.
+NOTE (session 25): isolated worktree agents could not write ops/loop/control/progress/*.json in the main checkout directly; ops/fleet_kit/fleet_headless.write_progress(root, ...) worked. Tell package agents to use it.
+NOTE (session 25 reap): reap --apply removed agent-ab38937e65fc9bdaa and agent-ae5208e75bc8711d0 (branches deleted); read back "reap dry-run: 0 removable, 5 kept, 2 listed (base main)": kept agent-a5131a8ddee39b9a8 (GATE-HOLD-BISECT, merged) and agent-a8df00429519931d4 (KINDLER-GEM-VARIANT, merged), both locked by the live session pid, plus lane-0..2; listed w42-int and w52-GATE-HOLD-D. Re-run fleet_done.py reap --apply next session to remove the two merged agent worktrees.
 NOTE (session 24 /done): session group waves 46 to 52 (plan 28c385e, 25 packages) closed: 24 merged and pushed (waves 46-51), GATE-HOLD-D deferred; KINDLER-COPY-SHEET (wave 47) and KINDLER-WEAPON-BASE (wave 48) were reverted, carried and merged; done rows folded 27e21ae; TC-OVL-CARD-TONE closed done, TC-EVAL-NOTES-STYLE closed superseded; 10 batch suites 5805-5869 passed + 21 timing (136-177 s wall), npm 870-876; decision 0002 and 0081 dated amendments, 0087 is the next free decision number. New rows (BLOCKED: session): TC-VERDICT-FALLBACK-WORD, KINDLER-GEM-VARIANT, ITEM-INFO-DOC-SOURCES, WEB-PLAY-FOOT-ONE-ROW (Play 13 px over at 1024x700 when the footer version line wraps), GATE-HOLD-BISECT (soak median ~146 s is over decision 0060's 145 s interim bound: bisect, do not move the number).
 OPERATOR NOTES (session 24; the operator may overrule): (1) the test_budgets loop-body CPU check now effectively passes up to ~0.81 percent (two Windows clock steps) while the stated budget stays 0.5 percent; the verifier accepted it as clock noise (TEST-BUDGET-LOOPBODY-NOISE, wave 51). (2) The CP-2 builder ran a forbidden `git reset -q` (it only unstaged its own files; history verified clean).
 NOTE (session 24 reap): reap --apply removed the w46 to w51 package and integrator worktrees (branches deleted); read back "reap dry-run: 0 removable, 3 kept, 2 listed (base main)": kept lane-0..2, listed w42-int and w52-GATE-HOLD-D (deferred, branch worktree-w52-GATE-HOLD-D kept).
@@ -17,20 +21,20 @@ WAVE-16 FOLLOW-UPS: design findings OPEN (reviews.log): RUN-LEDGER-WIRE LW-1..LW
 WAVE-15 FOLLOW-UPS: tools/docs_fresh.py EXPECTED_STALE (36 entries) can now be emptied. Design review OPEN findings: PLAY-TD-22B TF-1 (news inside the 10 s grace not retried), RUN-METRICS-SITES RL-1..RL-3 (log record consent copy vague, no polite announcement, Client.txt stop also stops it unstated), TEST-STATE-TEXT-4 TST4-1 (design 0001 still names state.py as text home). Decisions 0050/0069 want a one-line note that the watcher's GitHub-metadata read of GGG's public tree-export repo passes watch_gate although webfetch refuses GGG repos for dives. LOOP-WATCH-SETTLED's hand-off edit (drop the REG_OPEN session-start check) waits until SHAPE_ALL_PAGES is on, HALT is absent and a dry-run tick files TC-OAUTH-REG-OPEN (read back). TC-WORN-KEY wear key is bound in app/main.js, not the 20-hotkeys registry, and has no snapshot / Settings UI yet.
 Closed records: docs/handoff-archive/AL-2026-11-19.txt to AL-2026-11-24.txt, one block per session headed "SESSION <n> /done", each block listing what it moved: blocks 11 to 17 indexed in "SESSION 18 /done" (AL-2026-11-21.txt); 19 to 21 in AL-2026-11-22.txt (19: session 18-19 lines, PUB-HOOK-RELEASE-CHECK ruling, WATCH gate-hold history, BUDGETLOG; 20: waves 26-28; 21: waves 31-33, GATE-HOLD-C, plan-07 drift); 22 and 23 in AL-2026-11-23.txt (22: waves 34-37 plan; 23: waves 38-45 merge NOTE lines, group 38-45 plan, operator requests bullet, session 22 status); 24 in AL-2026-11-24.txt (session 23 NOTE, reap, findings and SESSION-21 ROWS lines).
 
-Next action: plan the next session group from wave 53, then run it, same
-PLAN / ORCH / CLOSE pattern as session 24. Pick packages from the open
-BLOCKED: session rows in ROADMAP.md (GATE-HOLD-BISECT, TC-VERDICT-FALLBACK-WORD,
-KINDLER-GEM-VARIANT, ITEM-INFO-DOC-SOURCES, WEB-PLAY-FOOT-ONE-ROW and the
-older ones) and any wave-99 package whose condition now holds; GATE-HOLD-D
-stays deferred (branch worktree-w52-GATE-HOLD-D kept) behind GATE-HOLD-BISECT.
-Write them into packages.json as waves 53 on (disjoint files, every
-dependency earlier), run `python tools/plan_check.py waves --write` and
-`python tools/plan_check.py check`, commit, then start the group per
-docs/plan/08-orchestration.md (section 1 with argument wave 53, then
-sections 2 to 7; decision 0077). ONE background orchestrator with its own
-live Monitor and heartbeat; merge batches of 4; SESSION-21 LESSONS apply.
+Next action: plan the next session group from wave 55, then run it, same
+PLAN / W<n> / CLOSE pattern as session 25 (main session dispatches one
+package agent per package, at most 2 at once, design-reviewer for any
+web/ or text/ change, one integrator per merge batch). Pick packages from
+the open BLOCKED: session rows in ROADMAP.md: PLAY-FIT-G5-TOTALS (the 55 G5
+element / word totals keeping tests/play_fit_pending/g.txt; delete g.txt
+once green), TEST-XDIST-GROUP-RESTORE (re-soak after; start the test_shots
+render first; GATE-HOLD-D decided with it) and the older ones, plus any
+wave-99 package whose condition now holds. Write them into packages.json
+as waves 55 on (disjoint files, every dependency earlier), run
+`python tools/plan_check.py waves --write` and
+`python tools/plan_check.py check`, commit, then run the group.
 Ask the operator nothing; the main session only dispatches.
-1. Waves 10 to 52 are closed (sessions 12 to 24; GATE-HOLD-D deferred).
+1. Waves 10 to 54 are closed (sessions 12 to 25; GATE-HOLD-D deferred).
 2. Go-public track: the repository exists and is PRIVATE until the plan-04
    flip gates hold (GP-12). Push main only through fleet_gitlock, never force.
 Orchestrator lessons (full text: archive blocks "SESSION 18 /done" and
@@ -47,7 +51,7 @@ Session start checks: if ops/runtime/ggg_docs/REG_OPEN exists, GGG has
 reopened OAuth app registration: update ROADMAP TC-OAUTH-REG and put the
 apply act in the batched operator ask (OA-36); the ready application is
 docs/ops/ggg-oauth-application.md (decision 0048). Read back 2026-11-24
-(session 24 /done): absent (no REG_OPEN file).
+(session 25 /done): absent (no REG_OPEN file).
 
 Operator records (the three lines below stay in this file, verbatim):
 OPERATOR GO Q-23 step 1 (2026-11-18): "The operator has ordered going public. Record that as a decision (docs/decisions/NNNN-go-public.md: decision, alternatives, why, reverses if), update CLAUDE.md "Public-repo hygiene" and ROADMAP, and flip .githooks/pre-push from refuse-all to the normal guarded push (fleet_identity pre-push check stays)."
@@ -231,7 +235,9 @@ docs/decisions/README.md, docs/design/reviews.log, ops/loop/control/HALT,
 ops/runtime/ggg_docs/.
 Operator orders (sessions 5 and 6), live state notes: archive block "SESSION 20 /done" of AL-2026-11-22.txt (probe /api/health before touching the app; a wave agent never starts or stops the app, core, overlay or loop).
 
-Acceptance: a session group from wave 53 is in packages.json (plan_check check green, waves --write applied) and closed as 08 section 7 says (open-row command prints "none open" or only DEFERRED ids, status empty on main, leak sweep clean, last batch suite and npm test green, WAVE POINTER moved to the group's last wave), every package merged or re-deferred with a reason.
+Acceptance: a session group from wave 55 is in packages.json (plan_check check green, waves --write applied) and closed as 08 section 7 says (open-row command prints "none open" or only DEFERRED ids, status empty on main, leak sweep clean, last batch suite and npm test green, WAVE POINTER moved to the group's last wave), every package merged or re-deferred with a reason.
+
+Do NOT redo (session 25, on main and pushed): plan 4309d0f (waves 53-54); wave 53 merged eaa74d7, wave 54 a598e1f; fold aecc223 (5 done rows archived, PLAY-FIT-G5-TOTALS and TEST-XDIST-GROUP-RESTORE applied); KINDLER-GEM-VARIANT and footer clauses already in CLAUDE.md (280c1eb).
 
 Do NOT redo (session 24, on main and pushed): plan 28c385e (waves 46-52); waves 46 to 51 merged (pointer "wave 52 done, next wave 53", 73cd9d0); the session 24 roadmap fold 27e21ae (26 done rows archived, 6 new rows applied); w46 to w51 worktrees reaped.
 
@@ -241,8 +247,8 @@ Do NOT redo (sessions 19 to 22): archive blocks "SESSION 20 /done" and "SESSION 
 
 Do NOT redo (sessions 6 to 18): docs/handoff-archive/
 
-In flight: none (no orchestrator, agent or progress row of this tree running). Loop live, do not touch; REG_OPEN read back 2026-11-24 session 24 /done: absent. HALT absent.
+In flight: none (no orchestrator, agent or progress row of this tree running). Loop live, do not touch; REG_OPEN read back 2026-11-24 session 25 /done: absent. HALT absent.
 
-Status (session 24 /done, 2026-11-24, fresh): game_idle true before the suite; suite via the gate from Bash: parallel 5869 passed / 9 skipped (88.18 s), timing 21 passed (49.19 s), rc 0; npm 876/876; leak sweep no HALT; main 73cd9d0 = origin/main before this hand-off. Inbox: 1 MAIN TERMINAL note, skipped. Board skipped (opt-out).
+Status (session 25 /done, 2026-11-24, fresh): suite via the gate from Bash: parallel 5883 passed / 9 skipped (93.90 s), timing 21 passed (47.57 s), rc 0; npm 878/878; leak sweep no HALT; main aecc223 = origin/main before this hand-off. Inbox: 1 MAIN TERMINAL note, skipped. Board skipped (opt-out).
 
 Start with: read this file, then CLAUDE.md, ROADMAP.md, git log -10.
