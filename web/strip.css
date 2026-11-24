@@ -79,8 +79,9 @@ body[data-fresh="no"] #play-g .st-time { color: var(--fk-text-muted); }
 #play-g .st-sub[data-tone="warn"] { color: var(--fk-status-warn); }
 
 /* The bar's one status word (the ToS floor reading indicator, painted by
-   web/app.js through ALDash.barStatus): 20 px in a 32 px badge, neutral
-   while ok; only blocked and failed keep their colour (F-159). */
+   web/panels/consent.js through ALDash.barStatus): 20 px in a 32 px
+   badge, neutral while ok; only blocked and failed keep their colour
+   (F-159). */
 #reading.badge { font-size: var(--al-fs-title); line-height: var(--al-lh-title); font-weight: 400; }
 #reading.badge:not([data-state="blocked"]):not([data-state="failed"]) {
   color: var(--fk-text-muted);
