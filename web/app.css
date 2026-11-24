@@ -764,10 +764,10 @@ button.btn-32 { min-height: 2rem; padding: 0 var(--al-space-3); line-height: var
    (8 compact) + pager row 28 = 300 (256), slack 22 (36). The two row
    tracks share the panel height (652 px at 1280x760: 322 + 8 + 322), so
    extra height is slack, never a scroll. A card shows one page at a time
-   (.card-page, web/app.js cardPages); a list pages (web/pager.js classes
-   below) and never grows its card. Rows are one line with the ellipsis as
-   the guard in the cockpit; they wrap in the flow class and under a
-   text-spacing override (data-text-spacing="user"). */
+   (.card-page, card pages in web/panels/pager.js); a list pages
+   (web/pager.js classes below) and never grows its card. Rows are one
+   line with the ellipsis as the guard in the cockpit; they wrap in the
+   flow class and under a text-spacing override (data-text-spacing="user"). */
 .grid-card { display: flex; flex-direction: column; min-width: 0; gap: 0; }
 .card-head { display: flex; align-items: center; gap: var(--al-space-2); min-width: 0;
   min-height: var(--al-lh-title); }
@@ -800,7 +800,7 @@ button.btn-32 { min-height: 2rem; padding: 0 var(--al-space-3); line-height: var
 .grid-card .row-meta + .card-act, .grid-card .card-act + .row-meta { margin-top: var(--al-space-1); }
 #link-recover { margin-top: var(--al-space-1); }
 /* the loot filter page: a plain page of its card (review BG-10); the
-   card's page buttons show it (web/app.js cardPages) */
+   card's page buttons show it (card pages in web/panels/pager.js) */
 .tool-page .small { font-size: var(--al-fs-meta); line-height: var(--al-lh-meta); margin: var(--al-space-1) 0 0; }
 .tool-page .link { min-height: 1.5rem; padding: 0; font-size: var(--al-fs-meta); }
 .card-notes { margin: 0; padding-left: var(--al-space-4); overflow-wrap: anywhere; }
