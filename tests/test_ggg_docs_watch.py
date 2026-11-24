@@ -311,8 +311,8 @@ def test_diag_lists_the_dev_note_only_while_flagged():
     ids = [r["id"] for r in diag.checks({}, NOW)]
     assert "dev_docs" not in ids
     rows = diag.checks({"ggg_reg_open": True}, NOW)
-    row = rows[-1]
-    assert row["id"] == "dev_docs" and row["status"] == diag.NOTE
+    row = next(r for r in rows if r["id"] == "dev_docs")
+    assert row["status"] == diag.NOTE
     assert row["fix"] is None and row["detail"].isascii()
     v = diag.view({"ggg_reg_open": True}, "0.0.0", now=NOW)
     assert "GGG developer API" in v["report"]

@@ -341,7 +341,8 @@ def test_private_files_row():
     assert r["fix"] == diag.FIX_PRIVATE_BOTH
     assert len(r["fix"].splitlines()) == 1
     v = diag.view(dict(GREEN, acl_open=["runtime"]), "1", now=NOW)
-    assert v["failed"] == 1 and v["checks"][-1]["id"] == "private"
+    assert v["failed"] == 1 and [c["id"] for c in v["checks"]
+                                  if c["status"] == "fail"] == ["private"]
 
 
 def test_no_fix_text_holds_a_command_line():
