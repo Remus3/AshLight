@@ -366,7 +366,7 @@ test("blocked by a missing contact: no 'arrive within a minute' anywhere", () =>
   const w = p.webDataView(BLOCKED_WEB);
   assert.equal(w.on, true);
   assert.equal(w.blocked, "contact not set");
-  assert.equal(w.status, "Web data is on. Prices need one more step: add your contact for poe.ninja below.");
+  assert.equal(w.status, "Web data is on. This copy has no default contact, so prices need one more step: add your contact for poe.ninja below.");
   const saved = p.savedText(true, BLOCKED_WEB);
   assert.equal(saved, "Saved. Web data is on. Prices start once you add your contact for poe.ninja below.");
   const empty = with_({ rates: {}, age_s: null, blocked: "contact not set", contact_set: false,
@@ -417,7 +417,7 @@ test("contact field view: write-only, shown only until a contact is set", () => 
   assert.equal(c.label, "Your contact for poe.ninja");
   // DATA-CONTACT-DEFAULT: an optional override of the project's issues page
   assert.match(c.note, /^Optional\. /);
-  assert.match(c.note, /else its project issues page/);
+  assert.match(c.note, /else its project issues page when this copy has one/);
   assert.match(c.note, /poe\.ninja/);
   assert.match(c.note, /only on this computer/);
   assert.equal(p.contactView({ contact_set: true }).show, false);

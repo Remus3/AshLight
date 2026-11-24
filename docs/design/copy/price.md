@@ -24,7 +24,12 @@ a new or changed price template is edited here, not in design 0001.
 - price check (PRICE-1-UI, `price_card_text`): overlay `Price: <item>`,
   `<n> listed, ~<middle>` / `Lowest <amount> <currency>`, `Searching
   prices...`, `Prices in about <n> s`, `Web data is off` / `Contact not
-  set` (line 3 `See Prices and web data`; CARD-LINE-LIMIT-COPY2), `No
+  set` (line 3 `See Prices and web data`; CARD-LINE-LIMIT-COPY2; DATA-CONTACT-FORK-COPY:
+  the contact-not-set sentence says `This copy of AshLight has no default contact, so
+  poe.ninja prices need yours...`, and the dashboard status says `This copy has no
+  default contact, so prices need one more step`, because that state exists only in a
+  fork with no repository address; the contact note ends `else its project issues page
+  when this copy has one.`), `No
   listings found`, `Price check failed`; dashboard `<n> listed in <league>. The cheapest
   is <a>; the middle of the <k> cheapest is <b>.`; the one card is
   chosen by `overlay_card` (decision 0016)
