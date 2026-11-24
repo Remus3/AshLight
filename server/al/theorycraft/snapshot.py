@@ -38,6 +38,13 @@ ITEM-INFO-CORE (decision 0083): ITEM_SOURCES adds repoe-fork's uniques.json
 info popover (server/al/iteminfo.py). main() fetches default_sources(), the
 SOURCES plus ITEM_SOURCES, with the real probe table; run() with no
 sources stays SOURCES only. uniques has no probe yet.
+
+DATA-GEMS-SNAP: SOURCES adds repoe-fork's gems.json (same MIT export,
+GGG-owned data, opt-in, cache and attribution as base_items, decision 0009;
+the export's own page lists gems) as gems.json, the file
+theorycraft/archetypes.py reads (GEMS_FILE) so Kindler gem names and levels
+read checked. Its probe (snapprobe.PROBES "gems") counts the entries that
+yield a gem name the way archetypes.gem_index reads them.
 """
 
 import argparse
@@ -97,6 +104,8 @@ SOURCE_CAPS = {
     "mods": 96 * MiB,
     "stats": 96 * MiB,
     "uniques": 16 * MiB,
+    # the reader's own ceiling (archetypes.GEMS_MAX_BYTES)
+    "gems": 64 * MiB,
 }
 DEFAULT_CAP = 32 * MiB  # a caller's own source name
 TIMEOUT_S = 60
@@ -129,6 +138,9 @@ SOURCES = {
     "skilltree": GGG_TREE_POE2,
     # HUD-ACT (decision 0020): act / zone levels; reader server/al/acts.py.
     "world_areas": REPOE_POE2 + "world_areas.json",
+    # DATA-GEMS-SNAP (decisions 0009, 0081): gem names and levels for
+    # Kindler; reader server/al/theorycraft/archetypes.py (load_gems).
+    "gems": REPOE_POE2 + "gems.json",
 }
 
 # DATA-SNAP-TRIM: two files with no reader (about 27 MB) are not fetched by

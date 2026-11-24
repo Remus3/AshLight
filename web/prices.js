@@ -76,7 +76,7 @@
       show: known ? doc.contact_set !== true : null,
       label: "Your contact for poe.ninja",
       note: "Optional. An email address or a name. poe.ninja asks who runs an app. " +
-            "AshLight sends your contact if you add one, else its project issues page. " +
+            "AshLight sends your contact if you add one, else its project issues page when this copy has one. " +
             "Stored only on this computer."
     };
   }
@@ -88,7 +88,7 @@
     if (!on) {
       status = "Web data is off. AshLight asks nothing from the internet.";
     } else if (blocked === NO_CONTACT) {
-      status = "Web data is on. Prices need one more step: " + STEP_CONTACT + " below.";
+      status = "Web data is on. This copy has no default contact, so prices need one more step: " + STEP_CONTACT + " below.";
     } else if (blocked === RELEASE) {
       status = "Web data is on. " + RELEASE_TEXT;
     } else {

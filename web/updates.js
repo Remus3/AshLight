@@ -41,6 +41,11 @@
      a one-key settings import (POST /api/settings-import, the allow-listed
      key), so the core needs no route of its own; the snapshot's
      click_only follows on the core's next pass.
+   SAVE-FAIL-SAY (design findings UN-1, AS-1): a failed OK ack or
+   click-only save is also said in the page's one shared polite line, the
+   header's #tab-news, through ALTabs.say (design 0001 N6: a failed save
+   also goes to the header's polite line; a region of its own would breach
+   the 6-region cap of tests/test_a11y.py).
    No timer, no clipboard, no live region, no request but those clicks. */
 (function (root, factory) {
   "use strict";
@@ -259,6 +264,13 @@
     return typeof self !== "undefined" && self.ALTabs ? self.ALTabs : null;
   }
 
+  /* Say a line in the header's polite #tab-news (ALTabs.say); a page
+     without tabs says nothing. opts (tests): {tabs}. */
+  function say(doc, text, opts) {
+    var t = tabs(opts);
+    if (t && typeof t.say === "function") { t.say(doc, text); }
+  }
+
   /* Fill #update-box from a snapshot. opts (tests): {hosts, tabs}.
      Returns the model. The Settings tab mark is set after web/checks.js's
      paint (app.js calls this from the checks entry), and only while no
@@ -351,7 +363,8 @@
   }
 
   /* 'Update now' and the click-only switch. net: {fetch, token} (token a
-     value or a getter), the page's fetch for the bodiless POST. */
+     value or a getter), the page's fetch for the bodiless POST; tests may
+     add tabs, the ALTabs stand-in a failed save is said through. */
   function wireControls(doc, api, net) {
     var now = doc.getElementById("update-now");
     var nowSaidEl = doc.getElementById("update-now-said");
@@ -393,6 +406,7 @@
           box.checked = !on;
         }
         said.textContent = T.notSaved;
+        say(doc, T.notSaved, net);
       });
     });
   }
@@ -409,7 +423,11 @@
     btn.addEventListener("click", function () {
       if (busy) { return; }
       var w = wording(typeof getDoc === "function" ? getDoc() : null);
-      if (w === null) { said.textContent = T.notSaved; return; }
+      if (w === null) {
+        said.textContent = T.notSaved;
+        say(doc, T.notSaved, net);
+        return;
+      }
       busy = true;
       said.textContent = "";
       Promise.resolve().then(function () {
@@ -419,6 +437,7 @@
         if (typeof saved === "function") { saved(answer); }
       }, function () {
         said.textContent = T.notSaved;
+        say(doc, T.notSaved, net);
       }).then(function () { busy = false; });
     });
   }

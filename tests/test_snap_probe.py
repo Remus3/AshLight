@@ -196,3 +196,55 @@ def test_snapprobe_never_imports_snapshot():
     # the default tables of a run probe every real source by name
     assert set(snapshot.SOURCES) <= set(snapprobe.PROBES)
     assert snapprobe.probe("not_a_source", {}) is None
+
+
+# --- DATA-GEMS-SNAP: the gems probe ---------------------------------------
+
+GEMS_URL = snapshot.SOURCES["gems"]
+
+
+def _gems(n=200, named=True, nest=False):
+    out = {}
+    for i in range(n):
+        if not named:
+            e = {"tags": ["x"], "requirements": {"level": 1}}
+        elif nest:
+            e = {"base_item": {"display_name": f"Gem {i}"},
+                 "per_level": {"1": {"requirements": {"level": 1 + i % 60}}}}
+        else:
+            e = {"display_name": f"Gem {i}", "requirements": {"level": 1 + i % 60}}
+        out[f"Metadata/Items/Gems/SkillGem{i}"] = e
+    return out
+
+
+def test_gems_probe_passes_both_name_shapes():
+    for nest in (False, True):
+        res = snapprobe.probe("gems", _gems(nest=nest))
+        assert res["verdict"] == snapprobe.PASS, res
+        assert res["names"] == 200 and res["count"] == 200
+
+
+def test_gems_probe_fails_without_readable_names_or_entries():
+    res = snapprobe.probe("gems", _gems(named=False))
+    assert res["verdict"] == snapprobe.FAIL and "gem names" in res["reason"]
+    res = snapprobe.probe("gems", _gems(n=20))
+    assert res["verdict"] == snapprobe.FAIL and "entries" in res["reason"]
+    assert snapprobe.probe("gems", [])["verdict"] == snapprobe.FAIL
+
+
+def test_a_bad_gems_body_keeps_the_cached_file(tmp_path):
+    def run(fake, now):
+        return snapshot.run(tmp_path / "cache", fetch=fake, sources={"gems": GEMS_URL},
+                            probes=snapprobe.PROBES, runtime=tmp_path / "rt",
+                            log_dir=tmp_path / "logs", force=True, now=now)
+    good = _body(_gems())
+    assert run(Fake({GEMS_URL: good}), NOW) == {"gems": "fetched"}
+    out = run(Fake({GEMS_URL: _body(_gems(named=False))}), NOW + 5)
+    assert out["gems"].startswith("error: probe: only 0 gem names")
+    assert (tmp_path / "cache" / "gems.json").read_bytes() == good
+    doc = json.loads(snapprobe.report_path(tmp_path / "rt").read_text(encoding="ascii"))
+    entry = {e["source"]: e for e in doc["sources"]}["gems"]
+    assert entry["verdict"] == "fail"
+    rows = snapprobe.diag_rows({snapprobe.FACT: doc["sources"]}, NOW)
+    assert [r["id"] for r in rows] == ["snap_probe_gems"]
+    assert "skill gem list" in rows[0]["detail"]

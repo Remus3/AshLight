@@ -129,7 +129,7 @@ function setupBlock(over) {
       Object.assign(step("Overlay", o.overlay === true, "on",
         o.overlay === false ? "off, optional" : "not running, optional"), {})
     ],
-    facts: "Read only. AshLight never touches the game."
+    facts: "Read only. Play in Windowed Fullscreen."
   };
 }
 
