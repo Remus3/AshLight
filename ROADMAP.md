@@ -46,6 +46,18 @@ operator phrase.`
 - [ ] GLANCE-PENDING-OUT (build) Remove the stale DESIGN_TEXT_PENDING skip ('Copy the item first') in tests/test_glance_rules.py now that PLAY-TD-23-RECORDS wrote design 0001 section 10; empty the tuple and its skip branch. ACCEPT: python -m pytest -q tests/test_glance_rules.py passes with DESIGN_TEXT_PENDING gone or empty and no skip reported (-rs). ZERO-CLICK: test-only; nothing to press. DEPENDS: PLAY-TD-23-RECORDS. BLOCKED: session.
 - [ ] LOG-SHAPE-20261123 (build) New masked log shapes passed the two-sighting rule: work each NEW SHAPE line of ops/runtime/watch/live1_report.json (copied into the lane worktree) into a parser pattern with a fixture, or note why it stays unparsed. ACCEPT: every listed shape has a fixture and a passing test or a one-line note. SOURCE: watch ledger log-shape, filed 2026-11-23.
 - [ ] SAVE-FAIL-SAY (build) Announce failed saves on the header polite line: a failed update OK ack, autostart switch save and weights save or reset show a line but nothing is said to screen readers; route each through ALTabs.say (design findings UN-1, AS-1, WD-3, S3). ACCEPT: npm test --prefix app and python -m pytest -q tests/test_a11y.py pass with a pin that each failed save is announced politely. ZERO-CLICK: no setting; the announcement is automatic. DEPENDS: TC-WEIGHTS-DELTA-UI. BLOCKED: session.
+- [ ] DATA-CONTACT-CLEAR (build) Keep the poe.ninja contact field visible after a contact is typed, with a Clear that posts contact "" so the per-install override can be changed or cleared, never echoing the value (decision 0015); needs server/al/http.py or a new /api/web-data answer field (design review required; finding DCD-3). ACCEPT: python -m pytest -q tests/test_contact_field.py tests/test_contact_default.py tests/test_http_security.py passes and npm test --prefix app passes. ZERO-CLICK: one Clear click only when the player drops the override; nothing in play. DEPENDS: DATA-CONTACT-DEFAULT. BLOCKED: session.
+- [ ] DATA-CONTACT-FORK-COPY (build) Reword the blocked 'contact not set' status, its next step and the price-card text (shown only in a fork with no repository address) and the contact note that names an issues page a fork does not have, in server/al/text/price.py, web/prices.js and docs/design/copy/price.md (design review required; finding DCD-2). ACCEPT: python -m pytest -q tests/test_price_text.py tests/test_contact_field.py tests/test_contact_default.py passes and npm test --prefix app passes. ZERO-CLICK: copy only; nothing new to click. DEPENDS: DATA-CONTACT-DEFAULT. BLOCKED: session.
+- [ ] KINDLER-COPY-SHEET (build) Write docs/design/copy/kindler.md, the copy sheet for the Kindler card words (sub-tab labels, editor card heading and buttons, Move / Rename / Close / Keep, the toggle group names, Generate, status, not-scored and refusal lines, 'result ready', Out of date), in the form of the other docs/design/copy sheets, matching web/kindler.js word for word (design finding KT-8, wave 42). ACCEPT: python -m pytest -q tests/test_ux_review.py tests/test_kindler_tabs_ui.py passes. ZERO-CLICK: docs only. DEPENDS: KINDLER-UI-TABS. BLOCKED: session.
+- [ ] KINDLER-FIT-MEASURE (build) Run the tests/test_play_fit.py harness with a Kindler tab open on Build and items and measure the Kindler editor card at compact size (and full), recording the slack or overflow; extend the harness with a Kindler-tab case if it has none, and fix any overflow in web/panels/kindler.css (KINDLER-UI-TABS review KT-5 relies on 22 px card slack). ACCEPT: python -m pytest -q tests/test_play_fit.py tests/test_kindler_tabs_ui.py passes. ZERO-CLICK: layout and test only. DEPENDS: KINDLER-UI-TABS. BLOCKED: session.
+- [ ] KINDLER-PLAN-LIVE (build) Add a live calc test for the plan's PoB item focus on a real template (non-weapon slots ranked by PoB per-mod weights from the probe item, at most delta.MAX_PROBES calcs, repeat runs identical), registered in tests/test_marks.py CALC_TESTS and tests/tc_live_util.py CALC_FILES; it skips while the calc component is absent. ACCEPT: python -m pytest -q tests/test_marks.py tests/test_kindler_plan.py passes, and the new live file passes with the calc installed. ZERO-CLICK: developer-side only. DEPENDS: KINDLER-PLAN. BLOCKED: session.
+- [ ] KINDLER-STORE-EXPORT-WIRE (build) Wire the Kindler tabs into settings export and import: Core.export_settings applies settingsio.with_gen_builds(doc, self.gen_builds.export_block()); Core.import_settings validates settingsio.gen_builds_of(doc) before applying, then reports settingsio.merge_gen_builds(...). Files: server/al/core.py, tests/test_settingsio.py (P2, KINDLER-STORE follow-up). ACCEPT: python -m pytest -q tests/test_settingsio.py tests/test_kindler_store.py passes. ZERO-CLICK: rides the existing export and import. DEPENDS: KINDLER-STORE. BLOCKED: session.
+- [ ] KINDLER-SUPPORT-FIT (build) Add a bridge command that reports whether each support gem applies to its skill (PoB's own answer, never an own table) and wire it as kindlerplan.Planner(fit=...), so a plan's support links carry applies true / false instead of null; owns server/al/theorycraft/bridge.lua, server/al/theorycraft/calcwire.py, server/al/plug/kindler.py and their tests; no ToS change (the KINDLER Settled Reverses-if already names support applicability through the bridge). ACCEPT: python -m pytest -q tests/test_kindler_plan.py tests/test_tc_bridge.py passes. ZERO-CLICK: part of the Generate click. DEPENDS: KINDLER-PLAN. BLOCKED: session.
+- [ ] RUN-LEFTOVERS-CARD (build) Add 'Play in Windowed Fullscreen' to region C's setup mode (the first-run card part of RUN-LEFTOVERS-CORE): owns server/al/playcards.py, web/setupcard.js, tests/test_play_cards.py, docs/design/copy/explain.md and the display-mode copy line; it must fit the setup 190 px and compact 170 px budgets with no new row (for example in the SETUP_PROMISE facts line or the overlay row). ACCEPT: python -m pytest -q tests/test_play_cards.py tests/test_structure.py tests/test_leftovers.py passes. ZERO-CLICK: static text that shows itself. DEPENDS: RUN-LEFTOVERS-CORE. BLOCKED: session.
+- [ ] TEST-BUDGET-LOOPBODY-NOISE (build) tests/test_budgets.py real_loop_body read about 0.615 percent vs 0.5 in most session 23 batch suites and passed on every gated rerun; decisions 0084-0086 cover such noise only for their rows. Measure it on a quiet machine with main only, then record load noise in a decision 0002 amendment or make the reading robust (longer window or median); never move the budget without a quiet figure. ACCEPT: 5 consecutive gated whole suites green, or a decision records the ruling. ZERO-CLICK: Test housekeeping; no click. DEPENDS: none. BLOCKED: session.
+- [ ] WEB-PANEL-NAMES (build) web/panels/pager.js and settingsio.js share bare names with web/pager.js and web/settingsio.js, so tests/test_a11y.py's bare-name file table drops web/settingsio.js from its source checks; rename the two panel files (index.html tags and app/test requires) or key the table by path, and prove every web/**/*.js is read (TEST-WEB-PANELS-C2 follow-up). ACCEPT: python -m pytest -q tests/test_a11y.py tests/test_webpage.py tests/test_floor_static.py passes and npm test --prefix app passes. ZERO-CLICK: developer-side only. DEPENDS: TEST-WEB-PANELS-C2. BLOCKED: session.
+- [ ] WEB-PLAY-FIT-SETTINGS (build) tests/test_play_fit.py G1 reads 'panel-settings: page 11 px over' at 1024x700 from the main checkout but passes on the same tree in a sidecar worktree (where the batch suite runs); in the main checkout the page footer is 45 px, not 32 (one more line); find what the main checkout feeds the page that a worktree does not, make the harness independent of it and make Settings fit 1024x700 with the taller footer. ACCEPT: python -m pytest -q tests/test_play_fit.py passes from the main checkout and from a sidecar worktree. ZERO-CLICK: layout and test only. DEPENDS: TEST-WEB-PANELS-C2. BLOCKED: session.
+- [ ] WEB-STALE-COMMENTS (build) Point stale path comments at the code's new homes: web/index.html card pages and the two web/app.css cardPages comments (web/app.js cardPages, now web/panels/pager.js), web/strip.css barStatus (now web/panels/consent.js); drop web/strip.js's duplicate duration wrapper around ALFmt.duration if nothing needs its NO_TIME fallback (TEST-WEB-PANELS-C1 / C2 follow-up; no visible change). ACCEPT: python -m pytest -q tests/test_a11y.py tests/test_webpage.py tests/test_ux_review.py passes and npm test --prefix app passes. ZERO-CLICK: developer-side only; the player does nothing. DEPENDS: TEST-WEB-PANELS-C2. BLOCKED: session.
 
 ## Lane: data
 
@@ -58,6 +70,11 @@ operator phrase.`
 - [ ] LIVE-1-WHISPER (data) Live-verify the whisper log shape of LIVE-1 from the parse ledger. ACCEPT: python tools/live1_report.py prints VERIFIED live for the whisper item. ZERO-CLICK: The operator only plays; the ledger counts the first live hit by itself. DEPENDS: RUN-LEDGER-WIRE. BLOCKED: first live hit in the parse ledger (normal play after the ledger consent tick).
 - [ ] LIVE-WAYSTONE (data) Live-verify the waystone item text shape from the parse ledger's masked waystone block. ACCEPT: python tools/live1_report.py prints VERIFIED live for the waystone item. ZERO-CLICK: The operator only presses the item key on a waystone in normal play; the ledger keeps the masked shape by itself. DEPENDS: RUN-LEDGER-WIRE. BLOCKED: first live hit in the parse ledger (normal play after the ledger consent tick).
 - [ ] DOCS-FRESH-20261121 (data) 1 dated markers in docs are older than 30 days: resolve or re-date each with a source. ACCEPT: docs_fresh.py stale prints 0. ZERO-CLICK: the loop works it. SOURCE: watch refresh docs, filed 2026-11-21.
+- [ ] DATA-GEMS-SNAP (data) Add repoe-fork's poe2 gems.json to server/al/theorycraft/snapshot.py SOURCES behind the web_data opt-in, attributed per decision 0009, so Kindler gem names and levels are checked (KINDLER-DATA follow-up; gems stay unchecked until it lands). ACCEPT: python -m pytest -q tests/test_tc_snap.py tests/test_snap_probe.py tests/test_kindler_data.py passes. ZERO-CLICK: rides the existing snapshot refresh; no setting. DEPENDS: KINDLER-DATA. BLOCKED: session.
+- [ ] ELECTRON-45-4-1 (data) Electron 45.4.1 is at least 3 days old (pin 45.3.3): bump the exact pin, the lockfile and config/electron_pin.json under the written upgrade policy (decision 0070). ACCEPT: all three name 45.4.1; npm test, the static guards, npm audit signatures and the docs freshness test pass. ZERO-CLICK: the loop works it. SOURCE: watch electron 45.4.1, filed 2026-11-23.
+- [ ] ITEM-INFO-POB-CURRENCY (data) When a PoB-PoE2 pin move brings src/Data/CurrencyNames.lua, add its sha256 to config/tc_pins.json pob2_files and a text parser for its real shape in server/al/theorycraft/pobtext.py (never run as Lua, repoe-fork wins), so currency where_found rows show (ITEM-INFO-POB-TEXT follow-up; the file is absent from the current pin). ACCEPT: python -m pytest -q tests/test_tc_pobtext.py tests/test_tc_pob_drift_guard.py tests/test_iteminfo.py passes. ZERO-CLICK: read with the pinned calc component; no setting. DEPENDS: ITEM-INFO-POB-TEXT. BLOCKED: gate, until a PoB pin carries src/Data/CurrencyNames.lua.
+- [ ] ITEM-INFO-UNIQUES-PROBE (data) Give the uniques snapshot a shape probe: add a snapprobe probe for uniques (name, item_class), fold snapshot.ITEM_SOURCES into SOURCES and update the SOURCES pins in tests/test_tc_snap.py and tests/test_snap_probe.py (ITEM-INFO-CORE follow-up). ACCEPT: python -m pytest -q tests/test_snap_probe.py tests/test_tc_snap.py tests/test_iteminfo.py passes. ZERO-CLICK: rides the existing snapshot refresh; no setting. DEPENDS: ITEM-INFO-CORE. BLOCKED: session.
+- [ ] KINDLER-WEAPON-BASE (data) Give each attack template one authored weapon base (checked against the cached base_items snapshot, never guessed) composed into the PoB Items block Kindler builds, so attack templates score above 0 DPS (live: warrior_mace_slam Boneshatter dps 0; damage weights come out 0 in the plan focus); owns the archetypes.json schema addition, theorycraft/archetypes.py, theorycraft/kindler.py and their tests; no ToS change. ACCEPT: python -m pytest -q tests/test_kindler_data.py tests/test_kindler_templates.py tests/test_kindler_engine.py tests/test_kindler_live.py passes. ZERO-CLICK: part of the Generate click. DEPENDS: KINDLER-ENGINE. BLOCKED: session.
 
 
 ## Lane: review
@@ -337,96 +354,24 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
 
 ### Wave 36: web data
 
-- [ ] DATA-GUIDE-ONE-BLOCK (build) Dashboard: one guide block, no separate Zone tip + A poe.ninja
-  category link beside the trade link. ACCEPT: npm test --prefix app passes
-  (app/test/zoneguide.test.js unchanged) and no file under web/ contains 'zone-note'. Also (folded
-  DATA-PRICE-NINJA-LINK): python -m pytest -q tests/test_price_ninja_link.py
-  tests/test_price_check.py tests/test_price_card_age.py passes and npm test --prefix app passes.
-  ZERO-CLICK: Layout only; nothing for the player to do. Also (folded DATA-PRICE-NINJA-LINK): An
-  optional click; nothing is needed and nothing is fetched by the app. DEPENDS: DATA-GUIDE-MERGE,
-  DATA-CONTACT-UI, DATA-PRICE-CARD-TEXT, DATA-LEAGUE-IDENTITY. BLOCKED: session wave 38.
 
 ### Wave 37: reliability and observability
 
-- [ ] RUN-LEFTOVERS-CORE (build) Small leftovers: Windowed Fullscreen sentence, the dead 501 stub,
-  the no-op switch. ACCEPT: python -m pytest -q tests/test_leftovers.py tests/test_http_security.py
-  tests/test_floor_static.py tests/test_run_detach.py tests/test_ascii_lf.py passes. ZERO-CLICK: The
-  sentence shows itself. DEPENDS: RUN-FEED-TRUTH, RUN-STOP-RACE. BLOCKED: session wave 39.
 
 ### Wave 38: operator requests 2026-11-19, cores
 
-- [ ] ITEM-INFO-CORE (build) Item info lookup: token-gated GET /api/iteminfo over local caches.
-  ACCEPT: python -m pytest -q tests/test_iteminfo.py passes. ZERO-CLICK: Answers from what is
-  already cached; no setting. BLOCKED: session wave 38.
-- [ ] TEST-WEB-PANELS-C1 (build) Panel move C1: the Play blocks (events and trades, item check,
-  rates and price) leave web/app.js. ACCEPT: npm test --prefix app passes and python -m pytest -q
-  tests/test_dash_console.py tests/test_a11y.py tests/test_floor_static.py tests/test_ux_review.py
-  tests/test_webpage.py tests/test_trade_close.py tests/test_ux_b6.py passes, and grep -nE 'function
-  (renderEvents|renderTrades|dismissTrade|renderEval|renderRates|renderPrice)\(' web/app.js prints
-  nothing. ZERO-CLICK: Developer-side only; the player does nothing. The page assembles the panel
-  tags by itself; paint order is kept by explicit order values. DEPENDS: TEST-WEB-PANELS-B,
-  PLAY-LEGACY-OUT-2, PLAY-TD-16A-ITEMCARD. BLOCKED: session wave 39.
-- [ ] UI-HEADER-TEXT (build) Drop the visible AshLight text left of the tabs; sr-only h1 kept.
-  ACCEPT: python -m pytest -q tests/test_brand_assets.py tests/test_a11y.py passes. ZERO-CLICK:
-  Automatic. BLOCKED: session wave 40.
-- [ ] KINDLER-DATA (data) Kindler template schema and checked loader. ACCEPT: python -m pytest -q
-  tests/test_kindler_data.py passes. ZERO-CLICK: Reloads by itself on change. BLOCKED: session wave
-  38.
-- [ ] KINDLER-STORE (build) Kindler tabs store ops/runtime/gen_builds.json. ACCEPT: python -m pytest
-  -q tests/test_kindler_store.py tests/test_settingsio.py passes. ZERO-CLICK: Saved on every change.
-  BLOCKED: session wave 38.
 
 ### Wave 39: operator requests 2026-11-19, popover and templates
 
-- [ ] ITEM-INFO-POB-TEXT (data) Text-parse PoB CurrencyNames, WorldAreas and Uniques Source lines
-  under sha256 pins. ACCEPT: python -m pytest -q tests/test_tc_pobtext.py
-  tests/test_tc_pob_drift_guard.py passes. ZERO-CLICK: Read once per pin; no setting. DEPENDS:
-  ITEM-INFO-CORE. BLOCKED: session wave 39.
-- [ ] TEST-WEB-PANELS-C2 (build) Panel move C2: settings-side blocks leave web/app.js, view modules
-  register themselves, app.js is a shell. ACCEPT: npm test --prefix app passes, python -m pytest -q
-  tests/test_dash_console.py tests/test_a11y.py tests/test_floor_static.py tests/test_ux_review.py
-  tests/test_webpage.py tests/test_lootfilter_merge.py tests/test_build_item_text.py
-  tests/test_hot_reload.py passes, wc -l web/app.js prints under 300, and grep -oE
-  'window\.AL[A-Z][A-Za-z]*' web/app.js | grep -vcE 'window\.AL(App|Fmt|Regions|Tabs)$' prints 0.
-  ZERO-CLICK: Developer-side only; the player does nothing. The page assembles the panel tags by
-  itself; paint order is kept by explicit order values. DEPENDS: TEST-WEB-PANELS-C1. BLOCKED:
-  session wave 40.
-- [ ] ITEM-INFO-UI (build) Item names as link-like buttons with the shared item info popover.
-  ACCEPT: python -m pytest -q tests/test_iteminfo_ui.py tests/test_a11y.py tests/test_ux_review.py
-  passes. ZERO-CLICK: One click to look; it closes by itself on any other click. DEPENDS:
-  ITEM-INFO-CORE. BLOCKED: session wave 41.
-- [ ] KINDLER-TEMPLATES (data) First authored Kindler templates, act 1 to maps. ACCEPT: python -m
-  pytest -q tests/test_kindler_templates.py passes. ZERO-CLICK: Reloads by itself on change.
-  DEPENDS: KINDLER-DATA. BLOCKED: session wave 39.
 
 ### Wave 40: operator requests 2026-11-19, engine and tabs
 
-- [ ] KINDLER-ENGINE (build) Kindler candidates, PoB scoring and deterministic ranking on the
-  Generate route. ACCEPT: python -m pytest -q tests/test_kindler_engine.py
-  tests/test_kindler_live.py passes. ZERO-CLICK: One Generate click; results stay until the toggles
-  change. DEPENDS: KINDLER-DATA, KINDLER-TEMPLATES, KINDLER-STORE. BLOCKED: session wave 40.
-- [ ] KINDLER-UI-TABS (build) Build tab sub-tabs: Pasted build plus Kindler tabs with move, rename
-  and close. ACCEPT: python -m pytest -q tests/test_kindler_tabs_ui.py tests/test_a11y.py
-  tests/test_ux_review.py and npm test --prefix app pass. ZERO-CLICK: The tabs come back by
-  themselves; one Generate click per new idea. DEPENDS: KINDLER-STORE. BLOCKED: session wave 42.
 
 ### Wave 41: operator requests 2026-11-19, Kindler plan and card collapse
 
-- [ ] UI-CARD-COLLAPSE (build) Collapsible cards on Build and items and Run in the desktop client;
-  state in the core. ACCEPT: python -m pytest -q tests/test_card_collapse.py tests/test_ui_layout.py
-  tests/test_a11y.py passes and npm test --prefix app passes. ZERO-CLICK: Remembered by the app;
-  nothing to set. BLOCKED: session wave 43.
-- [ ] KINDLER-PLAN (build) Kindler result plan: stages, links, gem timing, passives, ascendancy,
-  item focus. ACCEPT: python -m pytest -q tests/test_kindler_plan.py passes. ZERO-CLICK: Follows the
-  Play guidance by itself while the tab toggle is on. DEPENDS: KINDLER-ENGINE. BLOCKED: session wave
-  41.
 
 ### Wave 42: operator requests 2026-11-19, Kindler result card
 
-- [ ] KINDLER-UI-RESULT (build) Kindler result card with stages and follow Play guidance. ACCEPT:
-  python -m pytest -q tests/test_kindler_result_ui.py tests/test_a11y.py tests/test_ux_review.py and
-  npm test --prefix app pass. ZERO-CLICK: The current step moves with the Play guidance by itself.
-  DEPENDS: KINDLER-PLAN, KINDLER-UI-TABS, ITEM-INFO-UI. BLOCKED: session wave 44.
 
 ### Parked
 
@@ -506,12 +451,6 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   One Connect click per session and one Refresh click per re-read until GGG's written yes; none
   after it. DEPENDS: TC-IMPORT, TC-CARD-PARTS-WEB. BLOCKED: the core half of the import; unblocks
   when TC-IMPORT is merged (package TC-IMPORT).
-- [ ] DATA-CONTACT-DEFAULT (build) Default contact: the project's issues page once the repository is
-  public. ACCEPT: python -m pytest -q tests/test_contact_default.py tests/test_contact_field.py
-  tests/test_data_ninja.py tests/test_leak_sweep.py passes and npm test --prefix app passes.
-  ZERO-CLICK: After this no player types anything for prices: the web-data tick is enough. DEPENDS:
-  DATA-CONTACT-UI, DATA-WEBFETCH-GZIP, DATA-DIAG-SEAM, DATA-SNAP-TRIM, DATA-GUIDE-ONE-BLOCK, GP-10.
-  BLOCKED: session wave 45.
 - [ ] OVL-ITEM-KEY-CTRL (build) Item-check default chord moves under Ctrl once the operator names a
   free letter. ACCEPT: node --test app/test/hotkey.test.js app/test/eval.test.js and python -m
   pytest -q tests/test_audit_pass5_low.py tests/test_floor_static.py pass with the new default in
