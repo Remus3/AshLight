@@ -65,6 +65,20 @@
     return m.text ? [m.text] : [];
   }
 
+  /* ITEM-INFO-UI: the same rows as {text, item}: item is the moved
+     item's name (the Prices list makes it the item info button), "" for
+     the one sentence. */
+  function items(pw) {
+    var moved = pw && Array.isArray(pw.moved) ? pw.moved : [];
+    if (moved.length) {
+      return moved.map(function (m) {
+        return { text: "You checked " + m.text,
+                 item: typeof m.name === "string" ? m.name : "" };
+      });
+    }
+    return rows(pw).map(function (t) { return { text: t, item: "" }; });
+  }
+
   function tabs() {
     return typeof self !== "undefined" && self.ALTabs ? self.ALTabs : null;
   }
@@ -98,6 +112,6 @@
     });
   }
 
-  return { model: model, rows: rows, paint: paint, wire: wire, CLEARED: CLEARED,
+  return { model: model, rows: rows, items: items, paint: paint, wire: wire, CLEARED: CLEARED,
            FAILED: FAILED, MARK: MARK, MOVED_PAGE: MOVED_PAGE };
 }));

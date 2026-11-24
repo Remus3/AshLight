@@ -1,0 +1,54 @@
+/* ITEM-INFO-UI (decision 0082 part 1): the shared item info popover and
+   the item name buttons (web/iteminfo.js). The popover sits in the top
+   layer (popover="manual") at a fixed place beside its button, so it
+   overlays the page and never changes a card's size; at most
+   min(22rem, 90vw) wide and 60vh tall, scrolling inside. Linked by the
+   al:panels marker (server/al/webpage.py). No motion. */
+.iteminfo-pop {
+  position: fixed;
+  inset: auto;
+  top: 0;
+  left: 0;
+  margin: 0;
+  box-sizing: border-box;
+  width: min(22rem, 90vw);
+  max-height: 60vh;
+  overflow: auto;
+  padding: var(--al-space-3);
+  color: var(--fk-text);
+  background: var(--fk-surface-2);
+  border: 1px solid var(--al-control-edge);
+  border-radius: var(--al-radius-card);
+  font-size: var(--al-fs-meta);
+  line-height: 1.4;
+}
+.iteminfo-pop .iteminfo-title {
+  margin: 0 0 var(--al-space-2);
+  font-size: var(--al-fs-body);
+  overflow-wrap: anywhere;
+}
+.iteminfo-pop p { margin: 0 0 var(--al-space-2); }
+.iteminfo-pop .iteminfo-rows {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--al-space-1) var(--al-space-3);
+  margin: 0 0 var(--al-space-2);
+}
+.iteminfo-pop .iteminfo-rows dt { color: var(--fk-text-muted); }
+.iteminfo-pop .iteminfo-rows dd { margin: 0; overflow-wrap: anywhere; }
+.iteminfo-pop .iteminfo-desc, .iteminfo-pop .iteminfo-dir { white-space: pre-line; }
+.iteminfo-pop .iteminfo-flavour { font-style: italic; white-space: pre-line; }
+.iteminfo-pop .iteminfo-sub { margin: 0 0 var(--al-space-1); font-size: var(--al-fs-meta); }
+.iteminfo-pop .iteminfo-where { margin: 0 0 var(--al-space-2); padding-left: var(--al-space-4); }
+.iteminfo-pop .iteminfo-credit, .iteminfo-pop .iteminfo-more { color: var(--fk-text-muted); }
+.iteminfo-pop a.out { display: inline-flex; align-items: center; min-height: 1.5rem; }
+
+/* An item name in a list row: link-like, the row's own size (14 px or
+   more), the 24 px target of a row with controls, the shared focus ring. */
+button.link.iteminfo-name {
+  padding: 0;
+  min-width: 1.5rem;
+  min-height: 1.5rem;
+  font: inherit;
+  text-align: left;
+}
