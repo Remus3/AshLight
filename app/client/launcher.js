@@ -413,12 +413,12 @@ function applyNow(home, port, opts) {
    records the choice in <runtime>\autostart.json. done(code), when given,
    is called once the script exits (code null when it could not start).
    Returns the child pid or 0. */
-function setAutostart(repo, on, spawn, done) {
+function setAutostart(repo, on, spawn, done, env) {
   const run = spawn || childProcess.spawn;
   const flag = on === true ? "-Enable" : "-Disable";
   const finish = typeof done === "function" ? done : () => {};
   try {
-    const child = run("powershell.exe", psArgs(path.join(repo, "scripts", "autostart.ps1"), [flag]), {
+    const child = run(psExe(env), psArgs(path.join(repo, "scripts", "autostart.ps1"), [flag]), {
       cwd: repo, detached: false, windowsHide: true, stdio: "ignore"
     });
     if (child && typeof child.on === "function") {
