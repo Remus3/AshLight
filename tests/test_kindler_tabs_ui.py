@@ -55,26 +55,22 @@ def test_sub_tabs_are_a_labelled_group_inside_the_build_panel():
     assert panel.index('id="kindler-bar"') < panel.index('<div class="col">')
 
 
-def test_editor_card_follows_the_cells_and_has_no_live_region():
-    panel = HTML[HTML.index('id="panel-build"'):HTML.index('id="panel-run"')]
-    card = _between('<section id="kindlerbox"', "</section>")
-    assert card in panel
-    assert panel.index('id="weightsbox"') < panel.index('id="kindlerbox"')
-    assert re.search(r'<section id="kindlerbox"[^>]*\bhidden>', card)
-    assert 'aria-labelledby="kindler-title"' in card
-    assert re.search(r'<h2 id="kindler-title"[^>]*tabindex="-1"', card)
-    for bad in ("aria-live", 'role="status"', 'role="alert"', "<details"):
-        assert bad not in card, bad
-        assert bad not in _between('<div id="kindler-bar"', "</div>"), bad
+def test_editor_card_is_built_by_the_script_with_no_live_region():
+    """The card is made by web/kindler.js on first show (dashboard element
+    cap, tests/test_dash_perf.py), not carried in the page."""
+    assert 'id="kindlerbox"' not in HTML
+    code = _code(JS)
+    for bad in ("aria-live", '"status"', '"alert"', '"details"', "primary"):
+        assert bad not in code, bad
     for word, cid in (("Move left", "kindler-left"), ("Move right", "kindler-right"),
                       ("Rename", "kindler-rename"), ("Close tab", "kindler-close"),
-                      ("Close", "kindler-yes"), ("Keep", "kindler-keep"),
-                      ("Generate", "kindler-generate")):
-        assert re.search(r'<button id="%s"[^>]*>%s</button>' % (cid, word), card), cid
-    assert re.search(r'<input id="kindler-name" type="text" maxlength="32"', card)
-    assert 'for="kindler-class"' in card and 'for="kindler-league"' in card
-    assert 'list="kindler-leagues"' in card
-    assert "primary" not in card
+                      ("Close", "kindler-yes"), ("Keep", "kindler-keep")):
+        assert re.search(r'b24\("%s", "%s"' % (cid, word), code), cid
+    assert re.search(r'"button", \{ id: "kindler-generate", type: "submit"', code)
+    assert 'id: "kindler-name", type: "text", maxlength: String(MAX_LABEL)' in code
+    assert '"aria-labelledby": "kindler-title"' in code
+    assert re.search(r'h\(d, "h2", \{ id: "kindler-title", "class": "one-line", tabindex: "-1" \}', code)
+    assert '"for": "kindler-class"' in code and '"for": "kindler-league"' in code
 
 
 def test_script_tag_loads_before_slots_and_the_sheet_comes_from_the_marker():
@@ -219,27 +215,6 @@ function makeDoc() {
   mk("button", "kindler-pasted", bar, "Pasted build");
   mk("button", "kindler-new", bar, "New Kindler tab");
   mk("span", "kindler-full", bar).hidden = true;
-  const card = mk("section", "kindlerbox", panel);
-  card.hidden = true;
-  mk("h2", "kindler-title", card, "Kindler");
-  const tools = mk("div", "kindler-tools", card);
-  ["kindler-left", "kindler-right", "kindler-rename", "kindler-close"].forEach((id) => mk("button", id, tools));
-  const rf = mk("form", "kindler-rename-form", card);
-  mk("input", "kindler-name", rf);
-  mk("button", "kindler-name-cancel", rf);
-  const cf = mk("div", "kindler-confirm", card);
-  mk("p", "kindler-confirm-q", cf);
-  mk("button", "kindler-yes", cf);
-  mk("button", "kindler-keep", cf);
-  const form = mk("form", "kindler-form", card);
-  mk("select", "kindler-class", form);
-  mk("input", "kindler-league", form);
-  mk("datalist", "kindler-leagues", form);
-  mk("div", "kindler-toggles", form);
-  mk("span", "kindler-status", form);
-  mk("span", "kindler-stale", card).hidden = true;
-  mk("span", "kindler-result", card);
-  mk("p", "kindler-stale-why", card).hidden = true;
   return doc;
 }
 
@@ -356,12 +331,9 @@ async function main() {
   const s1 = K.attach(doc, { request: core.request, store: store, later: () => {}, leagues: () => null });
   await settle();
   out.load = { bar: barIds(doc), current: currentIds(doc), stops: stops(doc),
-    cardHidden: doc.getElementById("kindlerbox").hidden,
+    card: doc.getElementById("kindlerbox"),
     sub: doc.getElementById("panel-build").getAttribute("data-sub"),
     labels: barIds(doc).map((id) => doc.getElementById(id).textContent) };
-  out.toggleInputs = doc.getElementById("kindler-toggles").children.map((fs) =>
-    fs.children.filter((c) => c.tagName === "LABEL").map((l) => l.children[0].value));
-  out.classOptions = doc.getElementById("kindler-class").children.map((o) => o.value);
 
   // 2. keyboard: Right from Pasted shows the first Kindler tab and focuses it
   const pasted = doc.getElementById("kindler-pasted");
@@ -378,6 +350,12 @@ async function main() {
       doc.getElementById("kt-" + k + "-unsure").checked),
     leftOff: doc.getElementById("kindler-left").getAttribute("aria-disabled"),
     rightOff: doc.getElementById("kindler-right").getAttribute("aria-disabled") };
+  out.toggleInputs = doc.getElementById("kindler-toggles").children.map((fs) =>
+    fs.children.filter((c) => c.tagName === "LABEL").map((l) => l.children[0].value));
+  out.classOptions = doc.getElementById("kindler-class").children.map((o) => o.value);
+  const card = doc.getElementById("kindlerbox");
+  out.cardPlace = { last: doc.getElementById("panel-build").children.slice(-1)[0] === card,
+    labelled: card.getAttribute("aria-labelledby"), cls: card.className };
   const ev2 = fire(doc.getElementById("kindler-bar"), "keydown", { key: "End", target: doc.activeElement });
   await settle();
   out.end = { current: currentIds(doc), focus: doc.activeElement && doc.activeElement.getAttribute("id"),
@@ -522,9 +500,11 @@ def test_load_puts_pasted_build_first_in_the_store_order(run):
     assert load["bar"] == ["kindler-pasted", "kindler-tab-k1", "kindler-tab-k2", "kindler-new"]
     assert load["labels"] == ["Pasted build", "Kindler 1", "Bow idea", "New Kindler tab"]
     assert load["current"] == ["kindler-pasted"] and load["stops"] == ["kindler-pasted"]
-    assert load["cardHidden"] is True and load["sub"] is None
+    assert load["card"] is None and load["sub"] is None  # built on first show
     assert run["toggleInputs"] == [["yes", "no", "unsure"]] * 5 + [["life", "energy_shield", "hybrid", "unsure"]]
     assert run["classOptions"][0] == "" and "Ranger" in run["classOptions"]
+    assert run["cardPlace"] == {"last": True, "labelled": "kindler-title",
+                                "cls": "card kindler-card"}
 
 
 def test_arrow_keys_move_and_show_with_one_tab_stop(run):

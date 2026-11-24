@@ -171,7 +171,8 @@
   <!-- KINDLER-UI-TABS (decision 0081 points 7 to 11): the Build sub-tabs, a
        labelled button group (adjudicator ruling 2026-11-23: no tab roles):
        the fixed Pasted build (this grid), the Kindler tabs web/kindler.js
-       puts before New, and New. -->
+       puts before New, and New. The Kindler editor card is made by
+       web/kindler.js after the cells when a Kindler sub-tab first shows. -->
   <div id="kindler-bar" class="kindler-bar" role="group" aria-label="Builds">
     <button id="kindler-pasted" type="button" class="subtab" data-label="Pasted build" aria-current="true" tabindex="0">Pasted build</button>
     <button id="kindler-new" type="button" class="secondary btn-24" aria-describedby="kindler-full">New Kindler tab</button>
@@ -480,53 +481,6 @@
     <p id="weights-status" class="row-meta one-line muted" role="status" aria-live="polite"></p>
   </section>
   </div>
-  <!-- KINDLER-UI-TABS: the shown Kindler tab's editor; it takes the grid's
-       place while a Kindler sub-tab is shown (web/kindler.js). Nothing
-       generates by itself: only the Generate click. -->
-  <section id="kindlerbox" class="card kindler-card" aria-labelledby="kindler-title" hidden>
-    <div class="kindler-head">
-      <h2 id="kindler-title" class="one-line" tabindex="-1">Kindler</h2>
-      <span class="row-meta muted">Kindler: build generator</span>
-    </div>
-    <div id="kindler-tools" class="kindler-row">
-      <button id="kindler-left" type="button" class="secondary btn-24">Move left</button>
-      <button id="kindler-right" type="button" class="secondary btn-24">Move right</button>
-      <button id="kindler-rename" type="button" class="secondary btn-24">Rename</button>
-      <button id="kindler-close" type="button" class="secondary btn-24">Close tab</button>
-    </div>
-    <form id="kindler-rename-form" class="kindler-row" hidden>
-      <label for="kindler-name" class="row-meta">Name</label>
-      <input id="kindler-name" type="text" maxlength="32" autocomplete="off" spellcheck="false"
-        aria-describedby="kindler-name-hint">
-      <button type="submit" class="secondary btn-24">Save name</button>
-      <button id="kindler-name-cancel" type="button" class="secondary btn-24">Cancel</button>
-      <span id="kindler-name-hint" class="row-meta muted">Up to 32 characters. Empty keeps the usual name.</span>
-    </form>
-    <div id="kindler-confirm" class="kindler-row" hidden>
-      <p id="kindler-confirm-q" class="row-body one-line"></p>
-      <button id="kindler-yes" type="button" class="secondary btn-24" aria-describedby="kindler-confirm-q">Close</button>
-      <button id="kindler-keep" type="button" class="secondary btn-24">Keep</button>
-    </div>
-    <form id="kindler-form" class="kindler-form">
-      <div class="kindler-row">
-        <label for="kindler-class" class="row-meta">Class</label>
-        <select id="kindler-class"></select>
-        <label for="kindler-league" class="row-meta">League</label>
-        <input id="kindler-league" type="text" list="kindler-leagues" maxlength="64"
-          placeholder="Standard" autocomplete="off" spellcheck="false">
-        <datalist id="kindler-leagues"></datalist>
-      </div>
-      <p class="row-meta muted">Not sure sets no limit. The league changes only prices and trade links.</p>
-      <div id="kindler-toggles" class="kindler-toggles"></div>
-      <div class="kindler-row">
-        <button id="kindler-generate" type="submit" class="secondary btn-28">Generate</button>
-        <span id="kindler-status" class="row-meta muted"></span>
-      </div>
-    </form>
-    <p class="kindler-result row-body"><span id="kindler-stale" class="badge" hidden>Out of date</span>
-      <span id="kindler-result"></span></p>
-    <p id="kindler-stale-why" class="row-meta muted" hidden></p>
-  </section>
   </div>
 
   <!-- PLAY-TD-20A-RUN-GRID (plan 03 section 4, TD-20): Run is a fixed 3 x 2

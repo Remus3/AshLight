@@ -4,7 +4,8 @@
    editor: Move left / Move right, Rename (at most 32 characters), Close
    with an inline confirm (Close / Keep, focus on Keep; never
    window.confirm), a class and league picker, the tri-state toggles and
-   Generate.
+   Generate. The editor card is built here the first time a Kindler
+   sub-tab shows (buildCard), so the page carries no unused markup.
 
    The sub-tabs are a labelled button group (role="group", aria-current
    on the shown one; adjudicator ruling 2026-11-23: no tab roles, the
@@ -217,8 +218,6 @@
       var stored = ctl.store ? ctl.store.getItem(STORE_KEY) : null;
       if (stored === "kindler") { s.want = "kindler"; }
     } catch (e) { /* private window */ }
-    buildToggles(s);
-    buildClasses(s);
     wire(s);
     paintBar(s);
     if (typeof ctl.onConnect === "function") {
@@ -271,6 +270,80 @@
       });
       box.appendChild(fs);
     });
+  }
+
+  /* h(doc, tag, attrs, kids): one element; attrs are attributes (class,
+     id, type ...), kids strings (textContent) or elements. */
+  function h(doc, tag, attrs, kids) {
+    var n = doc.createElement(tag);
+    Object.keys(attrs || {}).forEach(function (k) {
+      if (k === "hidden") { n.hidden = !!attrs[k]; } else if (k === "class") { n.className = attrs[k]; } else { n.setAttribute(k, attrs[k]); }
+    });
+    if (typeof kids === "string") { n.textContent = kids; } else {
+      (kids || []).forEach(function (c) { n.appendChild(c); });
+    }
+    return n;
+  }
+
+  /* KINDLER-UI-TABS fix round (dashboard element cap, test_dash_perf): the
+     editor card is made here the first time a Kindler sub-tab shows, after
+     the six card cells of #panel-build; the page holds only the sub-tab
+     bar until then. Text through textContent only, no markup strings. */
+  function buildCard(s) {
+    var d = s.doc;
+    var panel = s.$("panel-build");
+    if (s.$("kindlerbox") || !panel) { return s.$("kindlerbox"); }
+    var b24 = function (id, text, more) {
+      var a = { id: id, type: "button", "class": "secondary btn-24" };
+      Object.keys(more || {}).forEach(function (k) { a[k] = more[k]; });
+      return h(d, "button", a, text);
+    };
+    var card = h(d, "section", { id: "kindlerbox", "class": "card kindler-card",
+      "aria-labelledby": "kindler-title", hidden: true }, [
+      h(d, "div", { "class": "kindler-head" }, [
+        h(d, "h2", { id: "kindler-title", "class": "one-line", tabindex: "-1" }, "Kindler"),
+        h(d, "span", { "class": "row-meta muted" }, "Kindler: build generator")]),
+      h(d, "div", { id: "kindler-tools", "class": "kindler-row" }, [
+        b24("kindler-left", "Move left"), b24("kindler-right", "Move right"),
+        b24("kindler-rename", "Rename"), b24("kindler-close", "Close tab")]),
+      h(d, "form", { id: "kindler-rename-form", "class": "kindler-row", hidden: true }, [
+        h(d, "label", { "for": "kindler-name", "class": "row-meta" }, "Name"),
+        h(d, "input", { id: "kindler-name", type: "text", maxlength: String(MAX_LABEL),
+          autocomplete: "off", spellcheck: "false", "aria-describedby": "kindler-name-hint" }),
+        h(d, "button", { type: "submit", "class": "secondary btn-24" }, "Save name"),
+        b24("kindler-name-cancel", "Cancel"),
+        h(d, "span", { id: "kindler-name-hint", "class": "row-meta muted" },
+          "Up to 32 characters. Empty keeps the usual name.")]),
+      h(d, "div", { id: "kindler-confirm", "class": "kindler-row", hidden: true }, [
+        h(d, "p", { id: "kindler-confirm-q", "class": "row-body one-line" }),
+        b24("kindler-yes", "Close", { "aria-describedby": "kindler-confirm-q" }),
+        b24("kindler-keep", "Keep")]),
+      h(d, "form", { id: "kindler-form", "class": "kindler-form" }, [
+        h(d, "div", { "class": "kindler-row" }, [
+          h(d, "label", { "for": "kindler-class", "class": "row-meta" }, "Class"),
+          h(d, "select", { id: "kindler-class" }),
+          h(d, "label", { "for": "kindler-league", "class": "row-meta" }, "League"),
+          h(d, "input", { id: "kindler-league", type: "text", list: "kindler-leagues",
+            maxlength: "64", placeholder: "Standard", autocomplete: "off", spellcheck: "false" }),
+          h(d, "datalist", { id: "kindler-leagues" })]),
+        h(d, "p", { "class": "row-meta muted" },
+          "Not sure sets no limit. The league changes only prices and trade links."),
+        h(d, "div", { id: "kindler-toggles", "class": "kindler-toggles" }),
+        h(d, "div", { "class": "kindler-row" }, [
+          h(d, "button", { id: "kindler-generate", type: "submit", "class": "secondary btn-28" },
+            "Generate"),
+          h(d, "span", { id: "kindler-status", "class": "row-meta muted" })])]),
+      h(d, "p", { "class": "kindler-result row-body" }, [
+        h(d, "span", { id: "kindler-stale", "class": "badge", hidden: true }, "Out of date"),
+        h(d, "span", { id: "kindler-result" })]),
+      h(d, "p", { id: "kindler-stale-why", "class": "row-meta muted", hidden: true })]);
+    panel.appendChild(card);
+    buildToggles(s);
+    buildClasses(s);
+    wireCard(s);
+    s.leagueKey = "";
+    paintLeagues();
+    return card;
   }
 
   function current(s) {
@@ -358,8 +431,8 @@
   /* Which view is up: the grid (Pasted build) or the Kindler card. */
   function paintPanel(s) {
     var panel = s.$("panel-build");
-    var card = s.$("kindlerbox");
     var tab = s.sub === PASTED ? null : current(s);
+    var card = tab ? buildCard(s) : s.$("kindlerbox");
     if (panel) {
       if (tab) { panel.setAttribute("data-sub", "kindler"); } else { panel.removeAttribute("data-sub"); }
     }
@@ -695,6 +768,11 @@
       if (e.preventDefault) { e.preventDefault(); }
       show(s, next, "key");
     });
+  }
+
+  /* The editor card's controls, wired once when buildCard makes them. */
+  function wireCard(s) {
+    var $ = s.$;
     on($("kindler-left"), "click", function (e) { move(s, "left", e.currentTarget || $("kindler-left")); });
     on($("kindler-right"), "click", function (e) { move(s, "right", e.currentTarget || $("kindler-right")); });
     on($("kindler-rename"), "click", function () { openRename(s); });
