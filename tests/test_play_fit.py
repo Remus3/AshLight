@@ -15,9 +15,10 @@ failure is tolerated only while its pending marker exists: one one-line
 reason file per region or tab in tests/play_fit_pending/. Region C has two
 markers, c-setup (setup, idle and error modes: states a, d, e) and c-zone
 (every other mode). A missing region is a failure of that region, so it
-is pending exactly while its marker is. Page-wide budgets (page overflow,
-word, element and control totals, text styles) are pending while any
-region marker is. The package that lands a region or a tab deletes its
+is pending exactly while its marker is. Page-wide budgets (word, element
+and control totals, text styles) are pending while any region marker is;
+page overflow (G1 on the page) is never pending since WEB-PLAY-FOOT-ONE-ROW
+(the one-row footer took its last 13 px). The package that lands a region or a tab deletes its
 marker; from then on that scope must hold in every state and size.
 
 Skips cleanly without Chrome (or Edge) or node. Never touches the game,
@@ -99,11 +100,13 @@ PAGE_TOKEN = "f" * 48
 # its width moved with the commit: at 1024x700 one hash fit the footer on one
 # row (32 px) and another wrapped it to two (45 px), and the harness gave a
 # different Settings result per checkout. The sweep's cores answer one fixed
-# build string instead, the long form (a commit and the dev mark) that always
-# takes the second row at 1024 px, so every checkout measures the taller
-# footer.
+# build string instead, the long form (a commit and the dev mark). Since
+# WEB-PLAY-FOOT-ONE-ROW the footer shows that build cut to 7 hex in a
+# fixed-width face, so even the long form keeps one 32 px row at 1024 px
+# (FOOT_PX); the static Kindler page below still writes the full line.
 PIN_COMMIT = "0123456789ab"
 PIN_BUILD = buildinfo.compose(VERSION, PIN_COMMIT, True)
+FOOT_PX = 32  # design 0001's footer budget: one row in compact and full
 
 
 # -- markers ------------------------------------------------------------------
@@ -124,6 +127,8 @@ def marker_for(scope, state):
 def covered(f, pending):
     scope = f["scope"]
     if scope == "page":
+        if f["check"] == "G1":
+            return False  # WEB-PLAY-FOOT-ONE-ROW: page overflow is enforced
         return any(m in pending for m in REGION_MARKERS)
     if scope == "skeleton":
         return False
@@ -682,6 +687,13 @@ def test_missing_regions_and_overflow_are_pending_only_while_marked():
     sw = _fake_sweep(regions=False, over=380)
     fails = fit_failures(sw)
     assert {f["scope"] for f in fails} == {"page", *REGIONS}
+    # WEB-PLAY-FOOT-ONE-ROW: page overflow is never pending
+    over = [f for f in fails if f["scope"] == "page" and f["check"] == "G1"]
+    assert over and uncovered(fails, set(MARKERS)) == over
+    fails = [f for f in fails if f not in over]
+    sw["states"]["c"]["sizes"]["1280x760"]["play"]["words"] = 999
+    fails += [f for f in fit_failures(sw) if f["scope"] == "page" and f["check"] == "G5"]
+    assert any(f["scope"] == "page" for f in fails)
     assert uncovered(fails, set(MARKERS)) == []
     # deleting a marker while its region is still missing turns it red
     for marker in REGION_MARKERS:
@@ -784,15 +796,16 @@ def test_the_rows_state_puts_the_core_caps_back(tmp_path):
 def test_the_footer_is_the_same_in_every_checkout(sweep):
     """WEB-PLAY-FIT-SETTINGS: the sweep's cores answer the pinned build, so
     the footer has one height per size in every state, whatever the
-    checkout's commit, and at 1024x700 it is the two-row footer."""
+    checkout's commit; WEB-PLAY-FOOT-ONE-ROW: it is one 32 px row at every
+    cockpit size at s = 1, 1024x700 included."""
     assert buildinfo.build_id.__module__ == buildinfo.__name__  # put back after the sweep
     for key in (size_key(w, h) for w, h in COCKPIT):
         feet = {name: round(st["sizes"][key]["play"]["frame"]["foot"])
                 for name, st in sweep["states"].items()}
         assert len(set(feet.values())) == 1, (key, feet)
-    one_row = round(sweep["states"][FIT_STATES[0]]["sizes"]["1280x760"]["play"]["frame"]["foot"])
-    two_rows = round(sweep["states"][FIT_STATES[0]]["sizes"]["1024x700"]["play"]["frame"]["foot"])
-    assert two_rows > one_row, (one_row, two_rows)
+    for key in ("1280x760", "1264x821", "1024x700"):
+        foot = round(sweep["states"][FIT_STATES[0]]["sizes"][key]["play"]["frame"]["foot"])
+        assert foot == FOOT_PX, (key, foot)
 
 
 def test_play_fits_or_is_pending(sweep):

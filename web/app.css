@@ -396,9 +396,16 @@ input[type="checkbox"] { width: 24px; height: 24px; vertical-align: middle; }
    row, the disclaimer sentence (text colour) and the trademark sentence
    (muted) at the 13 px step, then the version line; it wraps only in a
    narrow window. Its two folds moved to Settings > About and data.
-   WEB-PLAY-FIT-SETTINGS: the build hash is set in a proportional face,
-   so the row's width moves with the commit; at 1024 px a hash can push
-   the version line to a second row. The footer never shrinks below its
+   WEB-PLAY-FIT-SETTINGS: the build hash was set in a proportional face,
+   so the row's width moved with the commit and at 1024 px a hash pushed
+   the version line to a second row. WEB-PLAY-FOOT-ONE-ROW: the footer
+   shows the build cut to 7 hex in a fixed-width face (.foot-hash; the
+   12-hex line stays in Settings > About and data), so the longest line
+   ("Version x.y.z, build <7 hex>, dev") keeps one 32 px row at 1024 px
+   with about 17 px to spare. Compact and full hold the footer at 2rem as
+   a minimum, not a fixed height, so a 1.4.12 text spacing override or a
+   narrow flow window still wraps and grows it instead of clipping. The
+   footer never shrinks below its
    content (a long Settings pane once squeezed it to 32 px and its second
    row ran 11 px past the window); the pane scrolls instead. */
 .foot {
@@ -415,6 +422,7 @@ input[type="checkbox"] { width: 24px; height: 24px; vertical-align: middle; }
   flex-shrink: 0;
 }
 .foot p { margin: var(--al-space-0) 0; }
+.foot-hash { font-family: var(--al-font-mono); }
 /* UX-ONBOARD-COPY: what AshLight does and never does, open in Settings >
    About and data, one readable column */
 .promises { max-width: 60ch; }
@@ -660,7 +668,7 @@ button.bar-word:hover { background: var(--fk-surface); }
 @media (min-width: 64em) and (min-height: 43.75em) {
   main { max-width: 100rem; padding: var(--al-space-3) var(--al-space-4); }
   .bar { min-height: 3.25rem; padding-block: 0; }
-  .foot { min-height: 2rem; padding-block: 0; align-items: center; }
+  .foot { min-height: 2rem; padding-block: 0; align-items: center; column-gap: var(--al-space-3); }
   .panel-play {
     --track-g: 6.25rem; --track-1: 4.25rem; --track-3: 9.5rem; --track-5: 12.5rem;
     --track-6: 0.25rem; --track-7: 0.25rem; --track-8: 0.25rem; --track-9: 6rem;

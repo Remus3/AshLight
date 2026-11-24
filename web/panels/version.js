@@ -19,7 +19,7 @@
    No clipboard, no timer, no new request, no live region.
 
    UMD like web/fmt.js: CommonJS for node --test (app/test/panels.test.js)
-   exports {name, order, panel, versionText}; in the page the file
+   exports {name, order, panel, versionText, footerParts}; in the page the file
    registers itself with window.ALApp (web/registry.js) as "version",
    order 270, after the other settings panels (it only queues its read).
    The core links this file at the panels marker of index.html
@@ -75,7 +75,34 @@
     }
     return "Version " + ver + (commit ? ", build " + commit : "") + (dev ? ", dev" : "");
   }
+
+  /* WEB-PLAY-FOOT-ONE-ROW: the footer's short form of the same line, so
+     the footer stays one row at 1024 px: the build cut to its first 7 hex,
+     set apart in a fixed-width face (web/app.css .foot-hash); the full
+     12-hex line stays in Settings > About and data. {head, hash, tail},
+     hash "" when the line names no build; null when versionText says
+     nothing. */
+  function footerParts(doc) {
+    var text = versionText(doc);
+    if (!text) { return null; }
+    var m = /^(Version [^,]+, build )([0-9a-f]{12})(.*)$/.exec(text);
+    if (!m) { return { head: text, hash: "", tail: "" }; }
+    return { head: m[1], hash: m[2].slice(0, 7), tail: m[3] };
+  }
   /* BUILD-STAMP:end */
+
+  /* the footer line from footerParts: text nodes only, no markup */
+  function fillFooter(line, parts) {
+    while (line.firstChild) { line.removeChild(line.firstChild); }
+    line.appendChild(document.createTextNode(parts.head));
+    if (parts.hash) {
+      var hash = document.createElement("span");
+      hash.className = "foot-hash";
+      hash.textContent = parts.hash;
+      line.appendChild(hash);
+    }
+    if (parts.tail) { line.appendChild(document.createTextNode(parts.tail)); }
+  }
 
   function loadDataCredit() {
     api("GET", "/api/version").then(function (doc) {
@@ -86,7 +113,7 @@
       $("credits").hidden = !text; // the About and data group around it
       var ver = versionText(doc);
       if (ver) {
-        $("build-line").textContent = ver;
+        fillFooter($("build-line"), footerParts(doc));
         $("build-line").hidden = false;
         $("about-version").textContent = ver;
       }
@@ -107,5 +134,6 @@
     };
   }
 
-  return { name: NAME, order: ORDER, panel: panel, versionText: versionText };
+  return { name: NAME, order: ORDER, panel: panel, versionText: versionText,
+           footerParts: footerParts };
 }));
