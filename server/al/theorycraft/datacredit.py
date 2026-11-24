@@ -4,6 +4,11 @@ The one home of the snapshot ATTRIBUTION text and the snapshot cache
 location. No network, no fetch: the core imports this module (never
 snapshot.py, see tests/test_tc_snap.py) to tell whether snapshot data exists
 and to publish the attribution in GET /api/version as "data_credit".
+
+DATA-GEMS-SNAP: the gems snapshot (gem names and levels for Kindler) is
+part of the same RePoE fork export as the item, mod and stat data, under
+the same terms (decision 0009), so the repoe-fork sentence of ATTRIBUTION
+credits it; there is no second credit line.
 """
 
 import json
