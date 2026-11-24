@@ -59,12 +59,14 @@ change. Tests: tests/test_kindler_tabs_ui.py, tests/test_ux_review.py.
   Building could not score these` (no score), else `not scored`.
 - Partial suffix: ` Time ran out, so this is the best of the builds
   scored so far.`
+- Announcement (polite line, only while the Build tab shows): `<label>:
+  result ready.`
 - Out of date: badge `Out of date`, with `Your choices changed. Press
   Generate to update.`
 
 ## Plan card
 
-- Heading `Plan`; muted line `<name>, <ascendancy>` (ascendancy when
+- Heading `Plan` (empty until the plan loads); muted line `<name>, <ascendancy>` (ascendancy when
   known).
 - Follow chip: `Follow Play guidance`; why: `Shows the stage that matches
   where you are.` (on) or `Pick a stage with Previous stage and Next
@@ -76,10 +78,10 @@ change. Tests: tests/test_kindler_tabs_ui.py, tests/test_ux_review.py.
   stage`; badge `Now`; why `This stage matches <your zone | your act |
   your area level | your level | where you are>.`
 - Trigger line: `For character level <min> to <max>`, `For area level
-  <min> to <max>`, `For Act <n>`.
+  <min> to <max>`, `For Act <n>` (no trigger line for a zone stage).
 - Pages (group label `Plan parts`): `Skills and gems`, `Passives`, `Item
   focus`. Part buttons `Previous part`, `Next part`; label `Part <i> of
-  <n>`.
+  <n>` (blank with one part).
 - Skills page: heads `Skills`, `Gem changes`; ` Links: ` with ` (not used
   by this skill)`; `No skills planned for this stage.`; `No gem changes at
   this stage.`; steps `Swap <gem> for <gem>`, `Drop <gem>`, `Pick up
