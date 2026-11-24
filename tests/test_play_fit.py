@@ -101,9 +101,10 @@ PAGE_TOKEN = "f" * 48
 # row (32 px) and another wrapped it to two (45 px), and the harness gave a
 # different Settings result per checkout. The sweep's cores answer one fixed
 # build string instead, the long form (a commit and the dev mark). Since
-# WEB-PLAY-FOOT-ONE-ROW the footer shows that build cut to 7 hex in a
-# fixed-width face, so even the long form keeps one 32 px row at 1024 px
-# (FOOT_PX); the static Kindler page below still writes the full line.
+# WEB-PLAY-FOOT-ONE-ROW the footer shows that build cut to 7 hex (always
+# 7 characters, so its width moves by at most one letter), so even the long
+# form keeps one 32 px row at 1024 px (FOOT_PX); the static Kindler page
+# below still writes the full line.
 PIN_COMMIT = "0123456789ab"
 PIN_BUILD = buildinfo.compose(VERSION, PIN_COMMIT, True)
 FOOT_PX = 32  # design 0001's footer budget: one row in compact and full

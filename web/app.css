@@ -402,12 +402,13 @@ input[type="checkbox"] { width: 24px; height: 24px; vertical-align: middle; }
    shows the build cut to 7 hex (web/panels/version.js footerText; the
    12-hex line stays in Settings > About and data), so the longest line
    ("Version x.y.z, build <7 hex>, dev") keeps one 32 px row at 1024 px
-   with about 17 px to spare, more than any 7 hex letters can move it. Compact and full hold the footer at 2rem as
-   a minimum, not a fixed height, so a 1.4.12 text spacing override or a
-   narrow flow window still wraps and grows it instead of clipping. The
-   footer never shrinks below its
-   content (a long Settings pane once squeezed it to 32 px and its second
-   row ran 11 px past the window); the pane scrolls instead. */
+   whatever the 7 hex letters are (tests/test_play_fit.py FOOT_PX).
+   Compact and full hold the footer at 2rem as a minimum, not a fixed
+   height, so a 1.4.12 text spacing override or a narrow flow window
+   still wraps and grows it instead of clipping. The footer never
+   shrinks below its content (a long Settings pane once squeezed it to
+   32 px and its second row ran 11 px past the window); the pane
+   scrolls instead. */
 .foot {
   display: flex;
   flex-wrap: wrap;
