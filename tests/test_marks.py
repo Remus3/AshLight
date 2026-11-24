@@ -81,7 +81,9 @@ CALC_TESTS = {
     # KINDLER-ENGINE (wave 40 adjudicator ruling 2026-11-23)
     "tests/test_kindler_live.py": {
         "test_live_reference_build_through_kindler_matches_the_bridge",
-        "test_live_real_templates_score_and_repeat_byte_identical"},
+        "test_live_real_templates_score_and_repeat_byte_identical",
+        # KINDLER-GEM-VARIANT
+        "test_live_every_early_attack_skill_scores_above_zero"},
     # KINDLER-PLAN-LIVE
     "tests/test_kindler_plan_live.py": {
         "test_live_plan_ranks_item_focus_by_pob_weights_and_repeats"},
