@@ -24,6 +24,19 @@ test("known tree hosts keep their link", () => {
   }
 });
 
+test("TC-TREE-URL: the core's version 7 link passes safeTreeUrl", () => {
+  // GGG's documented PoE2 example, the shape treeurl.encode builds
+  const u = "https://pathofexile2.com/game/passive-skill-tree/" +
+            "AAAABwoAAAXO9AAArTcAAjpP1-wAAjpPNGMAAjpPvEYAAA==";
+  assert.equal(v.safeTreeUrl(u), u);
+  const doc = { loaded: true, code: "", tree_url: u, build: { class_name: "Monk", level: 1,
+    stats: {}, gear: {}, skills: [], tree: { node_count: 5, url: null } } };
+  assert.equal(v.buildView(doc, null).tree.url, u);
+  // a hostile core value never becomes the link
+  doc.tree_url = "javascript:alert(1)";
+  assert.equal(v.buildView(doc, null).tree.url, "");
+});
+
 test("off-list hosts and tricks give no link", () => {
   for (const u of ["https://example.org/tree/endgame",
                    "https://evil.example/www.pathofexile.com/",

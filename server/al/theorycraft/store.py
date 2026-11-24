@@ -33,7 +33,8 @@ import time
 from pathlib import Path
 
 from .. import jsonfile
-from . import buildfile, codec, health, model, paste, providers, searchstr, skillsplit
+from . import (buildfile, codec, health, model, paste, providers, searchstr, skillsplit,
+               treeurl)
 
 log = logging.getLogger("al.theorycraft")
 
@@ -415,7 +416,10 @@ class BuildStore:
                                    fallback={"slots": [], "pob_weights": False}),
                 # TC-BUILDFILE (decision 0034): what the .build download
                 # holds; the text itself comes from GET /api/buildfile
-                "build_file": build_file_summary(b, tree_data)}
+                "build_file": build_file_summary(b, tree_data),
+                # TC-TREE-URL (research 0035 R7): the official viewer link,
+                # only built here; the player opens it (no request is made)
+                "tree_url": _safe(treeurl.from_build, b, tree_data)}
 
 
 def _safe(fn, *args, fallback=None):
