@@ -77,6 +77,8 @@ PROBES = {
     # may sit at the top or under base_item / active_skill, so the probe
     # counts readable names instead of naming one field
     "gems": {"kind": "object", "min": 150, "fields": (), "names": 100},
+    # ITEM-INFO-UNIQUES-PROBE: iteminfo.uniques_from_doc (name, item_class)
+    "uniques": {"kind": "object", "min": 80, "fields": ("name", "item_class")},
 }
 
 # the Checks row's words for a source
@@ -88,6 +90,7 @@ SOURCE_WORDS = {
     "skilltree": "passive tree",
     "world_areas": "zone list",
     "gems": "skill gem list",
+    "uniques": "unique item list",
 }
 
 _SAFE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_ .-]{0,63}\Z")
