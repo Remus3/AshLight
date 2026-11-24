@@ -1,1 +1,0 @@
- -- done 2026-11-24 (session wave 55; verified; G5 totals enforced, g.txt removed; design 0001 ruling: elements at most 100 plus 6 per open trade row, state b words at 153 until PLAY-FIT-B-WORDS; follow-ups PLAY-FIT-SR-COUNT, PLAY-A11Y-COMPARE-ORDER, PLAY-FEED-VERB-CLIP)

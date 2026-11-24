@@ -1,1 +1,0 @@
- -- done 2026-11-24 (session wave 56; verified; xdist_group restored by a tests/conftest.py wrapper under pytest 9.2.0 + xdist 3.8.0, test_shots render first, soaks 135.6 / 137.7 / 136.9 s median 136.9 s, 145 s bound kept)
