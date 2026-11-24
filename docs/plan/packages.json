@@ -23124,7 +23124,8 @@
     "tests/test_budgets.py",
     "tools/docs_fresh.py",
     "README.md",
-    "tests/test_docs_fresh.py"
+    "tests/test_docs_fresh.py",
+    "tests/slow_budget.py"
    ],
    "new_files": [],
    "integrator_edits": [
@@ -23152,7 +23153,7 @@
    "design_review": false,
    "blocked": null,
    "operator_act": "",
-   "notes": "Owner of tests/test_budgets.py and README.md in wave 46. docs_fresh.py line 480 'tailer idle' fact and line 491 README Budgets section.",
+   "notes": "Owner of tests/test_budgets.py and README.md in wave 46. docs_fresh.py line 480 'tailer idle' fact and line 491 README Budgets section. Widened 2026-11-24 (ORCH-46): tests/slow_budget.py, whose SLOW_TABLE entry for the retired test must go (test_slow_budget live-test check).",
    "wave": 46,
    "owner": "session"
   },
