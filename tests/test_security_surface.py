@@ -83,7 +83,7 @@ ROUTES = {
     # ITEM-INFO-CORE: the plug route (server/al/plug/iteminfo.py, decision 0083)
     ("GET", "/api/iteminfo"): (HEADER, None),
     ("GET", "/events"): (QUERY, None),
-    # token POST (19)
+    # token POST (20)
     ("POST", "/api/clipboard-read"): (HEADER, None),  # a 501 stub (decision 0003)
     ("POST", "/api/consent"): (HEADER, 4096),
     ("POST", "/api/overlay-layout"): (HEADER, 4096),
@@ -99,6 +99,7 @@ ROUTES = {
     ("POST", "/api/verdicts"): (HEADER, 4096),  # RUN-VERDICTS-CORE plug route
     ("POST", "/api/character"): (HEADER, 4096),  # RUN-CHARACTER-PIN plug route
     ("POST", "/api/gen-builds"): (HEADER, 4096),  # KINDLER-STORE plug route
+    ("POST", "/api/kindler-generate"): (HEADER, 4096),  # KINDLER-ENGINE plug route
     ("POST", "/api/wear"): (HEADER, 256 * 1024),  # TC-WORN-WIRE: the eval body cap
     ("POST", "/api/hotkeys"): (HEADER, 4096),  # HOTKEYS-LIVE (OVL-KEYS-CORE)
     ("POST", "/api/overlay-sample"): (HEADER, 4096),  # OVL-CARD-SLOT
