@@ -300,7 +300,7 @@ test("the row sentence keeps its template: the buyer leads, new never enters it"
   const r = F.view(snapOf([t]), NOW, {}, "").rows[0];
   assert.equal([r.buyer, r.verb, r.item, r.price].join(" "),
     "Quietfox wants Grim Bane Ruby Ring - 5 exalted");
-  assert.equal(r.tag, "Trade");
+  assert.equal(r.tag, "", "a trade row carries no tag (design 0001 ruling 2026-11-24)");
   assert.ok(r.title.indexOf("Grim Bane Ruby Ring - 5 exalted") > 0);
 });
 
@@ -556,7 +556,7 @@ test("an empty feed shows one muted line", () => {
   const empty = find(ui.doc.slot, "feed-empty")[0];
   assert.equal(empty.hidden, false);
   assert.equal(empty.textContent, F.EMPTY);
-  assert.equal(F.EMPTY, "Nothing yet. Trades and events show up here as you play.");
+  assert.equal(F.EMPTY, "Nothing yet. Trades and events show here.");
   assert.equal(ui.doc.byId["play-t-h"].textContent, "Recent");
 });
 

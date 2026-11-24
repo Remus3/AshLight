@@ -6,33 +6,39 @@
    cue at most (F-159): a warn notice colours its word, and the 4 px edge
    repeats it; the title, rows, count and button stay neutral. Nothing
    moves (no animation, no transition). */
-.notice { min-width: 0; }
-.notice-head {
+/* the head row's parts and the body rows sit in the box itself, with no
+   head wrapper (PLAY-FIT-G5-TOTALS): the head parts share the first 32 px
+   line (the word's line box is 32 px, the button 32), each body row takes
+   a full line of its own below them */
+.notice {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0 var(--al-space-2);
-  min-height: 2rem;
   min-width: 0;
 }
-.notice-head > p { margin: 0; }
-.notice-word { flex: 0 0 auto; font-weight: 600; color: var(--fk-status-idle); }
-.notice-title { flex: 1 1 auto; font-weight: 600; color: var(--fk-text); }
+.notice > p { margin: 0; }
+.notice-word, .notice-label { flex: 0 0 auto; line-height: 2rem; }
+.notice-word { font-weight: 600; color: var(--fk-status-idle); }
+.notice-title, .notice-none { flex: 1 1 auto; min-width: 0; }
+.notice-title { font-weight: 600; color: var(--fk-text); }
 .notice-more { flex: 0 0 auto; }
 .notice-act { flex: 0 0 auto; margin-left: auto; }
-.notice-row { color: var(--al-text-body); }
+.notice-row { flex: 0 0 100%; color: var(--al-text-body); }
 /* tone: the word and the edge say the same state; one colour per notice */
 .notice[data-tone="warn"] .notice-word { color: var(--fk-status-warn); }
 .notice[data-tone="warn"].edge { border-left-color: var(--fk-status-warn); }
 .notice[data-tone="bad"] .notice-word { color: var(--fk-status-bad); }
 .notice[data-tone="bad"].edge { border-left-color: var(--fk-status-bad); }
-/* compact and full: the head is one fixed 32 px row; a name or title takes
-   the ellipsis (full text in title). The flow class and a text-spacing
-   override let it wrap and grow instead (plan 03 3.9). */
+/* compact and full: the head is one 32 px row; a title takes the ellipsis
+   (full text in title) and never pushes the button to a second line. The
+   flow class and a text-spacing override let it wrap and grow instead
+   (plan 03 3.9). */
 @media (min-width: 64em) and (min-height: 43.75em) {
-  .notice-head { flex-wrap: nowrap; height: 2rem; }
+  .notice-title, .notice-none { flex: 1 1 0; }
 }
-[data-text-spacing="user"] .notice-head { flex-wrap: wrap; height: auto; }
+[data-text-spacing="user"] .notice-title,
+[data-text-spacing="user"] .notice-none { flex: 1 1 auto; }
 /* PLAY-N-FIT: the compact class keeps the head row only, in CSS too, so a
    resize from full to compact reflows at once instead of waiting for the
    next repaint (web/notice.js repaints on the state push or its 1 s tick);

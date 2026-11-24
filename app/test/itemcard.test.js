@@ -45,6 +45,13 @@ function makeDoc(opts) {
       },
       removeAttribute(k) { delete this.attrs[k]; },
       appendChild(c) { c.parentNode = this; this.children.push(c); return c; },
+      insertBefore(c, ref) {
+        const i = this.children.indexOf(ref);
+        c.parentNode = this;
+        this.children.splice(i < 0 ? this.children.length : i, 0, c);
+        return c;
+      },
+      removeChild(c) { this.children = this.children.filter((x) => x !== c); c.parentNode = null; return c; },
       replaceChildren() { this.children = []; },
       addEventListener(type, fn) { (this.listeners[type] = this.listeners[type] || []).push(fn); },
       click() { (this.listeners.click || []).forEach((fn) => fn({ type: "click" })); }
@@ -137,11 +144,13 @@ test("the head is the one polite, atomic live region", () => {
   assert.equal(head.getAttribute("aria-atomic"), "true");
   assert.equal(head.getAttribute("role"), "status");
   // a repaint of the same check writes nothing (so nothing is re-announced)
-  const word = doc.getElementById("ic-word-text");
+  // the word is the text node after the glyph and its space (no span)
+  const word = doc.getElementById("ic-word").children[2];
+  assert.equal(word.nodeType, 3);
   let writes = 0;
-  const desc = Object.getOwnPropertyDescriptor(word, "textContent");
-  Object.defineProperty(word, "textContent", { get: desc.get,
-    set(v) { writes += 1; desc.set.call(this, v); } });
+  let val = word.textContent;
+  Object.defineProperty(word, "textContent", { get() { return val; },
+    set(v) { writes += 1; val = v; } });
   IC.paint(doc, snapWith(card()));
   assert.equal(writes, 0);
   IC.paint(doc, snapWith(card({ word: "Sidegrade", glyph: "[-]", state: "idle" })));
@@ -155,7 +164,8 @@ test("rows are reserved: 2 sentence rows and 5 compare rows in every card", () =
   IC.wire(doc, { tabs: Tabs });
   IC.paint(doc, snapWith(card()));
   const rows = doc.all.filter((n) => n.nodeType === 1 && n.className.split(" ").includes("ic-cmp-row"));
-  const sent = doc.getElementById("ic-body").children[0].children;
+  const sent = doc.getElementById("ic-body").children
+    .filter((n) => n.nodeType === 1 && n.className.split(" ").includes("ic-sent"));
   assert.equal(rows.length, 5);
   assert.equal(sent.length, 2);
   const before = doc.all.length;
@@ -166,12 +176,14 @@ test("rows are reserved: 2 sentence rows and 5 compare rows in every card", () =
   rows.forEach((r) => assert.equal(shown(r), true));
   sent.forEach((r) => assert.equal(shown(r), true));
   assert.equal(doc.getElementById("ic").getAttribute("data-stage"), "weights");
-  assert.equal(rows[0].children[0].textContent, "");
+  assert.equal(rows[0].children[1].textContent, "");
   // the full card fills the same nodes
   IC.paint(doc, snapWith(card()));
   assert.equal(doc.all.length, before + 2, "only the two links are new");
-  assert.equal(rows[0].children[0].textContent, "+30 to maximum Life");
-  assert.equal(rows[0].children[1].textContent, "+30 points");
+  // a row: its points (floated right) first, then its text as a text node
+  assert.equal(rows[0].children[1].textContent, "+30 to maximum Life");
+  assert.equal(rows[0].getAttribute("title"), "+30 to maximum Life");
+  assert.equal(rows[0].children[0].textContent, "+30 points");
   assert.equal(sent[0].textContent, "21 points more than your Gloves.");
   assert.equal(sent[0].getAttribute("title"), "21 points more than your Gloves.");
   assert.equal(txt(doc, "ic-label"), "vs Old Grip");
@@ -184,7 +196,8 @@ test("at most 2 links: https only, a new tab, never a trade call", () => {
   IC.paint(doc, snapWith(card({ links: [
     { label: "Trade search", url: URL_T }, { label: "Bad", url: "javascript:alert(1)" },
     { label: "Upgrade search", url: URL_U }, { label: "Third", url: URL_T }] })));
-  const links = doc.getElementById("ic-links").children;
+  // the row holds the links, then the action buttons
+  const links = doc.getElementById("ic-links").children.filter((n) => n.tagName === "A");
   assert.deepEqual(links.map((a) => a.textContent), ["Trade search", "Upgrade search"]);
   links.forEach((a) => {
     assert.equal(a.tagName, "A");
@@ -267,15 +280,16 @@ test("the empty card teaches the press with the bound key and says where the che
   assert.equal(shown(doc.getElementById("ic-body")), false);
   const rows = doc.getElementById("ic-empty").children.map((r) => r.textContent);
   // OVL-KEYS-WEB: no bound key yet, so no key is named
-  assert.deepEqual(rows, ["Hover an item in game, press Ctrl+C,", "then press the item check key.",
-    "The check stays here; the overlay", "card leaves after 20 seconds."]);
+  assert.deepEqual(rows, ["Press Ctrl+C on an item, then the", "item check key.",
+    "The check stays here."]);
   rows.forEach((r) => assert.ok(r.length <= IC.ROW_CHARS, r));
-  // the keys and the card time from the snapshot (F-026, TD-18)
+  // the bound key from the snapshot (F-026); the card time is no longer
+  // repeated here (PLAY-FIT-G5-TOTALS, design 0001 G5)
   IC.paint(doc, { play: {}, hotkeys: { eval: { key: "Ctrl+Shift+F9" } },
     overlay_layout: { card_s: 60 } });
   const again = doc.getElementById("ic-empty").children.map((r) => r.textContent);
-  assert.deepEqual(again, ["Hover an item in game, press Ctrl+C,", "then press Ctrl+Shift+F9.",
-    "The check stays here; the overlay", "card leaves after 60 seconds."]);
+  assert.deepEqual(again, ["Press Ctrl+C on an item, then", "Ctrl+Shift+F9.",
+    "The check stays here."]);
   // a card time that is not one of the choices reads the default
   assert.equal(IC.cardTime({ overlay_layout: { card_s: 5 } }), 20);
   assert.equal(IC.itemKey({ hotkeys: { eval: { key: "" } } }), "");
@@ -311,7 +325,7 @@ test("a press error and a waystone use the core's words", () => {
   assert.equal(doc.getElementById("ic-name").hidden, true);
   assert.equal(txt(doc, "ic-pval"), "No price for this check");
   assert.equal(txt(doc, "ic-psrc"), "");
-  assert.equal(doc.getElementById("ic-links").children.length, 0);
+  assert.equal(doc.getElementById("ic-links").children.filter((n) => n.tagName === "A").length, 0);
   IC.paint(doc, snapWith(card({ kind: "waystone", state: "needs-operator", glyph: "[?]",
     word: "Risky", name: "Waystone (Tier 15)",
     compare: { label: "Rewards and risky mods", rows: [{ text: "+38% rarity", value: "" },

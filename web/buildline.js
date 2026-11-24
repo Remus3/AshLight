@@ -113,7 +113,12 @@
     if (nodes.doc === doc && nodes.root) { return nodes; }
     var slot = slotOf(doc);
     if (!slot || typeof doc.createElement !== "function") { return null; }
-    var root = el(doc, "div", "bl", "bl");
+    // the slot is the build line itself (PLAY-FIT-G5-TOTALS: no wrapper)
+    var root = slot;
+    if ((" " + root.className + " ").indexOf(" bl ") < 0) {
+      root.className = root.className ? root.className + " bl" : "bl";
+    }
+    root.id = "bl";
     root.hidden = true;
     var r1 = el(doc, "p", "bl-row1 row-title");
     var word = el(doc, "span", "bl-word", "bl-word");
@@ -128,7 +133,6 @@
     r1.appendChild(button);
     root.appendChild(r1);
     root.appendChild(r2);
-    slot.appendChild(root);
     if (typeof button.addEventListener === "function") {
       button.addEventListener("click", function () { showPaste(doc, wired.tabs); });
     }

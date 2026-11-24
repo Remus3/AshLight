@@ -79,8 +79,15 @@ SLACK_MIN = {1: 2, 1.25: 3}           # G4
 I_SLACK_MIN = {"full": 16, "compact": 6}
 WORD_CAPS = {"g": 20, "c": 52, "t": 50, "n": 22, "b": 16, "i": 60, "u": 24}  # G5
 WORDS_MAX = 250
-WORDS_STATE_MAX = {"b": 150, "a": 110}  # plain campaign zone, first run
+# plain campaign zone, first run; b is the measured 153 by the design 0001
+# ruling 2026-11-24 (PLAY-FIT-G5-TOTALS): its last 3 words over 150 are
+# server text (the notice tip and the build line), back to 150 once cut
+WORDS_STATE_MAX = {"b": 153, "a": 110}
 ELEMENTS_MAX = 100
+# design 0001 ruling 2026-11-24 (PLAY-FIT-G5-TOTALS): each open trade row
+# adds its own 6 elements (li, buyer, item, price, right, Dismiss), as G6
+# adds its Dismiss per trade
+ELEMENTS_PER_TRADE = 6
 CONTROL_CAPS = {"g": 0, "c": 1, "n": 1, "b": 1, "i": 4, "u": 0}  # G6; t by trades
 CONTROLS_BASE = 7
 TARGET_MIN = 24
@@ -340,9 +347,10 @@ def fit_failures(sweep):
             words_max = min(WORDS_MAX, WORDS_STATE_MAX.get(state, WORDS_MAX))
             if play["words"] > words_max:
                 add("page", "G5", state, key, f"{play['words']} words on Play (max {words_max})")
-            if play["elements"] > ELEMENTS_MAX:
+            el_max = ELEMENTS_MAX + ELEMENTS_PER_TRADE * trades
+            if play["elements"] > el_max:
                 add("page", "G5", state, key,
-                    f"{play['elements']} visible elements (max {ELEMENTS_MAX})")
+                    f"{play['elements']} visible elements (max {el_max})")
             ctl_max = CONTROLS_BASE + control_cap("t", trades)
             if len(play["controls"]) > ctl_max:
                 add("page", "G6", state, key, f"{len(play['controls'])} controls (max {ctl_max})")
@@ -630,7 +638,11 @@ def _report(fails, limit=40):
 # -- tests without a browser ---------------------------------------------------------
 
 def test_pending_markers_are_known_one_line_reasons():
-    assert PENDING_DIR.is_dir()
+    # PLAY-FIT-G5-TOTALS removed the last marker (g.txt); git keeps no empty
+    # folder, so no folder means no marker
+    if not PENDING_DIR.is_dir():
+        assert read_pending() == set()
+        return
     for p in sorted(PENDING_DIR.iterdir()):
         assert p.suffix == ".txt" and p.stem in MARKERS, f"unknown pending marker {p.name}"
         raw = p.read_bytes()

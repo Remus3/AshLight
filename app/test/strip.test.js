@@ -67,15 +67,18 @@ function makeDoc() {
   return doc;
 }
 
+// PLAY-FIT-G5-TOTALS: the slot is the strip, a cell holds its rows straight
 function cell(doc, key) {
-  const root = doc.slot.children[0];
-  return root.children.find((c) => c.getAttribute("data-cell") === key);
+  return doc.slot.children.find((c) => c.getAttribute("data-cell") === key);
 }
-function value(doc, key) { return cell(doc, key).children[1].children[0]; }
+function part(c, cls) {
+  return c.children.find((n) => n.className.split(" ").includes(cls));
+}
+function value(doc, key) { return part(cell(doc, key), "st-value"); }
 function shown(doc, key) { return value(doc, key).textContent; }
-function said(doc, key) { return cell(doc, key).children[1].children[1]; }
-function sub(doc, key) { return cell(doc, key).children[2]; }
-function zoneTime(doc) { return cell(doc, "zone").children[1].children[1]; }
+function said(doc, key) { return part(cell(doc, key), "st-said"); }
+function sub(doc, key) { return part(cell(doc, key), "st-sub"); }
+function zoneTime(doc) { return part(cell(doc, "zone"), "st-time"); }
 
 const NOW = 10000;
 const PLAYING = {
@@ -218,7 +221,7 @@ test("tick moves only the timers; paint is idempotent", () => {
   assert.equal(shown(doc, "session"), "1:02:15");
   ST.paint(doc, PLAYING, NOW + 10);
   assert.equal(doc.all.length, before, "the nodes are made once");
-  assert.equal(doc.slot.children.length, 1);
+  assert.equal(doc.slot.children.length, 4, "the four cells, no wrapper");
 });
 
 test("the G5 guard drops optional parts in a fixed order, frozen last", () => {

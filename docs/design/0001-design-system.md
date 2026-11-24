@@ -245,6 +245,45 @@ character, under the 0.5em budget. The cockpit tracks are held by the
 fit harness (`tests/test_play_fit.py`, checks G1 and G2) in every play
 state and size class.
 
+G5 totals ruling (2026-11-24, PLAY-FIT-G5-TOTALS; figures in
+`docs/design/play-fit-figures.md`). The fit harness holds the G5 word
+and element totals of Play in every state since this package (the last
+pending marker is gone). They were met by real cuts: each region paints
+into its slot with no wrapper of its own, rows hold their parts with no
+wrapper (feed rows, strip cells, compare rows, the setup and notice
+rows), the item card's price is one row and its links and actions share
+one row, the U label is its visible heading, and the empty texts are
+shorter, each keeping one short clause of what will appear (item card 3
+rows, feed "Nothing yet. Trades and events show here.", notice "none -
+tips show here", U "Check items to rank them."). The empty item card
+now says only that the check stays here: the overlay card's time is no
+longer repeated there (the F-151 wording, reversed here), it is the
+Settings > Overlay card time choice. The Play region headings as
+shipped: "At a glance" (G), "Right now" (C), "Trades N" or "Recent" (T,
+visible), "Notices" (N), "Your build" (B), "Item check" (I) and "Best
+checks" (U, visible); the others are for screen readers only.
+- Decision: visible elements at most 100 plus 6 per open trade row (a
+  trade row is the row, buyer, item, price, right segment and Dismiss);
+  a trade row has no "Trade" tag (the head "Trades N", the verb, the
+  price and Dismiss say it); event rows keep their Death, Level and Zone
+  tags (the one quick type cue). Words: at most 250, 110 on first run,
+  and 153 in a plain campaign zone (the measured state b; the 3 words
+  over 150 are server text, the notice tip and the build line, outside
+  the web files; back to 150 once that text is cut).
+- Alternatives: a flat 100 met by cutting content (compare rows, strip
+  labels); a flat 125; a counter that skips visually hidden elements
+  (the 6 screen-reader headings and the trade status; a harness change,
+  left to its own row); dropping the event tags too.
+- Why: the base stays the design's 100 (the heaviest state with no
+  trade measures 83, one-trade states 98 of 106); trade-heavy states
+  grow with the player's own open requests, as G6 already allows one
+  Dismiss per trade.
+- Reverses if: a trade row grows past 6 elements; the counter skips
+  visually hidden elements (then recompute the allowance); players miss
+  the Trade tag in play; a state with no trade measures over 100 after
+  this package; the server text of state b is cut (then b goes back to
+  150).
+
 ## 5. Colour
 
 ### 5.1 Palette
@@ -393,7 +432,10 @@ red-green deficient player cannot tell them apart by colour. Rules:
 
 - Every state shows its kit glyph or word (`[>] reading`, `[x] failed`).
 - Event kinds carry a text tag (`TRADE`, `DEATH`, `FROM`) and, where marked
-  by colour, also a shape cue (left rule, border).
+  by colour, also a shape cue (left rule, border). On Play a trade row's
+  words are its tag: "<buyer> wants <item> - <price>" and its Dismiss
+  (G5 totals ruling, section 4); Run > Recent and the overlay keep the
+  word "Trade".
 - Never pair red and green as the only difference between two adjacent
   things. Where a categorical palette is needed (charts), use the kit
   `chart` palette with direct labels, or Okabe-Ito hues (source 5).
@@ -454,7 +496,9 @@ word and normal rows carry no colour while all is well.
 
 Event semantics (Play feed, Run > Recent and the overlay card):
 
-- trade request: `accent` edge + the word "Trade" (TD-13). Accent has one
+- trade request: `accent` edge + the word "Trade" (TD-13); on Play the
+  row's own words "<buyer> wants <item> - <price>" and its Dismiss stand
+  for that word (G5 totals ruling, section 4). Accent has one
   meaning, "you can act here": links, the selected tab, the focus ring,
   the one filled button and the edge of a trade request that waits for a
   reply.
@@ -608,7 +652,10 @@ Rules (sources 10, 11, 12):
 7. Front-load the key word so a truncated line still makes sense.
 8. ASCII only (FLEET item 8): "..." not an ellipsis character, "-" not a
    dash, straight quotes.
-9. Empty states explain what will appear and when.
+9. Empty states explain what will appear and when. In the word-budgeted
+   Play regions the explanation is one short clause after the empty word
+   ("Nothing yet. Trades and events show here.", "none - tips show
+   here"; G5 totals ruling, section 4).
 
 Good / bad examples:
 

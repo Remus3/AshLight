@@ -266,21 +266,24 @@
     return true;
   }
 
+  /* A button row: the consent button keeps a row (.su-act) for its said
+     word beside it; any other button is the row itself (PLAY-FIT-G5-TOTALS:
+     no wrapper around a lone button). */
   function buttonRow(doc, r, ctx) {
-    var wrap = el(doc, "div", "su-act");
     var btn = el(doc, "button", (r.action === "consent" ? "primary" : "secondary") + " su-btn");
     btn.setAttribute("type", "button");
     btn.setAttribute("data-action", r.action);
     btn.textContent = r.text;
-    wrap.appendChild(btn);
-    if (r.action === "consent") {
-      var said = el(doc, "span", "su-said row-meta");
-      said.setAttribute("role", "status");
-      wrap.appendChild(said);
-      btn.addEventListener("click", function () { consent(doc, ctx, said); });
-    } else {
+    if (r.action !== "consent") {
       btn.addEventListener("click", function () { openChecks(doc, ctx); });
+      return btn;
     }
+    var wrap = el(doc, "div", "su-act");
+    wrap.appendChild(btn);
+    var said = el(doc, "span", "su-said row-meta");
+    said.setAttribute("role", "status");
+    wrap.appendChild(said);
+    btn.addEventListener("click", function () { consent(doc, ctx, said); });
     return wrap;
   }
 
@@ -295,10 +298,8 @@
         var g = el(doc, "span", "su-glyph");
         g.setAttribute("aria-hidden", "true");
         g.textContent = r.glyph + " ";
-        var t = el(doc, "span", "su-text");
-        t.textContent = r.text;
         n.appendChild(g);
-        n.appendChild(t);
+        n.appendChild(doc.createTextNode(r.text));
       } else {
         n.textContent = r.text;
       }
@@ -318,13 +319,12 @@
     h.textContent = v.title;
     h.setAttribute("title", v.full || v.title);
     pane.appendChild(h);
-    var list = el(doc, "div", "su-rows");
+    // the rows sit in the pane itself, after the title (no list wrapper)
     v.rows.forEach(function (r) {
       var n = r.kind === "button" ? buttonRow(doc, r, ctx) : textRow(doc, r);
       n.setAttribute("data-kind", r.kind);
-      list.appendChild(n);
+      pane.appendChild(n);
     });
-    pane.appendChild(list);
     if (v.facts) {
       var f = el(doc, "p", "su-facts row-meta muted one-line" + (v.factsDrop ? " su-promise" : ""));
       f.textContent = v.facts;
