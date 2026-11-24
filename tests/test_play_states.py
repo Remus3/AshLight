@@ -162,3 +162,40 @@ def test_states_swap_under_one_port(tmp_path):
     with ps.open_state("a2", tmp_path / "two", port=port) as st:
         assert st.port == port and st.url == url
         assert st.state()["tailer"]["consented"] is True
+
+
+def test_reg_open_stat_uses_the_cores_own_runtime_root(tmp_path, monkeypatch):
+    # CORE-REGOPEN-ROOT: a core on a tmp runtime root stats only its own
+    # ggg_docs/REG_OPEN, never the live ops/runtime path.
+    import pathlib
+    from server.al import paths
+    from server.al.core import Core
+    rt = tmp_path / "rt"
+    core = Core(runtime=rt, tail=False, discover=False)
+    try:
+        live = os.path.normcase(os.path.abspath(str(ps.ROOT / "ops" / "runtime")))
+        seen = []
+        real_stat = pathlib.Path.stat
+
+        def stat(self, *a, **k):
+            seen.append(os.path.normcase(os.path.abspath(str(self))))
+            return real_stat(self, *a, **k)
+
+        def no_live(*a, **k):
+            raise AssertionError("the live runtime dir was asked for")
+
+        monkeypatch.setattr(pathlib.Path, "stat", stat)
+        monkeypatch.setattr(paths, "runtime_dir", no_live)
+        assert core._ggg_reg_open() is False
+        flag = rt / "ggg_docs" / "REG_OPEN"
+        flag.parent.mkdir(parents=True, exist_ok=True)
+        flag.write_text("open\n", encoding="ascii")
+        assert core._ggg_reg_open() is True
+        assert core.diag_facts()["ggg_reg_open"] is True
+        flag.unlink()
+        assert core._ggg_reg_open() is False
+        assert seen, "the flag check made no stat"
+        assert not [p for p in seen if p == live or p.startswith(live + os.sep)]
+    finally:
+        monkeypatch.undo()
+        core.close()

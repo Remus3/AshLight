@@ -2107,11 +2107,11 @@ class Core:
 
     def _ggg_reg_open(self):
         """True while the dev docs watch's REG_OPEN flag exists (a stat of a
-        local file; a test core never reads the live runtime dir)."""
-        if not self._real:
-            return False
+        local file under this core's own runtime root: the real core's is
+        the live runtime dir, a test or demo core's is its own folder, so it
+        never stats the live ops/runtime path; CORE-REGOPEN-ROOT)."""
         try:
-            return (paths.runtime_dir() / "ggg_docs" / "REG_OPEN").is_file()
+            return (self.runtime / "ggg_docs" / "REG_OPEN").is_file()
         except OSError:
             return False
 
