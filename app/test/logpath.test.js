@@ -13,7 +13,7 @@ const L = W.load("logpath.js");
 
 const HTML = W.source("index.html");
 const SRC = W.source("logpath.js");
-const APP = W.source("app.js");
+const CONSENT = W.source("consent.js");
 const DRIVE = "C" + ":";
 const GAME = DRIVE + "\\Program Files\\Games\\PoE2";
 const LOG = GAME + "\\logs\\Client.txt";
@@ -210,11 +210,12 @@ test("the markup: a labelled field in Reading and web data, hidden, a quiet answ
   assert.match(HTML, /<script src="\/web\/logpath\.js" defer><\/script>/);
 });
 
-test("app.js calls the module from the consent painter and its wire step", () => {
-  const start = APP.indexOf("name: \"consent\"");
-  const block = APP.slice(start, APP.indexOf("A.register(", start));
-  assert.match(block, /window\.ALLogPath\.paint\(document, s\)/);
-  assert.match(block, /window\.ALLogPath\.wire\(document, api, render\)/);
+test("the consent panel calls the module from its painter and its wire step", () => {
+  // TEST-WEB-PANELS-C2: the "consent" entry lives in web/panels/consent.js
+  const paint = CONSENT.slice(CONSENT.indexOf("  function paint(s) {"));
+  const wire = CONSENT.slice(CONSENT.indexOf("  function wire(host) {"));
+  assert.match(paint.slice(0, paint.indexOf("\n  }\n")), /window\.ALLogPath\.paint\(document, s\)/);
+  assert.match(wire.slice(0, wire.indexOf("\n  }\n")), /window\.ALLogPath\.wire\(document, api, render\)/);
 });
 
 test("the module reads nothing and starts no timer", () => {

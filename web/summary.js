@@ -23,6 +23,16 @@
     module.exports = api;
   } else {
     root.ALSummary = api;
+    /* TEST-WEB-PANELS-C2 (F-135): UTIL-SESSION-SUMMARY registers itself
+       (web/registry.js) as "summary", order 130, the name and order
+       web/app.js gave it: the last play stretch's card, by itself. */
+    if (root.ALApp && typeof root.ALApp.register === "function") {
+      root.ALApp.register({
+        name: "summary",
+        order: 130,
+        paint: function (s) { api.paint(document, s); }
+      });
+    }
   }
 }(typeof self !== "undefined" ? self : this, function (F, actsLib) {
   "use strict";

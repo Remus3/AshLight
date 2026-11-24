@@ -22,6 +22,18 @@
     module.exports = api;
   } else {
     root.ALRuns = api;
+    /* TEST-WEB-PANELS-C2 (F-135): the Maps card registers itself
+       (web/registry.js) as "runs", order 120, the name and order web/app.js
+       gave it. UTIL-MAPS: the open map's time counts up while the player
+       is in it. */
+    if (root.ALApp && typeof root.ALApp.register === "function") {
+      root.ALApp.register({
+        name: "runs",
+        order: 120,
+        paint: function (s) { api.paint(document, s, root.ALApp.host.serverNow(), true); },
+        tick: function (s, now) { api.paint(document, s, now, false); }
+      });
+    }
   }
 }(typeof self !== "undefined" ? self : this, function (F, actsLib) {
   "use strict";

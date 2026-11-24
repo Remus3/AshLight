@@ -31,6 +31,18 @@
     module.exports = api;
   } else {
     root.ALHistory = api;
+    /* TEST-WEB-PANELS-C2 (F-135): UTIL-UNDERLEVEL / UTIL-RUN-HISTORY
+       register themselves (web/registry.js) as "history", order 150, the
+       name and order web/app.js gave them: the core's sentences, by
+       themselves, and the player's clicks. */
+    if (root.ALApp && typeof root.ALApp.register === "function") {
+      root.ALApp.register({
+        name: "history",
+        order: 150,
+        paint: function (s, c) { api.paint(document, c); },
+        wire: function () { api.wire(document, root.ALApp.host.api); }
+      });
+    }
   }
 }(typeof self !== "undefined" ? self : this, function (F, actsLib) {
   "use strict";

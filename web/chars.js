@@ -33,6 +33,31 @@
     module.exports = api;
   } else {
     root.ALChars = api;
+    /* TEST-WEB-PANELS-C2 (F-135): the Characters card registers itself
+       (web/registry.js) as "chars", order 50, the name and order web/app.js
+       gave it. UTIL-MULTICHAR: pick is the character the player picked
+       ("" = the one playing); on its wire the card fills app.js's charLink
+       with view(s), the picked character's numbers for every other panel
+       (the playing one's when the view cannot be made), and a pick paints
+       the last push again in full. */
+    if (root.ALApp && typeof root.ALApp.register === "function") {
+      var pick = "";
+      root.ALApp.register({
+        name: "chars",
+        order: 50,
+        paint: function (s) { api.paint(document, s, pick); },
+        wire: function () {
+          var host = root.ALApp.host;
+          host.charLink.view = function (s) {
+            try { return api.view(s, pick); } catch (e) { return s; }
+          };
+          api.wire(document, function (name) {
+            pick = name;
+            host.repaint();
+          });
+        }
+      });
+    }
   }
 }(typeof self !== "undefined" ? self : this, function (actsLib) {
   "use strict";

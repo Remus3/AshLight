@@ -321,6 +321,9 @@ test("verdicts: the page holds one mount with a heading, after the checks list",
   assert.match(HTML, /<div id="verdicts" class="tool verdicts" role="group" aria-labelledby="verdicts-title" hidden>\s*<h4 id="verdicts-title" class="sub-h">Tried in game<\/h4>/);
   assert.equal(HTML.split('src="/web/verdicts.js"').length - 1, 1);
   assert.ok(HTML.indexOf("/web/verdicts.js") < HTML.indexOf("/web/app.js"));
-  const app = web.source("app.js");
-  assert.equal(app.split("ALVerdicts.wire(document, api)").length - 1, 1);
+  // TEST-WEB-PANELS-C2: web/checks.js wires the card once, as its
+  // "verdicts" entry after every other wire; app.js names it no more
+  const checks = web.source("checks.js");
+  assert.equal(checks.split("ALVerdicts.wire(document, root.ALApp.host.api)").length - 1, 1);
+  assert.ok(!web.source("app.js").includes("ALVerdicts"));
 });

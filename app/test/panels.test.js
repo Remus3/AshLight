@@ -10,8 +10,14 @@
    web/panels/layout.js ("layout"), weights.js ("weights"), gfx.js ("gfx")
    and webdata.js ("webdata"), and from TEST-WEB-PANELS-C1 the Play-side
    blocks web/panels/itemcheck.js ("eval"), rates.js ("price") and
-   events.js ("events"), each under the name and order app.js gave it
-   before the move. Fixture values are invented. */
+   events.js ("events"), and from TEST-WEB-PANELS-C2 the rest:
+   web/panels/pager.js ("build" and the shared page plumbing), consent.js
+   ("consent", "reading", "rail"), filter.js ("filter"), restart.js
+   ("restart-overlay"), settingsio.js ("settingsio", "hotkeys") and
+   version.js ("version"), plus feedpace.js (no panel: feedLink and pacer
+   on the host), each under the name and order app.js gave it before the
+   move; the web/*.js view modules register themselves too. Fixture values
+   are invented. */
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const vm = require("node:vm");
@@ -26,7 +32,29 @@ const BUILD_SRC = web.source("build.js");
 /* one moved panel per row: file, registered name, order */
 const MOVED = [["build.js", "loaded-build", 9], ["itemcheck.js", "eval", 20],
   ["rates.js", "price", 40], ["events.js", "events", 90], ["layout.js", "layout", 200],
-  ["weights.js", "weights", 220], ["gfx.js", "gfx", 230], ["webdata.js", "webdata", 250]];
+  ["weights.js", "weights", 220], ["gfx.js", "gfx", 230], ["webdata.js", "webdata", 250],
+  // TEST-WEB-PANELS-C2 (pager.js and settingsio.js by their panels/ path:
+  // web/ has a file of the same name)
+  ["panels/pager.js", "build", 10], ["consent.js", "consent", 70], ["filter.js", "filter", 210],
+  ["restart.js", "restart-overlay", 240], ["panels/settingsio.js", "settingsio", 260],
+  ["version.js", "version", 270]];
+const PAGER_SRC = web.source("panels/pager.js");
+const FEED_SRC = web.source("feedpace.js");
+/* the view modules that register themselves (TEST-WEB-PANELS-C2): file,
+   then the names they register in run order */
+const VIEWS = [["acts.js", ["pace", "acts"]], ["chars.js", ["chars"]],
+  ["checks.js", ["checks", "verdicts"]], ["hints.js", ["hints"]], ["history.js", ["history"]],
+  ["pricewatch.js", ["pricewatch"]], ["runs.js", ["runs"]], ["summary.js", ["summary"]],
+  ["zoneguide.js", ["zoneguide"]]];
+const FMT = web.load("fmt.js");
+
+/* Run a view module as the page does (window.ALApp and window.ALFmt set). */
+function runView(file, reg) {
+  const sandbox = { ALApp: reg, ALFmt: FMT };
+  sandbox.window = sandbox;
+  vm.runInNewContext(web.source(file), sandbox, { filename: file });
+  return sandbox;
+}
 const B_FILES = ["layout.js", "weights.js", "gfx.js", "webdata.js"];
 
 function quietRegistry() {
@@ -69,7 +97,9 @@ test("each moved panel registers with its name and order", () => {
     assert.equal(mod.order, order, file);
     const { reg } = quietRegistry();
     runPanel(web.source(file), { ALApp: reg });
-    assert.deepEqual(reg.names(), [name], file);
+    // a file with more entries (consent.js, settingsio.js) lists them in more
+    const want = [[name, order]].concat(mod.more || []).sort((a, b) => a[1] - b[1]).map((e) => e[0]);
+    assert.deepEqual(reg.names(), want, file);
   }
 });
 
@@ -77,13 +107,15 @@ test("the loaded build paints and wires just before app.js's build entry, either
   // the page: the panels marker sits before app.js (TEST-WEB-ASSEMBLE)
   const page = quietRegistry().reg;
   runPanel(BUILD_SRC, { ALApp: page });
+  runPanel(PAGER_SRC, { ALApp: page });
   runApp(page);
   const names = page.names();
-  // TEST-WEB-PANELS-C1: "eval" (20) is a panel file of its own now
-  assert.deepEqual(names.slice(0, 3), ["loaded-build", "build", "chars"]);
-  // the explicit order keeps it first even when app.js registers first
+  // TEST-WEB-PANELS-C2: the "build" entry is web/panels/pager.js's now
+  assert.deepEqual(names, ["loaded-build", "build"]);
+  // the explicit order keeps it first even when it registers last
   const late = quietRegistry().reg;
   runApp(late);
+  runPanel(PAGER_SRC, { ALApp: late });
   runPanel(BUILD_SRC, { ALApp: late });
   assert.deepEqual(late.names(), names);
 });
@@ -105,21 +137,29 @@ test("app.js no longer holds the moved block and hands over exactly what the pan
   for (const v of ["buildDoc", "buildRev", "calcRev", "pobEvalId", "lastPaste", "linkRecover"]) {
     assert.ok(!APP.includes(v), "app.js still names " + v);
   }
-  const reg = runApp(quietRegistry().reg);
+  // TEST-WEB-PANELS-C2: pager.js and feedpace.js add their members when
+  // they load, before app.js, which merges its own into the same object
+  const reg = quietRegistry().reg;
+  runPanel(PAGER_SRC, { ALApp: reg });
+  runPanel(FEED_SRC, { ALApp: reg });
+  runApp(reg);
   const keys = Object.keys(reg.host).sort();
-  // TEST-WEB-PANELS-B: every host key is bound by at least one panel file
-  const all = MOVED.map(([file]) => web.source(file)).join("\n");
+  // TEST-WEB-PANELS-B: every host key is bound by at least one panel file,
+  // view module or the shell (A.host.loadRates, feedLink, pacer)
+  const all = MOVED.map(([file]) => web.source(file)).concat(VIEWS.map(([file]) => web.source(file)),
+    [APP]).join("\n");
   const bound = [...new Set([...all.matchAll(/\bhost\.([A-Za-z$]+)/g)].map((m) => m[1]))].sort();
   assert.deepEqual(bound, keys);
   keys.forEach((k) => {
-    if (!["token", "cardOpener", "webLink", "evalLink", "ratesLink"].includes(k)) {
+    if (!["token", "cardOpener", "webLink", "evalLink", "ratesLink", "readLink", "charLink"].includes(k)) {
       assert.equal(typeof reg.host[k], "function", k);
     }
   });
-  // filled by web/panels/webdata.js, itemcheck.js and rates.js on their wires
-  assert.deepEqual(Object.keys(reg.host.webLink), []);
-  assert.deepEqual(Object.keys(reg.host.evalLink), []);
-  assert.deepEqual(Object.keys(reg.host.ratesLink), []);
+  // filled by web/panels/webdata.js, itemcheck.js, rates.js, consent.js and
+  // web/chars.js on their wires
+  for (const link of ["webLink", "evalLink", "ratesLink", "readLink", "charLink"]) {
+    assert.deepEqual(Object.keys(reg.host[link]), [], link);
+  }
 });
 
 test("the panel adds no clipboard read, timer, request or live region (decisions 0014, 0034)", () => {
@@ -288,17 +328,20 @@ function strip(src) {
 }
 
 test("with every panel the page keeps today's paint and wire order, either load order", () => {
-  // app/test/registry.test.js's entries, with the loaded build first
-  const today = ["loaded-build", "build", "eval", "price", "chars", "pace", "consent", "reading",
-    "events", "acts", "runs", "summary", "zonenote", "history", "pricewatch", "hints",
+  // app/test/registry.test.js's entries (TEST-WEB-PANELS-C2: every one from
+  // a panel file or a view module; "zonenote" is gone)
+  const today = ["hotkeys", "loaded-build", "build", "eval", "price", "chars", "pace", "consent",
+    "reading", "events", "acts", "runs", "summary", "history", "pricewatch", "hints",
     "checks", "zoneguide", "layout", "filter", "weights", "gfx", "restart-overlay", "webdata",
-    "settingsio"];
+    "settingsio", "version", "verdicts", "rail"];
   const page = quietRegistry().reg;
   MOVED.forEach(([file]) => runPanel(web.source(file), { ALApp: page }));
+  VIEWS.forEach(([file]) => runView(file, page));
   runApp(page);
   assert.deepEqual(page.names(), today);
   const late = quietRegistry().reg;
   runApp(late);
+  VIEWS.slice().reverse().forEach(([file]) => runView(file, late));
   MOVED.slice().reverse().forEach(([file]) => runPanel(web.source(file), { ALApp: late }));
   assert.deepEqual(late.names(), today);
 });
@@ -330,9 +373,10 @@ test("app.js no longer holds the settings-side blocks; each lives in its panel",
   for (const name of ["layout", "weights", "gfx", "webdata"]) {
     assert.ok(!APP.includes('name: "' + name + '"'), "app.js still registers " + name);
   }
-  // the restart-overlay button stays in app.js: render() clears its note on
-  // every push (app/test/client_controls.test.js)
-  assert.ok(APP.includes("  function wireRestartOverlay() {"));
+  // TEST-WEB-PANELS-C2: the restart-overlay button left app.js too; its
+  // note clears through host.onPush (app/test/client_controls.test.js)
+  assert.ok(!APP.includes("wireRestartOverlay"));
+  assert.ok(web.source("restart.js").includes("  function wireRestartOverlay() {"));
   assert.ok(!B_SRC["layout.js"].includes("restartOverlay"));
   // connect() runs the panels' first reads where it read them itself
   const at = APP.indexOf("  function connect() {");
@@ -718,5 +762,185 @@ test("each Play-side panel says why when web/app.js has not set the host", () =>
     if (file === "events.js") { reg.render({}); } else { reg.start(); }
     assert.equal(said.length, 1, file);
     assert.match(said[0], new RegExp("^panel " + name + " (wire|paint) failed: " + name + ": no page host"));
+  }
+});
+
+/* ---- TEST-WEB-PANELS-C2: the settings-side blocks (consent and ledger,
+   filter, restart overlay, settings import / export, the pagers and card
+   pages, version and credit) and the feed / pacer block leave web/app.js;
+   the view modules register themselves; app.js is a shell. */
+const C2_SRC = {
+  "consent.js": web.source("consent.js"), "filter.js": web.source("filter.js"),
+  "restart.js": web.source("restart.js"), "panels/settingsio.js": web.source("panels/settingsio.js"),
+  "panels/pager.js": PAGER_SRC, "version.js": web.source("version.js"), "feedpace.js": FEED_SRC
+};
+
+test("app.js is a shell: under 300 lines, no feature module named, the blocks in their files", () => {
+  assert.ok(APP.split("\n").length - 1 < 300, "web/app.js has " + (APP.split("\n").length - 1) + " lines");
+  // the package's accept grep: only the four shared shims are named
+  const named = [...APP.matchAll(/window\.AL[A-Z][A-Za-z]*/g)].map((m) => m[0]);
+  assert.deepEqual(named.filter((n) => !/^window\.AL(App|Fmt|Regions|Tabs)$/.test(n)), []);
+  const blocks = {
+    "consent.js": ["showPill", "showReading", "stopReading", "readingView", "ledgerView",
+      "paintLedger", "toggleLedger"],
+    "filter.js": ["downloadFilter", "mergeFilter"],
+    "restart.js": ["wireRestartOverlay"],
+    "version.js": ["versionText", "loadDataCredit"],
+    "feedpace.js": ["feedLink", "pacer"]
+  };
+  for (const [file, fns] of Object.entries(blocks)) {
+    for (const fn of fns) {
+      assert.ok(new RegExp("\\n  function " + fn + "\\(").test(C2_SRC[file]), file + " lacks " + fn);
+      assert.ok(!new RegExp("function " + fn + "\\(").test(APP), "app.js still defines " + fn);
+    }
+  }
+  // the page plumbing sits inside pager.js's parts()
+  for (const fn of ["el", "linkOut", "setLine", "cardHomeName", "cardShown", "cardHeading",
+    "showCardPage", "cardHome", "setCardHome", "wireCard", "sizeClass", "textPager", "linkPager",
+    "relayoutPagers"]) {
+    assert.ok(new RegExp("\\n    function " + fn + "\\(").test(PAGER_SRC), "pager.js lacks " + fn);
+    assert.ok(!new RegExp("function " + fn + "\\(").test(APP), "app.js still defines " + fn);
+  }
+  for (const marker of ["READING-VIEW", "LEDGER-VIEW", "BUILD-STAMP", "FEED-PACE"]) {
+    assert.ok(!APP.includes(marker + ":begin"), "app.js still holds " + marker);
+  }
+  for (const v of ["charPick", "restartSaid", "ledgerSend", "buildPagers", "cardOpener = {}",
+    "FEED_RETRY_MS", "name: \"zonenote\""]) {
+    assert.ok(!APP.includes(v), "app.js still names " + v);
+  }
+  // pad, duration and clock: the formatters live in web/fmt.js; app.js
+  // keeps only the clock alias (app/test/fmt.test.js)
+  assert.doesNotMatch(APP, /function (pad|duration|clock)\(/);
+});
+
+test("each view module registers itself once, with its name and order", () => {
+  const orders = {};
+  for (const [file, want] of VIEWS) {
+    const { reg } = quietRegistry();
+    const spy = reg.register;
+    const specs = [];
+    reg.register = (spec) => { specs.push([spec.name, spec.order]); return spy(spec); };
+    runView(file, reg);
+    assert.deepEqual(reg.names(), want, file);
+    assert.equal(specs.length, want.length, file);
+    specs.forEach(([n, o]) => { orders[n] = o; });
+    // without a registry (a page that has none, or a test sandbox) it
+    // registers nothing and still loads
+    const bare = { ALFmt: FMT };
+    bare.window = bare;
+    vm.runInNewContext(web.source(file), bare, { filename: file });
+  }
+  // the names and orders web/app.js gave these entries before the move
+  assert.deepEqual(orders, { pace: 60, acts: 110, chars: 50, checks: 180, verdicts: 300, hints: 170,
+    history: 150, pricewatch: 160, runs: 120, summary: 130, zoneguide: 190 });
+});
+
+test("the C2 panels add no clipboard, live region or new request; the timers moved as they were", () => {
+  const ENDPOINTS = { "consent.js": ["/api/consent"], "filter.js": ["/api/filter"], "restart.js": [],
+    "panels/settingsio.js": [], "panels/pager.js": [], "version.js": ["/api/version"],
+    "feedpace.js": [] };
+  // the download links' revoke timers, as before the move; nothing else
+  const TIMERS = { "filter.js": 2, "panels/settingsio.js": 1 };
+  for (const [f, src] of Object.entries(C2_SRC)) {
+    assert.doesNotMatch(src, /[^\x0a\x20-\x7e]/, f);
+    assert.ok(!src.includes("\r"), f);
+    const code = strip(src);
+    for (const bad of ["setInterval", "requestAnimationFrame", "XMLHttpRequest", "EventSource",
+      "innerHTML", "aria-live", "clipboard", "localStorage", "sessionStorage"]) {
+      assert.ok(!code.includes(bad), f + ": " + bad);
+    }
+    assert.equal(code.split("setTimeout(").length - 1, TIMERS[f] || 0, f);
+    const paths = [...new Set([...code.matchAll(/"(\/api\/[a-z-]+)"/g)].map((m) => m[1]))].sort();
+    assert.deepEqual(paths, ENDPOINTS[f], f);
+  }
+  // the shell keeps the feed, the health read and the state read
+  const shell = [...new Set([...strip(APP).matchAll(/"(\/(?:api\/)?[a-z-]+)/g)].map((m) => m[1]))].sort();
+  assert.deepEqual(shell, ["/api/health", "/api/state", "/events"]);
+});
+
+/* a fake page for the C2 panels */
+function c2Page() {
+  const els = {};
+  const $ = (id) => { if (!els[id]) { els[id] = node(id); } return els[id]; };
+  const calls = { api: [], reads: [], readFns: [], pushes: [], renders: [], pills: [] };
+  let snap = null;
+  const host = {
+    $, token: "abc123",
+    api(method, path, body) {
+      calls.api.push([method, path, body]);
+      if (path === "/api/version") { return Promise.resolve({ build: "0.4.2+0123456789ab" }); }
+      return Promise.resolve({ state: { v: 2 } });
+    },
+    render(s) { calls.renders.push(s); },
+    getSnap: () => snap,
+    getLink: () => ({ event: "open", everLive: true }),
+    setText(n, t) { n.textContent = t; },
+    setPill(n, state, glyph, word) { calls.pills.push([n.id, state, word]); },
+    setLine(n, t) { n.textContent = t; },
+    onConnect(fn, late) { calls.reads.push([fn.name, !!late]); calls.readFns.push(fn); },
+    onPush(fn) { calls.pushes.push(fn); },
+    readLink: {}
+  };
+  const reg = R.create({ warn: (t) => { throw new Error(t); } });
+  reg.host = host;
+  const sandbox = {
+    ALApp: reg, ALDash: DASH, console,
+    document: { createElement: () => node(""), body: node("body") }
+  };
+  ["consent.js", "restart.js", "version.js"].forEach((f) => runPanel(C2_SRC[f], sandbox));
+  return { reg, host, $, calls, setSnap: (s) => { snap = s; } };
+}
+
+test("the consent, restart and version panels hand app.js their hooks on their wires", async () => {
+  const p = c2Page();
+  assert.deepEqual(p.reg.names(), ["consent", "reading", "restart-overlay", "version", "rail"]);
+  p.reg.start();
+  assert.deepEqual(p.calls.api, []); // wiring reads nothing
+  // the bar status word through readLink; the version read after the rates
+  assert.equal(typeof p.host.readLink.show, "function");
+  assert.deepEqual(p.calls.reads, [["loadDataCredit", true]]);
+  assert.equal(p.calls.pushes.length, 1);
+  // the consent paint and the bar word, as before the move
+  const s = { tailer: { consented: true, reading: true, path: "logs/Client.txt", ledger: false } };
+  p.setSnap(s);
+  p.reg.render(s);
+  assert.equal(p.$("reading-state").textContent, "AshLight is reading Client.txt.");
+  assert.equal(p.$("reading-path").textContent, "Log file: logs/Client.txt");
+  assert.equal(p.$("consent-no").hidden, false);
+  assert.equal(p.$("ledger-allow").textContent, "Allow the log record");
+  assert.equal(p.calls.pills.length, 1);
+  assert.equal(p.calls.pills[0][0], "reading");
+  p.host.readLink.show();
+  assert.equal(p.calls.pills.length, 2);
+  // the ledger click posts only the ledger flag, then paints the answer
+  p.$("ledger-allow").fire("click");
+  await tickOver();
+  assert.deepEqual(plain(p.calls.api), [["POST", "/api/consent", { ledger: true }]]);
+  assert.deepEqual(plain(p.calls.renders), [{ v: 2 }]);
+  // connect()'s late read fills the version lines
+  p.calls.api.length = 0;
+  p.calls.readFns[0]();
+  await tickOver();
+  assert.deepEqual(plain(p.calls.api.map((c) => c.slice(0, 2))), [["GET", "/api/version"]]);
+  assert.equal(p.$("build-line").textContent, "Version 0.4.2, build 0123456789ab");
+  assert.equal(p.$("build-line").hidden, false);
+  assert.equal(p.$("about-version").textContent, "Version 0.4.2, build 0123456789ab");
+  // the next push clears nothing while no restart was asked
+  p.$("restart-overlay-said").textContent = "x";
+  p.calls.pushes[0]({});
+  assert.equal(p.$("restart-overlay-said").textContent, "x");
+});
+
+test("each C2 panel says why when web/app.js has not set the host", () => {
+  for (const [file, name] of [["panels/pager.js", "build"], ["consent.js", "consent"],
+    ["filter.js", "filter"], ["restart.js", "restart-overlay"], ["panels/settingsio.js", "settingsio"],
+    ["version.js", "version"]]) {
+    const { reg, said } = quietRegistry();
+    const sandbox = { ALApp: reg, ALDash: DASH };
+    runPanel(C2_SRC[file], sandbox);
+    if (file === "panels/pager.js") { reg.host = {}; } // pager.js made an empty host
+    reg.start();
+    assert.equal(said.length, 1, file);
+    assert.match(said[0], new RegExp("^panel " + name + " wire failed: " + name + ": no page host"));
   }
 });

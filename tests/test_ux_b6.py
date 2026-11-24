@@ -43,7 +43,9 @@ def test_copy_feedback_adds_no_live_region():
     assert "aria-live" not in SEARCH and '"role"' not in SEARCH
     assert 'btn.setAttribute("aria-label", name + " ("' in SEARCH
     assert 'id="search-status"' not in HTML
-    m = re.search(r"function downloadFilter\(\) \{(.*?)\n  \}", APP, re.S)
+    # TEST-WEB-PANELS-C2 (adjudicator ruling): downloadFilter lives in
+    # web/panels/filter.js
+    m = re.search(r"function downloadFilter\(\) \{(.*?)\n  \}", srcpaths.read("panels/filter.js"), re.S)
     assert m and "aria-live" not in m.group(1)
     assert 'setAttribute("aria-label"' in m.group(1)
 

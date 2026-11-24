@@ -12,6 +12,18 @@
     module.exports = api;
   } else {
     root.ALHints = api;
+    /* TEST-WEB-PANELS-C2 (F-135): NEWBIE-HINTS registers itself
+       (web/registry.js) as "hints", order 170, the name and order
+       web/app.js gave it. The tip itself is a region N notice
+       (PLAY-LEGACY-OUT-2); this keeps only the Settings click "Show
+       new-character tips again". */
+    if (root.ALApp && typeof root.ALApp.register === "function") {
+      root.ALApp.register({
+        name: "hints",
+        order: 170,
+        wire: function () { api.wire(document, root.ALApp.host.api); }
+      });
+    }
   }
 }(typeof self !== "undefined" ? self : this, function () {
   "use strict";

@@ -18,6 +18,9 @@ const SRC = web.source("rail.js");
 const HTML = web.source("index.html");
 const CSS = web.source("app.css");
 const APP = web.source("app.js");
+// TEST-WEB-PANELS-C2: the Reading section's rows and the rail's start moved
+// from web/app.js to web/panels/consent.js
+const CONSENT = web.source("consent.js");
 
 /* ---- a small fake DOM: ids, parents, hidden, attributes, focus ---- */
 function makeDoc() {
@@ -481,17 +484,21 @@ test("stylesheet: a 220 px rail, one rule folds off-page blocks, no motion", () 
   assert.ok(!/transition|animation/.test(rail));
 });
 
-test("app.js starts the rail once, from start(), before the first push", () => {
+test("the rail starts once, as the last wire of A.start(), before the first push", () => {
+  // TEST-WEB-PANELS-C2: web/panels/consent.js registers "rail" at order 310,
+  // after every other wire; app.js's start() runs A.start() before connect()
   const start = APP.slice(APP.indexOf("  function start() {"), APP.indexOf("\n  }\n", APP.indexOf("  function start() {")));
-  assert.equal(APP.split("window.ALRail.start(").length - 1, 1);
-  assert.ok(start.indexOf("window.ALRail.start(document") > start.indexOf("A.start();"));
-  assert.ok(start.indexOf("window.ALRail.start(document") < start.indexOf("connect();"));
-  assert.match(start, /tabs: window\.ALTabs \|\| null/);
+  assert.ok(!APP.includes("ALRail"));
+  assert.equal(CONSENT.split("window.ALRail.start(").length - 1, 1);
+  assert.ok(start.indexOf("A.start();") >= 0 && start.indexOf("A.start();") < start.indexOf("connect();"));
+  const rail = CONSENT.slice(CONSENT.indexOf("  function startRail() {"));
+  assert.match(rail.slice(0, rail.indexOf("\n  }\n")), /window\.ALRail\.start\(document, \{ tabs: window\.ALTabs \|\| null/);
+  assert.match(CONSENT, /name: "rail",\s*order: 310,\s*wire: function \(\) \{ startRail\(\); \}/);
 });
 
 test("readingView: the reading state, the log path and the opt-out", () => {
-  const m = /\/\* READING-VIEW:begin[\s\S]*?\*\/([\s\S]*?)\/\* READING-VIEW:end \*\//.exec(APP);
-  assert.ok(m, "READING-VIEW markers in web/app.js");
+  const m = /\/\* READING-VIEW:begin[\s\S]*?\*\/([\s\S]*?)\/\* READING-VIEW:end \*\//.exec(CONSENT);
+  assert.ok(m, "READING-VIEW markers in web/panels/consent.js");
   const box = {};
   vm.runInNewContext(m[1] + "\nout.f = readingView;", { out: box });
   const v = (tl) => JSON.parse(JSON.stringify(box.f(tl)));
@@ -507,7 +514,7 @@ test("readingView: the reading state, the log path and the opt-out", () => {
       assert.ok(sentence.split(" ").length <= 12, sentence);
     }
   }
-  assert.match(APP, /\$\("consent-no"\)\.hidden = !rv\.stop;/);
+  assert.match(CONSENT, /\$\("consent-no"\)\.hidden = !rv\.stop;/);
   // TEST-WEB-PANELS-C1 (adjudicator ruling, wave 39): renderRates lives in web/panels/rates.js
   assert.match(web.source("rates.js"), /setPill\(\$\("book-state"\), v\.pill\.state, v\.pill\.glyph, v\.pill\.word\);/);
 });

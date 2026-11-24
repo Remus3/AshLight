@@ -111,20 +111,26 @@ test("dashboard: the restart-overlay button shows only inside the client", () =>
   const tools = html.slice(html.indexOf('<section id="toolsbox"'), html.indexOf("</section>", html.indexOf('<section id="toolsbox"')));
   assert.match(tools, /<h3 id="tools-title">Appearance and tools<\/h3>/);
   assert.ok(tools.includes('id="restart-overlay-row"'));
-  const src = web.source("app.js");
+  // TEST-WEB-PANELS-C2: the row's block lives in web/panels/restart.js
+  const src = web.source("restart.js");
   const start = src.indexOf("  function wireRestartOverlay()");
   const end = src.indexOf("\n  }\n", start) + 4;
   const fnSrc = src.slice(start, end);
-  // MERGE-SEAMS F5: render() clears the note on the next state push,
-  // before its same-version early return, so any push clears it
-  const rStart = src.indexOf("  function render(s) {");
-  const rBody = src.slice(rStart, src.indexOf("\n  }\n", rStart));
-  const clear = rBody.match(/\n {4}(if \(restartSaid\) \{[^\n]*\})\n/);
-  assert.ok(clear, "render() clears the restart note");
-  assert.ok(rBody.indexOf(clear[1]) < rBody.indexOf("s.version === renderedVersion"));
+  // MERGE-SEAMS F5: the panel's push hook clears the note on the next
+  // state push; app.js's render() runs the hooks before its same-version
+  // early return, so any push clears it
+  const pStart = src.indexOf("  function onPush() {");
+  const clear = src.slice(pStart, src.indexOf("\n  }\n", pStart)).match(/\n {4}(if \(restartSaid\) \{[^\n]*\})$/);
+  assert.ok(clear, "the push hook clears the restart note");
+  assert.match(src, /host\.onPush\(onPush\);/);
+  const app = web.source("app.js");
+  const rStart = app.indexOf("  function render(s) {");
+  const rBody = app.slice(rStart, app.indexOf("\n  }\n", rStart));
+  assert.ok(rBody.indexOf("pushHooks.forEach(function (fn) { fn(s); });") > 0);
+  assert.ok(rBody.indexOf("pushHooks.forEach") < rBody.indexOf("s.version === renderedVersion"));
   function run(alClient) {
     const els = fakeDoc(["restart-overlay-row", "restart-overlay", "restart-overlay-said"]);
-    const ctx = { window: { alClient: alClient }, els: els, snap: null };
+    const ctx = { window: { alClient: alClient }, els: els, getSnap: () => null };
     vm.runInNewContext("function $(id) { return els[id]; }\n" +
       "function setText(n, t) { n.textContent = t; }\nvar restartSaid = false;\n" + fnSrc +
       "\nwireRestartOverlay();\nfunction push() { " + clear[1] + " }", ctx);

@@ -269,7 +269,8 @@ def test_merge_endpoint(tmp_path):
 
 def test_dashboard_merge_is_a_picked_file_with_no_live_region():
     html = srcpaths.index_html()
-    app = srcpaths.read("app.js")
+    # TEST-WEB-PANELS-C2: the filter wiring lives in web/panels/filter.js
+    app = srcpaths.read("panels/filter.js")
     js = srcpaths.read("filtermerge.js")
     assert '<input id="filter-merge-file" type="file"' in html
     assert '<script src="/web/filtermerge.js" defer></script>' in html
