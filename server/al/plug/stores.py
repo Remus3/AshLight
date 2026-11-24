@@ -2,7 +2,8 @@
 files, through the plug seam (decision 0056).
 
 - One row while a store has changes its Saver could not write yet (run
-  history, map ladder, price watch, zone visits, session summaries); the
+  history, map ladder, price watch, zone visits, session summaries, and
+  the Kindler tabs of plug/genbuilds.py, KINDLER-STORE); the
   core keeps retrying with back-off (1, 5, 30, then every 60 s), so the
   row clears by itself once a save lands.
 - One note once a damaged file was restored from its .bak (jsonfile
@@ -30,6 +31,7 @@ UNSAVED_WORDS = {
     "watch": "price watch list",
     "visits": "zone visits",
     "summary": "session summary",
+    "genbuilds": "Kindler tabs",  # KINDLER-STORE (plug/genbuilds.py)
 }
 
 # file name -> (noun phrase, plural) for the restore note; the config file
@@ -45,6 +47,7 @@ RESTORED_WORDS = {
     "hints.json": ("hint progress", False),
     "verdicts.json": ("in-game check results", True),
     "worn_gear.json": ("worn gear", False),
+    "gen_builds.json": ("Kindler tabs", True),  # KINDLER-STORE
 }
 OTHER_FILE = ("a saved file", False)
 
