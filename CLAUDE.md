@@ -1261,12 +1261,7 @@ of the HALT check.
   AshLight keeps Apache-2.0, link only to poe2db / wiki, no text or
   data fetched, bundled or snapshotted until a source permits app use,
   then only by decision 0009's opt-in sidecar route with any community
-  figure labelled "community estimate"). GET /api/iteminfo
-  (ITEM-INFO-CORE) is a token-gated plug route: exact name (at most 120
-  characters) over cached base_items, the cached uniques snapshot
-  (snapshot.ITEM_SOURCES, same opt-in) and the price book while web_data
-  is on; an unknown name is 200 with empty fields; price entries keep
-  only https poecdn.com icons. Reverses if: a permitted source
+  figure labelled "community estimate"). Reverses if: a permitted source
   for drops, vendor or disenchant data appears, a source publishes an
   API or app-use terms or gives written permission, GGG opens
   registration, PoB relicenses or a Source line proves wrong in play,
