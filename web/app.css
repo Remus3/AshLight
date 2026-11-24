@@ -919,8 +919,8 @@ li.al-row1.off, .al-row-ctl.off > .al-row1 { color: var(--fk-text-muted); }
    242 (compact 110 + 88 = 198); the Run history page 9 rows (8 compact)
    and the pager row: 222 (200) (its keep / clear switch is in Settings
    since PLAY-TD-21C-HISTORY-MOVE). Recent: the 24 px chip row, 4 px, 8 rows (6 compact) and the
-   pager row: 228 (compact 184). Characters: the 32 px picker, 4 px, 8
-   rows (6 compact) and the pager row: 236 (192). The small tag of a
+   pager row: 228 (compact 184). Characters: the picker at its tallest
+   (85 px, CP-1), 4 px, 5 rows (4 compact) and the pager row: 223 (201). The small tag of a
    Recent row keeps the 22 px row (line-height 1). A pressed chip says so
    by its edge and weight, never by colour alone; a hidden copy of its
    label at 600 keeps its width when it turns bold (as button.tab). */
@@ -933,9 +933,25 @@ button.chip::after { display: block; height: 0; overflow: hidden; visibility: hi
 .events .ev-tag { font-size: var(--al-fs-meta); line-height: 1; font-weight: 600;
   color: var(--fk-text-muted); }
 .events .ev-death .ev-tag { color: var(--fk-status-bad); }
-#charsbox .char-pick { flex-wrap: nowrap; margin: 0 0 var(--al-space-1); min-width: 0; }
-#charsbox .char-pick label { flex: none; }
-#charsbox .char-pick select { flex: 1 1 auto; min-width: 0; }
+/* CP-1: the picker never squeezes its select. DOM order is the visual
+   and Tab order (web/chars.js makes the pin between the label and the
+   select): the label and the pin share the first line (one line each,
+   nowrap; the pin sits at the line's end and takes the 24 px chip metrics
+   of the Recent chips, button.btn-24); the select takes the whole second
+   line, so its widest name reads in full and it keeps a 32 px target; the
+   pin's failure line (#char-pin-said, meta size) takes a third line only
+   while it holds text. Worst case 24 + 4 + 33 + 4 + 20 px: the Characters
+   card's ROWS in web/chars.js is set from it. At 320 px the pin wraps
+   under the label (flow has no card budget). tests/test_play_fit.py pins
+   all of it. */
+#charsbox .char-pick { flex-wrap: wrap; margin: 0 0 var(--al-space-1); min-width: 0; }
+#charsbox .char-pick label { flex: none; white-space: nowrap; }
+#charsbox #char-pin { flex: none; margin-left: auto; white-space: nowrap; min-height: 1.5rem;
+  padding: 0 var(--al-space-2); font-size: var(--al-fs-meta); line-height: var(--al-lh-meta); }
+#charsbox .char-pick select { flex: 1 0 100%; max-width: 100%; }
+#charsbox #char-pin-said { flex: 1 0 100%; font-size: var(--al-fs-meta);
+  line-height: var(--al-lh-meta); }
+#charsbox #char-pin-said:empty { display: none; }
 
 @media (min-width: 64em) and (min-height: 43.75em) {
   .panel-cards { align-items: stretch; grid-template-columns: repeat(3, minmax(0, 1fr));
