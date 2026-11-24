@@ -90,9 +90,9 @@ def test_off_contact_not_set_says_what_to_do():
     t = price_card_text(price("off", error="contact not set"))
     # DATA-PRICE-CARD-TEXT (F-018): names poe.ninja and the card, not a file
     assert (t["line"], t["detail"]) == ("Contact not set", "See Prices and web data")
-    assert t["sentence"] == ("poe.ninja prices need a contact, such as an email or a name. "
-                             "Add it under Settings, Reading and web data, then "
-                             "press the hotkey again.")
+    assert t["sentence"] == ("This copy of AshLight has no default contact, so poe.ninja "
+                             "prices need yours, such as an email or a name. Add it under "
+                             "Settings, Reading and web data, then press the hotkey again.")
     assert "Web data is off" not in str(t)
     assert "config/local.json" not in str(t) and "trade site" not in str(t)
     # the generic error key never borrows the contact text
