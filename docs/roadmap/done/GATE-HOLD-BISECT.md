@@ -1,0 +1,1 @@
+ -- done 2026-11-24 (session wave 54; verified; three exclusive soaks median 140.1 s under the 145 s bound, no code change; xdist_group not honoured by pytest 9.2.0 with xdist 3.8.0, follow-up TEST-XDIST-GROUP-RESTORE)
