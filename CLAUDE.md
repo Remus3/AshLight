@@ -438,9 +438,18 @@ of the HALT check.
   the calc off, moves from 350 to 460 MB: B11 plus the core max of 68 MB is
   452, rounded up. B10 and B12 stay. Figures are from the first live budget
   log: 3059 rows, 400 with the companion open, working set median 319.2,
-  p95 330.2, max 340.5 MB. Reverses if: B10 or B12 breach persistently, the
-  operator keeps 300 MB, or a later log puts the companion-open median over
-  350 MB.
+  p95 330.2, max 340.5 MB. Amended 2026-11-24 (TEST-BUDGET-LOOPBODY-NOISE):
+  B1 test_real_loop_body keeps its 0.5 percent budget and its assert allows
+  one measured process-CPU clock step (share < 0.005 x load_factor + step /
+  wall; step measured, capped at 20 ms; 15.6 ms on Windows, so about 0.81
+  percent passes over the 5 s window and 3 steps still fail); quiet figure
+  0.000 percent over 6 gated runs; the about 0.615 percent batch red is
+  exactly 2 steps, quantization, not a regression. Reverses if: B10 or B12
+  breach persistently, the operator keeps 300 MB, a later log puts the
+  companion-open median over 350 MB, B1 test_real_loop_body reds at 3 or
+  more steps on a quiet machine with main only (then a regression row and a
+  bisect), Windows gives the process clock a finer step, or the window or
+  budget changes.
 - Wave gate: a package runs the test files tools/test_select.py names for
   its diff, file-named, outside the suite gate (no timing tests, at most
   90 s per subset; timing and budget tests go through the gate); main moves
