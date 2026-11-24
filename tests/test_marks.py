@@ -78,6 +78,10 @@ CALC_TESTS = {
     "tests/test_audit_pass7.py": {"test_live_flask_and_charm_outputs_reach_the_build_view"},
     "tests/test_tc_pob_drift_guard.py": {"test_live_launch_object_and_output_keys"},
     "tests/test_math_skill_split.py": {"test_live_calc_outputs_for_build_view"},
+    # KINDLER-ENGINE (wave 40 adjudicator ruling 2026-11-23)
+    "tests/test_kindler_live.py": {
+        "test_live_reference_build_through_kindler_matches_the_bridge",
+        "test_live_real_templates_score_and_repeat_byte_identical"},
 }
 TIMING_WHOLE = {"tests/test_budgets.py", "tests/test_soak.py", "tests/test_math_perf.py"}
 # mixed files: only these tests carry the timing mark, the rest of the file not
@@ -145,7 +149,7 @@ def _fuzz_bound_tests():
 
 def test_calc_files_list_is_the_live_calc_files():
     assert set(CALC_FILES) == CALC_WHOLE | set(CALC_TESTS)
-    assert len(CALC_FILES) == 8
+    assert len(CALC_FILES) == 9
     for rel in CALC_FILES:
         assert (ROOT / rel).is_file(), rel
 

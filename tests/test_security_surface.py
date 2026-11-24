@@ -83,7 +83,7 @@ ROUTES = {
     # ITEM-INFO-CORE: the plug route (server/al/plug/iteminfo.py, decision 0083)
     ("GET", "/api/iteminfo"): (HEADER, None),
     ("GET", "/events"): (QUERY, None),
-    # token POST (20)
+    # token POST (21)
     ("POST", "/api/consent"): (HEADER, 4096),
     ("POST", "/api/overlay-layout"): (HEADER, 4096),
     ("POST", "/api/trade-dismiss"): (HEADER, 4096),
@@ -98,6 +98,7 @@ ROUTES = {
     ("POST", "/api/verdicts"): (HEADER, 4096),  # RUN-VERDICTS-CORE plug route
     ("POST", "/api/character"): (HEADER, 4096),  # RUN-CHARACTER-PIN plug route
     ("POST", "/api/gen-builds"): (HEADER, 4096),  # KINDLER-STORE plug route
+    ("POST", "/api/kindler-generate"): (HEADER, 4096),  # KINDLER-ENGINE plug route
     ("POST", "/api/wear"): (HEADER, 256 * 1024),  # TC-WORN-WIRE: the eval body cap
     ("POST", "/api/hotkeys"): (HEADER, 4096),  # HOTKEYS-LIVE (OVL-KEYS-CORE)
     ("POST", "/api/overlay-sample"): (HEADER, 4096),  # OVL-CARD-SLOT
@@ -352,7 +353,7 @@ def test_route_table_matches_http_py():
         counts[(method, rule)] = counts.get((method, rule), 0) + 1
     assert counts == {("GET", NONE): 5, ("GET", PROOF): 1, ("GET", HEADER): 18,
                       ("GET", QUERY): 1,
-                      ("POST", HEADER): 20, ("PUT", HEADER): 1,
+                      ("POST", HEADER): 21, ("PUT", HEADER): 1,
                       ("DELETE", REFUSED): 1, ("PATCH", REFUSED): 1,
                       ("OPTIONS", REFUSED): 1}
     # the token rule in the source is the one the table assumes
@@ -493,6 +494,8 @@ def _cap_probe(server, path, length, ctype):
     return int(head[0].split()[1])
 
 
+# two probes per POST / PUT route (21 + 1 since KINDLER-ENGINE): about 1.5 s
+@pytest.mark.slow
 def test_body_caps_are_pinned(srv):
     for (method, path), (rule, cap) in ROUTES.items():
         if method not in ("POST", "PUT"):

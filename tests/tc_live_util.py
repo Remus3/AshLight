@@ -171,6 +171,7 @@ CALC_MARKS = (pytest.mark.calc, pytest.mark.xdist_group(CALC_GROUP_A))
 CALC_FILES = (
     "tests/test_audit_pass7.py",
     "tests/test_fullstack.py",
+    "tests/test_kindler_live.py",
     "tests/test_math_e2e_live.py",
     "tests/test_math_perf.py",
     "tests/test_math_skill_split.py",
