@@ -33,11 +33,11 @@ Network only with consent: nothing is fetched while the web_data opt-in
 (config/local.json, decision 0013) is off, unless --opt-in is passed;
 AL_NO_SNAPSHOT=1 skips it always (AUDIT-SNAPSHOT-OPTIN).
 
-ITEM-INFO-CORE (decision 0083): ITEM_SOURCES adds repoe-fork's uniques.json
+ITEM-INFO-CORE (decision 0083): SOURCES holds repoe-fork's uniques.json
 (same licence, opt-in and cache as base_items, decision 0009) for the item
-info popover (server/al/iteminfo.py). main() fetches default_sources(), the
-SOURCES plus ITEM_SOURCES, with the real probe table; run() with no
-sources stays SOURCES only. uniques has no probe yet.
+info popover (server/al/iteminfo.py). ITEM-INFO-UNIQUES-PROBE: it joined
+SOURCES (ITEM_SOURCES is gone; default_sources() is SOURCES) and has a probe
+(snapprobe.PROBES "uniques": name and item_class).
 
 DATA-GEMS-SNAP: SOURCES adds repoe-fork's gems.json (same MIT export,
 GGG-owned data, opt-in, cache and attribution as base_items, decision 0009;
@@ -141,6 +141,9 @@ SOURCES = {
     # DATA-GEMS-SNAP (decisions 0009, 0081): gem names and levels for
     # Kindler; reader server/al/theorycraft/archetypes.py (load_gems).
     "gems": REPOE_POE2 + "gems.json",
+    # ITEM-INFO-CORE (decision 0083): unique item list for the item info
+    # popover; reader server/al/iteminfo.py (uniques_from_doc).
+    "uniques": REPOE_POE2 + "uniques.json",
 }
 
 # DATA-SNAP-TRIM: two files with no reader (about 27 MB) are not fetched by
@@ -153,17 +156,9 @@ OPTIONAL_SOURCES = {
 }
 
 
-# ITEM-INFO-CORE (decision 0083): the unique item list for the item info
-# popover (name, item class, release state); fetched by main() beside
-# SOURCES under the same opt-in; reader server/al/iteminfo.py.
-ITEM_SOURCES = {
-    "uniques": REPOE_POE2 + "uniques.json",
-}
-
-
 def default_sources():
-    """What a normal run of the tool fetches: SOURCES plus ITEM_SOURCES."""
-    return dict(SOURCES, **ITEM_SOURCES)
+    """What a normal run of the tool fetches: SOURCES."""
+    return dict(SOURCES)
 
 
 class FetchError(Exception):
