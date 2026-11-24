@@ -70,6 +70,9 @@
 }(typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
+  // RUN-CARDS-PAGE-FIT: a full page plus the Run cards' 24 px pager row is
+  // 244 of 244 px at 1280x760 (200 of 204 at 1024x700), measured with 10
+  // rows on Acts, Maps and Deaths (tests/test_play_fit.py rows10)
   var LIST_ROWS = { full: 10, compact: 8 };
   var TEXT = {
     full: { entries: 3, lines: 3, cols: 47 },

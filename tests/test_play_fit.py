@@ -51,7 +51,10 @@ for _p in (ROOT / "tools", ROOT / "tests", ROOT):
 
 import play_states as ps  # noqa: E402
 import srcpaths  # noqa: E402
+import synth_client  # noqa: E402
+import fullstack_mocks as fs  # noqa: E402
 from ci_timing import ci_scale  # noqa: E402
+from server.al import runs  # noqa: E402
 
 pytestmark = pytest.mark.server
 
@@ -462,6 +465,83 @@ def metric_rows():
     return rows
 
 
+# -- RUN-CARDS-PAGE-FIT: the 10-row fit state -------------------------------------
+#
+# The Run tab's Acts, Maps and Deaths cards page their lists; a page must fit
+# its card when it is full. No recipe of tests/play_states.py fills a page:
+# the core sends at most RECENT_MAPS finished maps and RECENT_DEATHS deaths
+# (5 each), so this harness-only state lifts both caps to ROWS_FILL for its
+# own core (in this process, restored on close) and drives a synthetic run
+# through 11 acts and 12 maps with a death in each (two in the last, so the
+# Deaths card's most deaths line shows). Every list then holds more rows
+# than a page, so each card shows a full first page.
+
+ROWS_STATE = "rows10"
+ROWS_FILL = 12
+ROWS_MIN = 10  # the rows each list must hold (more than any page)
+ROWS_ACTS = (("G1_1", 1, "The Riverbank"), ("G2_1", 16, "Vastiri Outskirts"),
+             ("G3_1", 33, "Sandswept Marsh"), ("G4_1", 45, "Isle of Kin"),
+             ("P1_1", 46, "Example Interlude One"), ("P2_1", 47, "Example Interlude Two"),
+             ("P3_1", 48, "Example Interlude Three"), ("C_G1_1", 50, "Example Cruel One"),
+             ("C_G2_1", 52, "Example Cruel Two"), ("C_G3_1", 54, "Example Cruel Three"),
+             ("C_G4_1", 56, "Example Cruel Four"))
+FIT_STATES = ps.STATES + (ROWS_STATE,)
+
+
+def rows_counts(snap):
+    """(act rows, map rows, death rows) the Run cards list for a snapshot
+    (web/acts.js splitRows, web/runs.js mapRows and the death recap)."""
+    maps = snap.get("maps") or {}
+    acts_part = snap.get("acts") or {}
+    recap = snap.get("death_recap") or {}
+    return (len(acts_part.get("splits") or ()),
+            len(maps.get("recent") or ()) + (1 if maps.get("current") else 0),
+            len(recap.get("recent") or ()))
+
+
+def _rows_recipe(st):
+    ps._consent(st)
+    s = synth_client.Session(seed=47, character="Rowdemo", klass="Ranger")
+    s.marker()
+    s.raw("[WINDOW] Gained focus")
+    for aid, lvl, name in ROWS_ACTS:
+        s.zone_change(aid, lvl, name)
+        s.level_up()
+    for i in range(ROWS_FILL):
+        s.zone_change(*fs.HIDEOUT)
+        s.zone_change(f"MapRow{i}", 65 + i % 10, f"Example Map {i}", seed=470 + i)
+        s.death()
+    s.death()  # a second death in the open map: the most deaths line shows too
+    st.append(s)
+    return st.wait_for(lambda x: min(rows_counts(x)) >= ROWS_MIN
+                       and (x.get("death_recap") or {}).get("worst_text"),
+                       "10 rows on each Run card")
+
+
+@contextlib.contextmanager
+def open_rows_state(root, port=None):
+    """The 10-row fit state on its own PlayStack; the core's recent caps are
+    lifted for its life and put back afterwards."""
+    saved = runs.RECENT_MAPS, runs.RECENT_DEATHS
+    runs.RECENT_MAPS = runs.RECENT_DEATHS = ROWS_FILL
+    try:
+        st = ps.PlayStack(Path(root), port=port)
+        try:
+            _rows_recipe(st)
+            st.pinned()
+            yield st
+        finally:
+            st.close()
+    finally:
+        runs.RECENT_MAPS, runs.RECENT_DEATHS = saved
+
+
+def _opener(name):
+    if name == ROWS_STATE:
+        return open_rows_state
+    return lambda root, port=None: ps.open_state(name, root, port=port)
+
+
 @contextlib.contextmanager
 def _open_state(name, root, port):
     """The state on the previous state's port (one page URL for the whole
@@ -469,7 +549,7 @@ def _open_state(name, root, port):
     for i, want in enumerate((port, None) if port else (None,)):
         stack = contextlib.ExitStack()
         try:
-            st = stack.enter_context(ps.open_state(name, root / f"{name}-{i}", port=want))
+            st = stack.enter_context(_opener(name)(root / f"{name}-{i}", port=want))
         except OSError:
             stack.close()
             if want is None:
@@ -490,7 +570,7 @@ def run_sweep(root, browser, node):
     port = None
     recipe_token, ps.TOKEN = ps.TOKEN, PAGE_TOKEN
     try:
-        for name in ps.STATES:
+        for name in FIT_STATES:
             with _open_state(name, root, port) as st:
                 port = st.port
                 snap = st.state()
@@ -499,8 +579,8 @@ def run_sweep(root, browser, node):
                               "sizes": [list(x) for x in SIZES], "answers": answers})
                 sweep["states"][name] = {"live": r["live"], "sizes": r["sizes"],
                                          "trades": len(snap.get("trade_requests") or ()),
-                                         "answers": answers}
-                if name == ps.STATES[-1]:
+                                         "answers": answers, "rows": rows_counts(snap)}
+                if name == FIT_STATES[-1]:
                     ph = drv.call({"cmd": "placeholder", "sizes": [list(x) for x in COCKPIT]})
                     sweep["placeholder"] = ph["sizes"]
                     sweep["metrics"] = drv.call({"cmd": "metrics", "rows": metric_rows()})["rows"]
@@ -664,7 +744,7 @@ def test_answers_name_their_regions_and_steps():
 # -- the browser sweep ------------------------------------------------------------------
 
 def test_every_state_and_size_was_measured(sweep):
-    assert tuple(sweep["states"]) == ps.STATES
+    assert tuple(sweep["states"]) == FIT_STATES
     for name, st in sweep["states"].items():
         assert st["live"], f"state {name}: the page never came live"
         assert set(st["sizes"]) == {size_key(w, h) for w, h in SIZES}, name
@@ -672,6 +752,20 @@ def test_every_state_and_size_was_measured(sweep):
             assert (m["vw"], m["vh"]) == parse_key(key), (name, key)
             assert m["play"] is not None, (name, key)
     assert set(sweep["placeholder"]) == {size_key(w, h) for w, h in COCKPIT}
+
+
+def test_the_rows_state_fills_every_run_list(sweep):
+    """RUN-CARDS-PAGE-FIT: Acts, Maps and Deaths each hold at least 10 rows
+    in the fit state, so their first page is full while it is measured."""
+    acts_n, maps_n, deaths_n = sweep["states"][ROWS_STATE]["rows"]
+    assert min(acts_n, maps_n, deaths_n) >= ROWS_MIN, (acts_n, maps_n, deaths_n)
+
+
+def test_the_rows_state_puts_the_core_caps_back(tmp_path):
+    before = runs.RECENT_MAPS, runs.RECENT_DEATHS
+    with open_rows_state(tmp_path / "rows") as st:
+        assert min(rows_counts(st.state())) >= ROWS_MIN
+    assert (runs.RECENT_MAPS, runs.RECENT_DEATHS) == before
 
 
 def test_play_fits_or_is_pending(sweep):
