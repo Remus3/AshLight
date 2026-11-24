@@ -89,6 +89,11 @@ class TreeSpec:
     nodes: tuple = ()
     url: str = None
     jewels: dict = field(default_factory=dict)  # node id -> item id
+    # TC-TREE-URL: node id -> weapon set (1 or 2) from PoB's WeaponSet<n>
+    # children, and node id -> "str" / "dex" / "int" from its
+    # Overrides/AttributeOverride lists; not part of to_dict
+    weapon_sets: dict = field(default_factory=dict)
+    attr_overrides: dict = field(default_factory=dict)
 
     def to_dict(self, tree=None):
         """`tree`: optional treedata.TreeData; when given, `named_nodes`
@@ -206,6 +211,29 @@ def _root(xml):
     return root
 
 
+def _id_list(text):
+    return [n for n in (_int(x) for x in (text or "").split(",")) if n is not None]
+
+
+_ATTR_LISTS = (("strNodes", "str"), ("dexNodes", "dex"), ("intNodes", "int"))
+
+
+def _spec_sets(sp):
+    """TC-TREE-URL: ({node: weapon set 1|2}, {node: "str"|"dex"|"int"})
+    from one Spec element's direct WeaponSet1 / WeaponSet2 children and
+    its Overrides/AttributeOverride lists (PoB's own save format)."""
+    sets, attrs = {}, {}
+    for child in sp:
+        if child.tag in ("WeaponSet1", "WeaponSet2"):
+            for n in _id_list(child.get("nodes")):
+                sets[n] = int(child.tag[-1])
+    for ov in sp.findall("Overrides/AttributeOverride"):
+        for key, attr in _ATTR_LISTS:
+            for n in _id_list(ov.get(key)):
+                attrs[n] = attr
+    return sets, attrs
+
+
 def _specs(root):
     tree = root.find("Tree")
     if tree is None:
@@ -221,8 +249,10 @@ def _specs(root):
             node, item = _int(so.get("nodeId")), _int(so.get("itemId"))
             if node is not None and item:
                 jewels[node] = item
+        weapon_sets, attrs = _spec_sets(sp)
         specs.append(TreeSpec(title=sp.get("title"), tree_version=sp.get("treeVersion"),
-                              nodes=nodes, url=url, jewels=jewels))
+                              nodes=nodes, url=url, jewels=jewels,
+                              weapon_sets=weapon_sets, attr_overrides=attrs))
     if not specs:
         return (), None
     active = _int(tree.get("activeSpec"), 1)

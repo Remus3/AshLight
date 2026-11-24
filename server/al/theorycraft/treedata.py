@@ -88,6 +88,7 @@ class Node:
     jewel_socket: bool = False
     class_start: tuple = ()  # class names that start on this node
     gid: str = None  # the export's string `id` slug (TC-BUILDFILE), None when null
+    asc_start: bool = False  # `isAscendancyStart` (TC-TREE-URL)
 
     @property
     def display_stats(self):
@@ -120,11 +121,18 @@ def _str(value):
 
 
 class TreeData:
-    def __init__(self, nodes, classes, ascendancy_ids=None, class_map=None):
+    def __init__(self, nodes, classes, ascendancy_ids=None, class_map=None,
+                 asc_order=None, attr_hashes=None):
         self.nodes = nodes      # int id -> Node
         self.classes = classes  # tuple of class names, index order
         self._asc_ids = dict(ascendancy_ids or {})  # ascendancy name -> id
         self.class_map = dict(class_map or {})  # ascendancy name -> class name
+        # TC-TREE-URL: class name -> its ascendancy names in export order,
+        # a placeholder entry (no name) kept as None so positions hold
+        self.asc_order = dict(asc_order or {})
+        # TC-TREE-URL: "str" / "dex" / "int" -> the export's generic
+        # attribute skill override hash (left out unless exactly one)
+        self.attr_hashes = dict(attr_hashes or {})
 
     def ascendancy_id(self, name):
         """The export's ascendancy id (e.g. `Witch1`) for a name, or None."""
@@ -190,17 +198,22 @@ def parse(doc):
     classes = []
     asc_names = {}  # ascendancy id -> name
     class_map = {}  # ascendancy name -> class name (TC-ASC-FROM-TREE)
+    asc_order = {}  # class name -> ascendancy names in order (TC-TREE-URL)
     for c in doc.get("classes") if isinstance(doc.get("classes"), list) else ():
         cname = _str(c.get("name")) if isinstance(c, dict) else None
         classes.append(cname)
         ascs = c.get("ascendancies") if isinstance(c, dict) else None
+        order = []
         for a in ascs if isinstance(ascs, list) else ():
+            order.append(_str(a.get("name")) if isinstance(a, dict) else None)
             if not isinstance(a, dict):
                 continue
             if _str(a.get("id")) and _str(a.get("name")):
                 asc_names.setdefault(a["id"], a["name"])
             if cname and _str(a.get("name")):
                 class_map.setdefault(a["name"], cname)
+        if cname and cname not in asc_order:
+            asc_order[cname] = tuple(order)
     nodes = {}
     for key, raw in doc["nodes"].items():
         if not isinstance(raw, dict):
@@ -226,11 +239,36 @@ def parse(doc):
                           notable=raw.get("isNotable") is True,
                           keystone=raw.get("isKeystone") is True,
                           jewel_socket=raw.get("isJewelSocket") is True,
-                          class_start=tuple(starts), gid=_str(raw.get("id")))
+                          class_start=tuple(starts), gid=_str(raw.get("id")),
+                          asc_start=raw.get("isAscendancyStart") is True)
     asc_ids = {}
     for aid, name in asc_names.items():
         asc_ids.setdefault(name, aid)
-    return TreeData(nodes, tuple(classes), asc_ids, class_map)
+    return TreeData(nodes, tuple(classes), asc_ids, class_map, asc_order,
+                    _attr_hashes(doc.get("skillOverrides")))
+
+
+# TC-TREE-URL: the export's generic attribute overrides (the choice an
+# Attribute node takes), found by the override's own name and id prefix
+_ATTR_NAMES = {"Strength": "str", "Dexterity": "dex", "Intelligence": "int"}
+
+
+def _attr_hashes(raw):
+    """{"str"|"dex"|"int": skill hash} from `skillOverrides`; an attribute
+    with no entry or more than one candidate is left out (never guessed)."""
+    found = {}
+    for key, o in raw.items() if isinstance(raw, dict) else ():
+        if not isinstance(o, dict):
+            continue
+        attr = _ATTR_NAMES.get(o.get("name"))
+        oid = _str(o.get("id"))
+        sid = _id(o.get("skill"))
+        if sid is None:
+            sid = _id(key)
+        if attr and oid and oid.startswith("generic_attribute_") \
+                and sid is not None and 0 <= sid <= 0xFFFF:
+            found.setdefault(attr, set()).add(sid)
+    return {a: next(iter(s)) for a, s in found.items() if len(s) == 1}
 
 
 _published = {}  # ascendancy name -> class name from the newest good export

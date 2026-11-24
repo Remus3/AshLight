@@ -124,7 +124,10 @@
       var n = b.tree.node_count || 0;
       tree = { line: (b.tree.title || "Passive tree") + ": " + plural(n, "point", "points") +
                      " allocated" + (b.tree.tree_version ? " (tree " + b.tree.tree_version + ")" : ""),
-               url: safeTreeUrl(b.tree.url),
+               /* TC-TREE-URL: the core's version 7 link for the official
+                  viewer wins over the URL PoB saved (PoB writes the older
+                  format); both pass safeTreeUrl. */
+               url: safeTreeUrl(doc.tree_url) || safeTreeUrl(b.tree.url),
                jewels: Object.keys(b.tree.jewels || {}).length };
     }
     return { loaded: true, title: title, levelLine: "Planned at " + planned + ".", you: you,

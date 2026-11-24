@@ -74,6 +74,17 @@ test("build view: skills, gems and tree summary", () => {
   assert.equal(m.tree.url, "https://www.pathofexile.com/passive-skill-tree/endgame");
 });
 
+test("TC-TREE-URL: the core's version 7 link wins over PoB's saved URL", () => {
+  const v7 = "https://pathofexile2.com/game/passive-skill-tree/AAAABwoAAAXO9AAA";
+  const m = v.buildView(Object.assign({}, BUILD, { tree_url: v7 }), null);
+  assert.equal(m.tree.url, v7);
+  // an unsafe or missing core link falls back to PoB's own URL
+  for (const bad of [null, "", "http://pathofexile2.com/x", "https://example.org/x"]) {
+    const f = v.buildView(Object.assign({}, BUILD, { tree_url: bad }), null);
+    assert.equal(f.tree.url, "https://www.pathofexile.com/passive-skill-tree/endgame", String(bad));
+  }
+});
+
 test("build view: empty and hostile values", () => {
   const e = v.buildView({ loaded: false, build: null }, null);
   assert.equal(e.loaded, false);
