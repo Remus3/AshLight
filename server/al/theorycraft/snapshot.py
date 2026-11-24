@@ -32,12 +32,6 @@ unless it passes `probes`.
 Network only with consent: nothing is fetched while the web_data opt-in
 (config/local.json, decision 0013) is off, unless --opt-in is passed;
 AL_NO_SNAPSHOT=1 skips it always (AUDIT-SNAPSHOT-OPTIN).
-
-ITEM-INFO-CORE (decision 0083): ITEM_SOURCES adds repoe-fork's uniques.json
-(same licence, opt-in and cache as base_items, decision 0009) for the item
-info popover (server/al/iteminfo.py). main() fetches default_sources(), the
-SOURCES plus ITEM_SOURCES, with the real probe table; run() with no
-sources stays SOURCES only. uniques has no probe yet.
 """
 
 import argparse
@@ -95,7 +89,6 @@ SOURCE_CAPS = {
     "world_areas": 16 * MiB,
     "mods": 96 * MiB,
     "stats": 96 * MiB,
-    "uniques": 16 * MiB,
 }
 DEFAULT_CAP = 32 * MiB  # a caller's own source name
 TIMEOUT_S = 60
@@ -138,19 +131,6 @@ OPTIONAL_SOURCES = {
     "mods": REPOE_POE2 + "mods.json",
     "stats": REPOE_POE2 + "stats_by_file.json",
 }
-
-
-# ITEM-INFO-CORE (decision 0083): the unique item list for the item info
-# popover (name, item class, release state); fetched by main() beside
-# SOURCES under the same opt-in; reader server/al/iteminfo.py.
-ITEM_SOURCES = {
-    "uniques": REPOE_POE2 + "uniques.json",
-}
-
-
-def default_sources():
-    """What a normal run of the tool fetches: SOURCES plus ITEM_SOURCES."""
-    return dict(SOURCES, **ITEM_SOURCES)
 
 
 class FetchError(Exception):
@@ -522,8 +502,7 @@ def main(argv=None, environ=None, fetch=http_fetch, contact=None, web_data=None)
         print("snapshot: skipped (web_data off; turn web data on or pass --opt-in)")
         return 0
     directory = Path(args.dir) if args.dir else cache_dir(env)
-    result = run(directory, fetch=fetch, sources=default_sources(), force=args.force,
-                 contact=contact, probes=snapprobe.PROBES,
+    result = run(directory, fetch=fetch, force=args.force, contact=contact,
                  runtime=paths.runtime_dir(), log_dir=paths.sidecar_dir("Logs", env))
     for name in sorted(result):
         print(f"snapshot: {name}: {result[name]}")

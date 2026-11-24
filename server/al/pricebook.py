@@ -63,12 +63,6 @@ good lists and shows a reload note; a missing file reads as the built-in
 lists below. UNIQUE_TYPES and EXCHANGE_TYPES stay readable as module
 attributes and always give the current lists; a dropped type is no longer
 requested, looked up or summarised.
-
-ITEM-INFO-CORE (decision 0083): an entry also keeps poe.ninja's icon URL
-(only an absolute https URL on a poecdn.com host, ICON_MAX characters) and
-a unique's flavour text (FLAVOUR_MAX characters) when the line carries
-them; info() finds one entry by exact name for the item info popover.
-Still cache-only: no request is added.
 """
 
 import threading
@@ -99,10 +93,6 @@ TYPES_PATH = Path(__file__).resolve().parent / "data" / "price_types.json"
 TYPES_MAX = 40  # names per list
 TYPES_MAX_BYTES = 64 * 1024
 _TYPE_RE = re.compile(r"[A-Za-z]{1,64}")
-ICON_MAX = 300
-FLAVOUR_MAX = 400
-ICON_HOST = "poecdn.com"
-_ICON_BAD = re.compile(r"[\s\"'<>\\]")
 CACHE_NAME = "book.json"
 MAX_LINES = 5000
 FEW_LISTINGS = 10  # a unique with fewer listings is a thin market
@@ -153,43 +143,6 @@ def _unit(core):
             name = it["name"][:60]
             break
     return pid, name or pid
-
-
-def safe_icon(url):
-    """`url` when it is an absolute https URL on poecdn.com or one of its
-    subdomains, with no user info, port, space or quote, at most ICON_MAX
-    characters; None otherwise (a relative path is never completed)."""
-    if not isinstance(url, str) or not url or len(url) > ICON_MAX or _ICON_BAD.search(url):
-        return None
-    try:
-        parts = urllib.parse.urlsplit(url)
-        port = parts.port
-    except ValueError:
-        return None
-    host = (parts.hostname or "").lower()
-    if parts.scheme != "https" or parts.username or parts.password or port is not None:
-        return None
-    if host != ICON_HOST and not host.endswith("." + ICON_HOST):
-        return None
-    return url
-
-
-def _flavour(line):
-    for k in ("flavourText", "flavorText"):
-        text = line.get(k)
-        if isinstance(text, str) and text.strip():
-            return " ".join(text.split())[:FLAVOUR_MAX]
-    return None
-
-
-def _extras(entry, icon, flavour=None):
-    """Add icon / flavour to an entry only when known (compact cache)."""
-    icon = safe_icon(icon)
-    if icon:
-        entry["icon"] = icon
-    if flavour:
-        entry["flavour"] = flavour
-    return entry
 
 
 def shape_error(lines, kept):
@@ -254,13 +207,11 @@ def parse_item_overview(body):
             continue
         base = line.get("baseType") if isinstance(line.get("baseType"), str) else ""
         listings = _num(line.get("listingCount"))
-        entries.append(_extras(
-            {"name": name.strip()[:120], "base": base.strip()[:120],
-             "corrupted": line.get("corrupted") is True,
-             "value": value,
-             "listings": int(listings) if listings is not None else None,
-             "change": _change(line)},
-            line.get("icon"), _flavour(line)))
+        entries.append({"name": name.strip()[:120], "base": base.strip()[:120],
+                        "corrupted": line.get("corrupted") is True,
+                        "value": value,
+                        "listings": int(listings) if listings is not None else None,
+                        "change": _change(line)})
     return {"primary": pid, "unit": unit, "entries": entries, "lines": lines}
 
 
@@ -271,14 +222,13 @@ def parse_exchange_overview(body):
     item. "lines" counts the dict lines read (DATA-PRICE-SHAPE-GUARD)."""
     doc, core = _doc(body)
     pid, unit = _unit(core)
-    names, icons = {}, {}
+    names = {}
     for items in (doc.get("items"), core.get("items")):
         for it in items[:MAX_LINES] if isinstance(items, list) else []:
             if isinstance(it, dict) and isinstance(it.get("id"), str):
                 nm = it.get("name") or it.get("text")
                 if isinstance(nm, str) and nm.strip() and it["id"] not in names:
                     names[it["id"]] = nm.strip()[:120]
-                    icons[it["id"]] = it.get("image") or it.get("icon")
     entries = []
     lines = 0
     for line in doc["lines"][:MAX_LINES]:
@@ -289,9 +239,9 @@ def parse_exchange_overview(body):
         value = _num(line.get("primaryValue"))
         if not isinstance(lid, str) or lid not in names or value is None:
             continue
-        entries.append(_extras({"name": names[lid], "value": value,
-                                "volume": _num(line.get("volumePrimaryValue")),
-                                "change": _change(line)}, icons.get(lid)))
+        entries.append({"name": names[lid], "value": value,
+                        "volume": _num(line.get("volumePrimaryValue")),
+                        "change": _change(line)})
     return {"primary": pid, "unit": unit, "entries": entries, "lines": lines}
 
 
@@ -566,33 +516,6 @@ class PriceBook:
                 if _key(e.get("name")) == base:
                     return self._result("stackable", n, t, e)
         return None
-
-    def info(self, name, league=None):
-        """ITEM-INFO-CORE: the cached entry whose name equals `name` (case
-        and spacing folded), or None: a unique first (the uncorrupted line,
-        then the most listed), else a stackable. The _result fields plus
-        icon and flavour when known. Never makes a request."""
-        key = _key(name)
-        if not key:
-            return None
-        same = [(n, t, e) for n, t, e in self._entries(league, ("unique",))
-                if _key(e.get("name")) == key]
-        if same:
-            pick = [x for x in same if x[2].get("corrupted") is not True] or same
-            n, t, e = max(pick, key=lambda x: x[2].get("listings") or 0)
-            out = self._result("unique", n, t, e)
-        else:
-            out = None
-            for n, t, e in self._entries(league, ("exchange",)):
-                if _key(e.get("name")) == key:
-                    out = self._result("stackable", n, t, e)
-                    break
-            if out is None:
-                return None
-        for k in ("icon", "flavour"):
-            if isinstance(e.get(k), str) and e[k]:
-                out[k] = e[k]
-        return out
 
     @staticmethod
     def _result(kind, type_name, t, e):
