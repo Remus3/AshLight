@@ -103,15 +103,19 @@ def test_dashboard_links_local_favicon():
     assert "http" not in html.split("<title>")[0].replace("http-equiv", "")
 
 
-def test_header_shows_the_mark_left_of_the_name():
+def test_header_shows_the_mark_and_a_hidden_name():
     # PLAY-TD-09C-BAR (F-190): AshLight's own small mark from the dashboard's
-    # own files (no GGG art), decorative (empty alt), in a 20 px box
+    # own files (no GGG art), decorative (empty alt, aria-hidden), in a 20 px
+    # box. UI-HEADER-TEXT (decision 0082 part 2): the visible name left of
+    # the tabs is gone; the h1 keeps "AshLight" only as .sr-only text, and
+    # document.title stays "AshLight".
     html = srcpaths.index_html()
     head = html[html.index('<header class="bar">'):html.index("</header>")]
-    h1 = head[head.index("<h1"):head.index("</h1>")]
-    img = '<img class="brand-mark" src="/web/favicon.svg" alt="" width="20" height="20">'
-    assert img in h1
-    assert h1.index(img) < h1.index("AshLight")
+    h1 = head[head.index("<h1"):head.index("</h1>") + len("</h1>")]
+    img = ('<img class="brand-mark" src="/web/favicon.svg" alt="" '
+           'aria-hidden="true" width="20" height="20">')
+    assert h1 == '<h1 class="brand">' + img + '<span class="sr-only">AshLight</span></h1>'
+    assert "<title>AshLight</title>" in html
     assert head.count("<img") == 1
     css = srcpaths.read("app.css")
     assert ".brand-mark { display: block; flex: 0 0 auto; width: 20px; height: 20px; }" in css
