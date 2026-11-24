@@ -17,7 +17,11 @@ import srcpaths
 ROOT = Path(__file__).resolve().parents[1]
 HTML = srcpaths.index_html()
 CSS = srcpaths.read("app.css")
-JS = {p.name: p.read_text(encoding="ascii") for p in srcpaths.web_js()}
+# WEB-PANEL-NAMES: keyed by the path under web/ (posix), so web/pager.js
+# and web/panels/pager.js (and the two settingsio.js) are both read; a
+# bare-name key let the panel file hide the web/ one.
+JS = {p.relative_to(srcpaths.WEB).as_posix(): p.read_text(encoding="ascii")
+      for p in srcpaths.web_js()}
 DESIGN = (ROOT / "docs" / "design" / "0001-design-system.md").read_text(encoding="ascii")
 
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta",
@@ -92,6 +96,20 @@ def by_id():
 def is_live(n):
     live = n.attrs.get("aria-live")
     return (live is not None and live != "off") or n.attrs.get("role") in LIVE_ROLES
+
+
+def test_every_web_script_is_read_once():
+    """WEB-PANEL-NAMES: every web/**/*.js is in the table under its own
+    key, so no file shares a key with another and none is skipped; the
+    shared bare names (pager.js, settingsio.js) are read twice, once per
+    folder."""
+    on_disk = sorted(p.relative_to(srcpaths.WEB).as_posix()
+                     for p in srcpaths.WEB.rglob("*.js"))
+    assert on_disk and sorted(JS) == on_disk
+    assert len(JS) == len(srcpaths.web_js())
+    for name in ("pager.js", "settingsio.js"):
+        assert name in JS and "panels/" + name in JS, name
+        assert JS[name] != JS["panels/" + name], name
 
 
 def test_landmarks_once_each_and_main_holds_the_cards():
@@ -225,7 +243,7 @@ def test_bar_has_one_status_word_on_every_tab():
     assert not [n for n in every if n.attrs.get("id") == "link"]
     # TEST-WEB-PANELS-C2 (adjudicator ruling): the bar status word lives
     # in web/panels/consent.js
-    app = JS["consent.js"]
+    app = JS["panels/consent.js"]
     assert 'showPill("link"' not in app and "D.linkView(" not in app
     assert 'showPill("link"' not in JS["app.js"] and "D.linkView(" not in JS["app.js"]
     assert re.search(r'showPill\("reading", D\.barStatus\(', app)
@@ -549,7 +567,7 @@ def test_failed_saves_are_said_on_the_header_polite_line():
     # #weights-status is itself a polite region (index.html), so the header
     # line says the words only while that line is not shown (review W1):
     # never twice while the card is open
-    we = JS["weights.js"]
+    we = JS["panels/weights.js"]
     assert is_live(by_id()["weights-status"])
     assert re.search(r"function failed\(text\) \{\s*var line = \$\(\"weights-status\"\);\s*"
                      r"if \(line\) \{ line\.textContent = text; \}\s*"
@@ -571,7 +589,7 @@ def test_failed_saves_are_said_on_the_header_polite_line():
     for words in ("Not saved. Try again.", "Not reset. Try again.",
                   "Not saved. Check that each value is a number, then try again."):
         assert len(words.split()) <= 12, words
-    for name in ("updates.js", "autostart.js", "weights.js"):
+    for name in ("updates.js", "autostart.js", "panels/weights.js"):
         assert "aria-live" not in JS[name] and not re.search(r"""role["']?\s*,""", JS[name]), name
 
 
