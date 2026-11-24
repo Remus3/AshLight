@@ -545,11 +545,23 @@ def test_failed_saves_are_said_on_the_header_polite_line():
     assert au.count("T.notSaved") == 2  # the helper's two uses only
     assert len(re.findall(r"\bnotSaved\(doc\);", au)) == 2
     assert 'require("./tabs.js")' in au and "root.ALTabs" in au
-    # web/panels/weights.js: the failure lines of save, row reset and reset
+    # web/panels/weights.js: the failure lines of save, row reset and reset.
+    # #weights-status is itself a polite region (index.html), so the header
+    # line says the words only while that line is not shown (review W1):
+    # never twice while the card is open
     we = JS["weights.js"]
-    assert re.search(r"function failed\(text\) \{\s*\$\(\"weights-status\"\)\.textContent = text;"
-                     r"\s*var t = window\.ALTabs;\s*"
+    assert is_live(by_id()["weights-status"])
+    assert re.search(r"function failed\(text\) \{\s*var line = \$\(\"weights-status\"\);\s*"
+                     r"if \(line\) \{ line\.textContent = text; \}\s*"
+                     r"if \(statusShown\(line\)\) \{ return; \}\s*"
+                     r"var t = window\.ALTabs;\s*"
                      r"if \(t && typeof t\.say === \"function\"\) \{ t\.say\(document, text\); \}", we)
+    shown = re.search(r"function statusShown\(node\) \{(.*?)\n  \}", we, re.S)
+    assert shown, "statusShown"
+    body = shown.group(1)
+    assert "node.offsetParent === null" in body
+    assert 'data-collapsed=\\"true\\"' in body and "[hidden]" in body
+    assert we.count("t.say(") == 1  # failed() is the one place weights.js says
     for words, n in (("Not reset. Try again.", 2),
                      ("Not saved. Check that each value is a number, then try again.", 1)):
         assert len(re.findall(r"failed\(\"" + re.escape(words) + r"\"\);", we)) == n, words
