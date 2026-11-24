@@ -800,7 +800,10 @@ of the HALT check.
   other than the overlay's (8 px allowance for the invisible window
   border); tray switch "Open AshLight when the game wakes", default on,
   kept in client-prefs.json in the runtime dir (decision 0041 amendment
-  2026-11-19).
+  2026-11-19). poe.ninja joined config/link_hosts.json 2026-11-23
+  (DATA-PRICE-NINJA-LINK, adjudicator ruling) for the price card's
+  category page link only. The player opens it with a click. The app
+  requests nothing for it.
   Reverses if:
   the overlay must run without the client, a release channel makes a
   signed .exe worth its build deps, or the companion renderer breaks the
@@ -1209,7 +1212,14 @@ of the HALT check.
   skills, support links, gem timing from the gems snapshot, ordered
   passives, ascendancy and per-slot item focus; per-tab "follow Play
   guidance" on by default, reading only published zone, act and level,
-  never claiming a step done). Reverses if: PoB drift makes route XML
+  never claiming a step done). KINDLER-DATA:
+  theorycraft/archetypes.py checks archetypes.json (schema 1, fixed key
+  allow-lists, src and checked per template and stage, hot reloaded);
+  resolve() only looks up and drops tree node ids missing from the cached
+  export with a note, gems unchecked until a gems snapshot exists; the
+  validator check() (connectivity from class and ascendancy start, order,
+  point budget (level - 1) + bonus_points, gem and zone ids) runs only in
+  tests and KINDLER-TEMPLATES. Reverses if: PoB drift makes route XML
   unreliable, 12 candidates in 60 s breach the 0024 / 0028 budgets,
   automatic regeneration is wanted and shown to cost no FPS, 6 tabs prove
   too few, a name collision or GGG use of the word is found, the operator
@@ -1251,7 +1261,12 @@ of the HALT check.
   AshLight keeps Apache-2.0, link only to poe2db / wiki, no text or
   data fetched, bundled or snapshotted until a source permits app use,
   then only by decision 0009's opt-in sidecar route with any community
-  figure labelled "community estimate"). Reverses if: a permitted source
+  figure labelled "community estimate"). GET /api/iteminfo
+  (ITEM-INFO-CORE) is a token-gated plug route: exact name (at most 120
+  characters) over cached base_items, the cached uniques snapshot
+  (snapshot.ITEM_SOURCES, same opt-in) and the price book while web_data
+  is on; an unknown name is 200 with empty fields; price entries keep
+  only https poecdn.com icons. Reverses if: a permitted source
   for drops, vendor or disenchant data appears, a source publishes an
   API or app-use terms or gives written permission, GGG opens
   registration, PoB relicenses or a Source line proves wrong in play,

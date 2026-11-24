@@ -144,7 +144,8 @@ wave starts; the wave integrator adds the index line. 0035 stays unused.
 - 0017: No app calls to trade2; trade-search link only; floor wording
   (PRICE-1, TC-UPGRADE, RES-POLICY).
 - 0016: Price check result contract, overlay card slot, rates panel
-  (PRICE-1-UI, DATA-NINJA-UI).
+  (PRICE-1-UI, DATA-NINJA-UI); amended 2026-11-23: card key ninja_url, a
+  poe.ninja category page link the player opens; the app requests nothing.
 - 0015: Price check per press and the User-Agent contact (PRICE-1,
   UA-CONTACT).
 - 0014: Build view, item check UI and graphics advisor (TC-VIEW,

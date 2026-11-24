@@ -119,7 +119,8 @@ its code (license notes: 0006).
 - 0036 poe.ninja as the PoE2 price source: contract, drift, watch design -
   poe.ninja contract as lines (24 URL shapes, 556 GETs a day max), ranked
   drift risks, 12 recommendations and a three-layer shape watch for 0058.
-  Verified 2026-11-18
+  Verified 2026-11-18; section Economy page forms (2026-11-23): poe.ninja
+  PoE2 economy page URL forms read from robots.txt and the sitemap
   ([0036-data-sources-poe-ninja.md](0036-data-sources-poe-ninja.md))
 - 0037 Data sources: PoB-PoE2, LuaJIT / WinLibs, repoe-fork, GGG tree
   export - upstream calc and data sources: what is pinned vs current,
