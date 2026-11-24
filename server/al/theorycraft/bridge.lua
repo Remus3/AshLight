@@ -13,7 +13,7 @@
 -- client ignores it). One ready frame with id 0 is sent after start.
 --
 -- Commands: "ping", "load_build" {xml}, "set_item" {text, slot?},
--- "outputs" {keys?}, "main_skill", "quit"; "probe_confinement" is for the
+-- "outputs" {keys?}, "main_skill", "support_fit", "quit"; "probe_confinement" is for the
 -- tests only.
 --
 -- This script reads only its stdin and PoB's own files; it runs no shell,
@@ -490,6 +490,51 @@ handlers["main_skill"] = function()
   return { found = true, disabled = disabled,
            reason = type(reason) == "string" and reason or nil,
            name = type(name) == "string" and name or nil }
+end
+
+-- KINDLER-SUPPORT-FIT (decision 0081): PoB's own answer, per active skill of
+-- the loaded build, whether each linked support applies to it. PoB decides
+-- it in calcs.createActiveSkill (CalcActiveSkill.lua): a support that
+-- calcLib.canGrantedEffectSupportActiveSkill accepts goes into the skill's
+-- effectList after the active effect; a rejected one stays only in its
+-- supportList. Read only; no own rule, nothing guessed: a linked gem PoB
+-- did not recognise is in neither list and is not reported.
+local function effect_name(eff)
+  if type(eff) ~= "table" then return nil end
+  if type(eff.gemData) == "table" and type(eff.gemData.name) == "string" then
+    return eff.gemData.name
+  end
+  if type(eff.grantedEffect) == "table" and type(eff.grantedEffect.name) == "string" then
+    return eff.grantedEffect.name
+  end
+  return nil
+end
+
+handlers["support_fit"] = function()
+  local build = build_mode()
+  if not build or not build.calcsTab then error("no build loaded", 0) end
+  frame()
+  local env = build.calcsTab.mainEnv
+  local list = type(env) == "table" and type(env.player) == "table"
+    and env.player.activeSkillList
+  local skills = {}
+  if type(list) ~= "table" then return { skills = skills } end
+  for _, active in ipairs(list) do
+    local name = type(active) == "table" and effect_name(active.activeEffect)
+    if name and type(active.supportList) == "table" then
+      local used = {}
+      if type(active.effectList) == "table" then
+        for i = 2, #active.effectList do used[active.effectList[i]] = true end
+      end
+      local sups = {}
+      for _, sup in ipairs(active.supportList) do
+        local sname = effect_name(sup)
+        if sname then sups[#sups + 1] = { name = sname, applies = used[sup] == true } end
+      end
+      skills[#skills + 1] = { skill = name, supports = sups }
+    end
+  end
+  return { skills = skills }
 end
 
 -- TC-CALC-CONFINE-LUA: test-only (tests/test_tc_bridge.py); the core never
