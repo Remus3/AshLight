@@ -39,6 +39,7 @@ import re
 import time
 
 from . import hotreload, num
+from .text import iteminfo as text
 
 NAME_MAX = 120          # the price book keeps names to 120 characters too
 TEXT_MAX = 600          # description / directions
@@ -46,7 +47,7 @@ MAX_BYTES = 64 * 1024 * 1024    # = basetypes.MAX_BYTES (one shared parse)
 UNIQUES_MAX_BYTES = 16 * 1024 * 1024
 UNIQUES_NAME = "uniques.json"
 RELEASED = "released"
-CREDIT = "Prices: poe.ninja"
+CREDIT = text.CREDIT
 REPOE, NINJA = "repoe-fork", "poe.ninja"
 DIVINE_ID, DIVINE_NAME = "divine", "divine orb"
 _MARKUP = re.compile(r"\[([^\[\]|]*)\|([^\[\]]*)\]|\[([^\[\]]*)\]")
@@ -55,36 +56,36 @@ _CONTROL = re.compile(r"[\x00-\x1f\x7f]")
 _STATE = re.compile(r"[a-z_]{1,32}")
 
 
-def key(text):
+def key(value):
     """The match key of a name: spacing folded, lower case."""
-    return " ".join(text.split()).lower() if isinstance(text, str) else ""
+    return " ".join(value.split()).lower() if isinstance(value, str) else ""
 
 
 def clean_name(name):
     """The asked name with its spacing folded; ValueError when it is not a
     string, empty, longer than NAME_MAX or holds a control character."""
     if not isinstance(name, str):
-        raise ValueError("Send an item name.")
+        raise ValueError(text.NO_NAME)
     if len(name) > NAME_MAX:
-        raise ValueError(f"An item name is at most {NAME_MAX} characters.")
+        raise ValueError(text.name_long(NAME_MAX))
     if _CONTROL.search(name):
-        raise ValueError("An item name is one line of text.")
+        raise ValueError(text.ONE_LINE)
     folded = " ".join(name.split())
     if not folded:
-        raise ValueError("Send an item name.")
+        raise ValueError(text.NO_NAME)
     return folded
 
 
-def plain(text):
+def plain(raw):
     """repoe-fork text with its [Id|Shown] / [Shown] markup read as the
     shown words, spacing kept per line, at most TEXT_MAX characters; None
     for no text."""
-    if not isinstance(text, str):
+    if not isinstance(raw, str):
         return None
 
     def shown(m):
         return m.group(2) if m.group(2) is not None else (m.group(3) or "")
-    out = _MARKUP.sub(shown, text)
+    out = _MARKUP.sub(shown, raw)
     out = "\n".join(" ".join(line.split()) for line in out.splitlines())
     out = out.strip()
     return out[:TEXT_MAX] if out else None
@@ -139,9 +140,9 @@ def bases_from_doc(doc):
         if isinstance(turns, str) and turns:
             fields["_turns"] = turns
         for f in ("description", "directions"):
-            text = plain(props.get(f))
-            if text:
-                fields[f] = text
+            words_of = plain(props.get(f))
+            if words_of:
+                fields[f] = words_of
         if state:
             fields["release_state"] = state
         by_key[k] = fields
@@ -165,7 +166,7 @@ def uniques_from_doc(doc):
         k = name.lower()
         if k in out and entry.get("is_alternate_art") is True:
             continue
-        fields = {"name": name, "rarity": "Unique"}
+        fields = {"name": name, "rarity": text.UNIQUE}
         words = class_words(entry.get("item_class"))
         if words:
             fields["item_class"] = words
@@ -188,11 +189,11 @@ class ItemInfo:
         self.rates = rates
         self.clock = clock
         self.bases = hotreload.Watched(
-            bases_path, None, name="Item info base list", default=_empty_bases,
+            bases_path, None, name=text.BASES_NAME, default=_empty_bases,
             check=hotreload.check_json(MAX_BYTES), from_doc=bases_from_doc,
             share=True, registry=False)
         self.uniques = hotreload.Watched(
-            uniques_path, None, name="Unique item list", default=dict,
+            uniques_path, None, name=text.UNIQUES_NAME, default=dict,
             check=hotreload.check_json(UNIQUES_MAX_BYTES, kind=(dict, list)),
             from_doc=uniques_from_doc, registry=False)
 

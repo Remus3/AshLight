@@ -443,3 +443,36 @@ def test_route_web_data_off_shows_no_market(core):
     assert status == 200
     f = json.loads(body)["fields"]
     assert "market" not in f and "icon" not in f and "flavour" not in f
+
+
+# --- the text (server/al/text/iteminfo.py, docs/design/copy/iteminfo.md) --
+
+def test_every_sentence_is_pinned_exactly():
+    from server.al.text import iteminfo as text
+    assert text.NO_NAME == "AshLight needs one item name. Open the item again."
+    assert text.MANY_NAMES == "Look up one item at a time."
+    assert text.ONE_LINE == ("An item name is one line of text. "
+                             "Use the name as the game shows it.")
+    assert text.name_long(120) == ("An item name is at most 120 characters. "
+                                   "Use the name as the game shows it.")
+    assert text.CREDIT == "Prices: poe.ninja" == ninja.SHORT_CREDIT
+    assert text.UNIQUE == "Unique"
+    assert text.BASES_NAME == "Item base list"
+    assert text.UNIQUES_NAME == "Unique item list"
+
+
+def test_refusals_use_the_text_module(tmp_path, core):
+    from server.al.text import iteminfo as text
+    look = make_lookup(tmp_path / "x")
+    for bad, want in ((None, text.NO_NAME), ("  ", text.NO_NAME),
+                      ("a\nb", text.ONE_LINE),
+                      ("x" * (iteminfo.NAME_MAX + 1), text.name_long(iteminfo.NAME_MAX))):
+        with pytest.raises(ValueError) as e:
+            look.lookup(bad)
+        assert str(e.value) == want
+    status, body = call(core, "/api/iteminfo", auth())
+    assert status == 400 and json.loads(body) == {"error": text.NO_NAME}
+    status, body = call(core, "/api/iteminfo?name=a&name=b", auth())
+    assert status == 400 and json.loads(body) == {"error": text.MANY_NAMES}
+    status, body = call(core, "/api/iteminfo?name=a%0Ab", auth())
+    assert status == 400 and json.loads(body) == {"error": text.ONE_LINE}

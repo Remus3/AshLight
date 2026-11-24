@@ -649,6 +649,7 @@ Generation rules:
    - overlaycard: [`docs/design/copy/overlaycard.md`](copy/overlaycard.md)
    - explain: [`docs/design/copy/explain.md`](copy/explain.md)
    - playernotes: [`docs/design/copy/playernotes.md`](copy/playernotes.md)
+   - iteminfo: [`docs/design/copy/iteminfo.md`](copy/iteminfo.md)
 3. **Player text is quoted, never rewritten.** Whisper bodies and names
    are shown verbatim (textContent only, never innerHTML), clipped with
    "..." at the line limit.

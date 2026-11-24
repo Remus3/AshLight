@@ -19,7 +19,6 @@ from pathlib import Path
 
 ORDER = 100
 PATH = "/api/iteminfo"
-BAD_NAME = "Send one item name."
 
 _lock = threading.Lock()
 
@@ -38,9 +37,12 @@ def lookup_of(core):
 
 
 def get_iteminfo(req, query, extra):
+    from ..text import iteminfo as text  # lazy, as lookup_of
     names = (query or {}).get("name") or []
-    if len(names) != 1:
-        return req._json(400, {"error": BAD_NAME}, extra)
+    if len(names) > 1:
+        return req._json(400, {"error": text.MANY_NAMES}, extra)
+    if not names:
+        return req._json(400, {"error": text.NO_NAME}, extra)
     try:
         reply = lookup_of(req.server.core).lookup(names[0])
     except ValueError as exc:
