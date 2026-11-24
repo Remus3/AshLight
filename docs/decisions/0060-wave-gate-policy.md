@@ -127,3 +127,43 @@ kit changes item 16c to forbid ungated file-named runs.
 - Reverses if: a soak median exceeds 145 s (bisect, do not move the
   number), or grouping is restored and the soak median changes by more
   than 5 s (record the new figures here).
+
+## Amendment 2026-11-24 (TEST-XDIST-GROUP-RESTORE)
+
+- Cause confirmed: pytest-xdist 3.8.0 (the newest release) marks a
+  grouped item under --dist loadgroup by assigning item._nodeid =
+  "<nodeid>@<group>", while pytest 9.2.0 derives Node.nodeid from
+  Node._id, so the worker's collection ids carried no group and
+  loadgroup ran as plain load. Not the marker registration, not the
+  suite_run arguments, not another conftest hook.
+- Fix (test side, pins unchanged): tests/conftest.py wraps
+  pytest_collection_finish and, only for an item holding an
+  xdist-written _nodeid that differs from its nodeid, puts the
+  suffixed id in place (the id's own parse) while the worker sends its
+  collection, then restores the plain id. The scheduler dispatches by
+  index, so reports, the slow budget and nodeid-keyed tables keep the
+  plain id. xdist is not imported. tests/test_xdist_group.py runs a
+  child pytest on 4 workers and fails when a group splits (it failed
+  before the fix with 6 grouped tests on gw0 to gw3).
+- Order: tools/suite_run.py names the test_shots render in
+  AL_SUITE_FIRST and tests/conftest.py moves it to the front of the
+  collection, so it is dispatched in the first wave after the
+  multi-test groups.
+- Soak: three exclusive runs of python tools/suite_run.py through the
+  suite gate on the package commit, 16 CPUs, 12 workers, 5898 passed
+  plus 9 skipped in phase 1 and 21 timing tests in phase 2, all green.
+  Gate-child wall 135.6, 137.7 and 136.9 s, median 136.9 s (phase 1
+  80.1, 82.1, 81.3 s; phase 2 54.6, 54.7, 54.6 s). Against the
+  140.1 s median of the GATE-HOLD-BISECT record, 3.2 s faster: under
+  the 5 s record threshold, inside the 145 s interim bound, above the
+  125 s restore condition, so no bound moves.
+- Alternatives: pin an older pytest that still honours item._nodeid.
+  Rejected: it moves a hash-pinned test dependency back across a major
+  version and there is no newer xdist release with a fix; the
+  conftest wrapper is smaller and untouched by a future fixed xdist
+  (it acts only when the ids differ).
+- Reverses if: pytest-xdist ships a release that sets the group
+  through Node._id (then drop the wrapper and keep the test), pytest
+  stops parsing a "@group" id through NodeId.parse, a soak median
+  exceeds 145 s (bisect, do not move the number), or a soak median
+  reaches 125 s or under (restore the 120 s bound).

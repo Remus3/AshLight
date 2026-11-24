@@ -99,6 +99,53 @@ def pytest_configure(config):
         config.addinivalue_line("markers", f"{name}: {doc}")
 
 
+# TEST-XDIST-GROUP-RESTORE (decision 0060 note 2026-11-24): under
+# --dist loadgroup pytest-xdist 3.8.0 marks a grouped item by setting
+# item._nodeid to "<nodeid>@<group>", but pytest 9.2.0 reads nodeid from
+# Node._id, so the suffix never reached the scheduler and loadgroup ran as
+# plain load. The scheduler only sees the ids a worker sends from
+# pytest_collection_finish (it then dispatches by index), so this wrapper
+# puts the suffixed id in place for that one hook and restores the plain id
+# after it: reports, the slow budget and every nodeid-keyed table keep the
+# plain id. It acts only on an item holding an xdist-written _nodeid that
+# differs from its nodeid, so serial runs are untouched. xdist is not
+# imported.
+@pytest.hookimpl(wrapper=True, tryfirst=True)
+def pytest_collection_finish(session):
+    swapped = []
+    for item in session.items:
+        want = vars(item).get("_nodeid")
+        if not isinstance(want, str) or want == item.nodeid:
+            continue
+        ident = getattr(item, "_id", None)
+        parse = getattr(type(ident), "parse", None)
+        if parse is not None:
+            swapped.append((item, ident))
+            item._id = parse(want)
+    try:
+        return (yield)
+    finally:
+        for item, ident in swapped:
+            item._id = ident
+
+
+# TEST-XDIST-GROUP-RESTORE: tools/suite_run.py names in AL_SUITE_FIRST the
+# tests to run first (the long test_shots render), so under --dist loadgroup
+# it is dispatched in the first wave instead of late in file order. Every
+# worker collects the same order, so their collections still match. Unset
+# (any run but the suite runner's) leaves the order alone.
+@pytest.hookimpl(trylast=True)
+def pytest_collection_modifyitems(config, items):
+    first = [n for n in os.environ.get("AL_SUITE_FIRST", "").split(",") if n]
+    if not first:
+        return
+    rank = {n: i for i, n in enumerate(first)}
+    front = sorted((it for it in items if it.nodeid in rank),
+                   key=lambda it: rank[it.nodeid])
+    if front:
+        items[:] = front + [it for it in items if it.nodeid not in rank]
+
+
 # TEST-SLOW-BUDGET (F-168): per-test call ceilings, the full-run suite
 # ceiling and the five worst call times (tests/slow_budget.py).
 import slow_budget  # noqa: E402

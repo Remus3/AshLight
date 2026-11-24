@@ -122,6 +122,38 @@ def test_an_existing_suite_t0_is_not_overwritten():
     assert [e["AL_SUITE_T0"] for _argv, e in seen] == ["1234.5", "1234.5"]
 
 
+def test_both_phases_name_the_render_to_run_first():
+    """TEST-XDIST-GROUP-RESTORE: the long test_shots render is named in
+    AL_SUITE_FIRST for both phases; tests/conftest.py moves it first."""
+    seen, runner = _record([0, 0])
+    env = dict(GATED)
+    assert suite_run.run(env, runner, xdist=True, out=io.StringIO()) == 0
+    want = "tests/test_shots.py::test_real_render_from_a_real_demo_core"
+    assert suite_run.FIRST == (want,)
+    assert [e.get(suite_run.FIRST_ENV) for _argv, e in seen] == [want, want]
+    assert suite_run.FIRST_ENV not in env, "the caller's mapping is not changed"
+
+
+@pytest.mark.slow  # one collect-only run of the whole tree
+def test_the_named_first_test_is_collected_first():
+    """The real conftest hook: with AL_SUITE_FIRST set the render is the
+    first collected item, and the collection keeps every other test."""
+    def collect(first):
+        env = {k: v for k, v in os.environ.items()
+               if not k.startswith("PYTEST_") and k != suite_run.FIRST_ENV}
+        if first:
+            env[suite_run.FIRST_ENV] = ",".join(suite_run.FIRST)
+        p = subprocess.run([sys.executable, "-m", "pytest", "--collect-only", "-q",
+                            "-m", "not timing"], cwd=str(ROOT), env=env,
+                           capture_output=True, text=True, timeout=120)
+        assert p.returncode == 0, p.stdout[-2000:] + p.stderr[-2000:]
+        return [ln for ln in p.stdout.splitlines() if "::" in ln]
+    plain, ordered = collect(False), collect(True)
+    assert ordered[0] == suite_run.FIRST[0]
+    assert plain[0] != suite_run.FIRST[0]
+    assert sorted(plain) == sorted(ordered)
+
+
 def test_run_outside_the_gate_is_refused_with_the_gate_command():
     seen, runner = _record([0, 0])
     buf = io.StringIO()
