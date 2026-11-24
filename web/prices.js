@@ -67,14 +67,17 @@
   /* The contact field (write-only: never prefilled, the value is never
      echoed; the core answers only contact_set). Shown only while the doc
      says no contact is set; a doc without contact_set leaves it as it is
-     (show null). */
+     (show null). DATA-CONTACT-DEFAULT: contact_set is the typed contact
+     only; with none, requests carry the project's issues page, so the
+     field is an optional per-install override. */
   function contactView(doc) {
     var known = !!doc && typeof doc.contact_set === "boolean";
     return {
       show: known ? doc.contact_set !== true : null,
-      label: "Contact for poe.ninja",
-      note: "An email address or a name. AshLight sends it to poe.ninja in its " +
-            "User-Agent, as poe.ninja asks, and stores it only on this computer."
+      label: "Your contact for poe.ninja",
+      note: "Optional. An email address or a name. poe.ninja asks who runs an app. " +
+            "AshLight sends your contact if you add one, else its project issues page. " +
+            "Stored only on this computer."
     };
   }
 

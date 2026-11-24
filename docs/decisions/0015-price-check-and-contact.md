@@ -102,3 +102,29 @@ Checks report, the settings export) says only contact_set, and the Checks
 fix names the card, never a file path. A set contact starts a due price
 refresh at once. Reverses if: a second store for the contact is wanted, or
 a read-back must show the value.
+
+## Amendment 2026-11-23
+
+DATA-CONTACT-DEFAULT (F-018, ruling Q-03), item 1 (contact): once the
+repository address is in the tree (config/public_repo.json, read only
+through updates.load_repo, the one address source; never a literal), the
+default contact is the project's issues page (webfetch.default_contact,
+`https://github.com/<repo>/issues`, cleaned like a typed value). Requests
+send webfetch.effective_contact: the typed "contact" of config/local.json
+when usable, else that default, else none ("contact not set" as before).
+Core.effective_contact feeds the poe.ninja client, the blocked reason and
+the Checks facts; snapshot.py main() uses the same fallback. Core.contact
+and the /api/web-data contact_set stay the typed contact only, so the
+dashboard field is an optional per-install override. Only the real core
+reads the address file; a test or demo core uses the update_repo it is
+handed ('' when none: no default). Release builds still make no poe.ninja
+request (decision 0072).
+ALTERNATIVES: (B) Core.contact itself falls back, so contact_set reads true
+and the field hides (rejected: the override could then only be typed by
+hand in local.json); (C) keep the typed contact mandatory (rejected: every
+player must type something before prices work).
+WHY: poe.ninja and GGG ask for a way to reach the tool's maker; the public
+issues page is that, and no player has to type anything.
+REVERSES IF: poe.ninja or GGG asks for a personal contact instead of a
+project page, the repository is withdrawn, or the operator rules the
+default unwanted.
