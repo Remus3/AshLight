@@ -33,6 +33,22 @@ a new or changed price template is edited here, not in design 0001.
   listings found`, `Price check failed`; dashboard `<n> listed in <league>. The cheapest
   is <a>; the middle of the <k> cheapest is <b>.`; the one card is
   chosen by `overlay_card` (decision 0016)
+- contact field (DATA-CONTACT-UI, DATA-CONTACT-CLEAR, web/prices.js
+  `contactView` / `contactClearedText`): label `Your contact for
+  poe.ninja`; the note while none is set `Optional. An email address or a
+  name. poe.ninja asks who runs an app. AshLight sends your contact if you
+  add one, else its project issues page when this copy has one. Stored
+  only on this computer.` (the page's static note is the same words); the
+  field stays once a contact is set, never prefilled, with a `Clear`
+  button beside `Save` and the note `Your contact is saved on this
+  computer and is not shown here. Type a new one and click Save to change
+  it, or click Clear to remove it.`; Clear answers in the status line
+  `Contact removed. AshLight now sends its project issues page to
+  poe.ninja.` (web data on, nothing blocked), `Contact removed. This copy
+  has no default contact, so prices need one more step: add your contact
+  for poe.ninja below.` (a fork with no default), `Contact removed from
+  this computer.` (web data off or a release build), `Not cleared. Try
+  again.` (it did not go)
 - poe.ninja price (PRICE-UNIQUE / PRICE-STACKABLES, `ninja_text`):
   overlay line `About <amount> <unit>` (`Under 0.001 <unit>` for dust);
   over 26 characters it reads `~<amount> <unit>`; within 24 h of a

@@ -181,3 +181,42 @@ def test_empty_contact_clears_the_key(api):
         assert cfg["league"] == "Standard" and cfg["web_data"] is True
     # clearing an unset contact is a no-op answer, not an error
     assert core.set_contact("") is False and "contact" not in _cfg(core)
+
+
+@pytest.mark.server
+def test_override_can_change_and_go_without_an_echo(api):
+    """DATA-CONTACT-CLEAR (finding DCD-3): the field stays once a contact is
+    set, so a second Save replaces the override and Clear (contact "")
+    removes it; no answer carries either value, only contact_set."""
+    srv, core, _net = api
+    other = "zq-other-4410"
+    _write_cfg(core, {"league": "Standard"})
+    for value in (CONTACT, other):
+        status, raw = _req(srv, "POST", "/api/web-data", {"contact": value})
+        assert status == 200 and _doc(raw)["contact_set"] is True
+        assert CONTACT.encode() not in raw and other.encode() not in raw
+        assert _cfg(core)["contact"] == value
+    status, raw = _req(srv, "POST", "/api/web-data", {"contact": ""})
+    assert status == 200 and _doc(raw)["contact_set"] is False
+    assert CONTACT.encode() not in raw and other.encode() not in raw
+    assert "contact" not in _cfg(core) and _cfg(core)["league"] == "Standard"
+    status, raw = _req(srv, "GET", "/api/web-data")
+    assert status == 200 and _doc(raw)["contact_set"] is False
+    # Clear posts only the contact key: the switch and league stay
+    assert _doc(raw)["web_data"] is False and _doc(raw)["league"] == "Standard"
+
+
+def test_page_has_a_clear_button_that_never_submits():
+    """The dashboard page: Clear is a plain button beside Save, hidden until
+    a contact is set; the field is never prefilled."""
+    page = (ROOT / "web" / "index.html").read_text(encoding="ascii")
+    start = page.index('<form id="webdata-form"')
+    form = page[start:page.index("</form>", start)]
+    i = form.index('<button id="webdata-contact-clear"')
+    tag = form[i:form.index(">", i) + 1]
+    assert 'type="button"' in tag and " hidden" in tag
+    assert form.index('id="webdata-contact-save"') < i
+    field = form[form.index('<input id="webdata-contact"'):]
+    assert "value=" not in field[:field.index(">")]
+    script = (ROOT / "web" / "panels" / "webdata.js").read_text(encoding="ascii")
+    assert '{ contact: "" }' in script

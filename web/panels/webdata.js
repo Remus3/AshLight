@@ -63,16 +63,24 @@
   // REL-UPDATE-NOTICE-UI: the opt-in wording version of the last answer that named one
   var wordingSeen = null;
 
-  /* The switch, the contact field (DATA-CONTACT-UI: shown only until a
-     contact is set; never prefilled) and the league picker. A partial doc
-     (only web_data, from /api/rates) leaves the field and the picker. */
+  /* The switch, the contact field (DATA-CONTACT-UI: never prefilled;
+     DATA-CONTACT-CLEAR: it stays once a contact is set, with Clear and
+     the saved note) and the league picker. A partial doc (only web_data,
+     from /api/rates) leaves the field and the picker. */
   function fillWebData(doc) {
     var v = P.webDataView(doc);
     var w = doc ? doc.wording_version : null;
     if (typeof w === "number" && w > 0 && Math.floor(w) === w) { wordingSeen = w; }
     webOn = v.on;
     $("webdata-on").checked = v.on;
-    if (v.contact.show !== null) { $("webdata-contact-row").hidden = !v.contact.show; }
+    if (v.contact.show !== null) {
+      $("webdata-contact-row").hidden = !v.contact.show;
+      // a page fixture that lacks the Clear button or the note leaves them
+      var clr = $("webdata-contact-clear");
+      var note = $("webdata-contact-note");
+      if (clr) { clr.hidden = !v.contact.clear; }
+      if (note) { note.textContent = v.contact.note; }
+    }
     if (doc && Array.isArray(doc.leagues)) {
       webDoc = doc;
       var lv = P.leagueView(doc);
@@ -136,6 +144,28 @@
     }).then(function () { webBusy = false; });
   }
 
+  /* DATA-CONTACT-CLEAR (finding DCD-3): the Clear click posts only
+     {contact: ""}; the core removes the key and answers contact_set false,
+     never a value. Clear hides itself on success, so focus moves to the
+     field (the player may type a new one). */
+  function clearContact() {
+    if (webBusy) { return; }
+    webBusy = true;
+    $("webdata-status").textContent = "Saving...";
+    api("POST", "/api/web-data", { contact: "" }).then(function (doc) {
+      var box = $("webdata-contact");
+      box.value = "";
+      fillWebData(doc);
+      $("webdata-status").textContent = P.contactClearedText(doc);
+      var clr = $("webdata-contact-clear");
+      if (!clr || clr.hidden) { box.focus(); }
+      renderPrice(getSnap() ? getSnap().price : null, true);
+      loadRates();
+    }).catch(function () {
+      $("webdata-status").textContent = "Not cleared. Try again.";
+    }).then(function () { webBusy = false; });
+  }
+
   /* DATA-LEAGUE-PICKER-UI: a pick saves at once (POST /api/web-data
      {league}; "" follows poe.ninja's current league again). Makes no
      request to poe.ninja: the next due price update uses it. */
@@ -183,6 +213,11 @@
     $("webdata-form").addEventListener("change", saveWebData);
     // DATA-CONTACT-UI: Save (or Enter in the contact field) submits the form
     $("webdata-form").addEventListener("submit", function (e) { e.preventDefault(); saveContact(); });
+    // DATA-CONTACT-CLEAR: Clear is a plain button (never submits the form);
+    // its click is read on the form, like the change event above
+    $("webdata-form").addEventListener("click", function (e) {
+      if (e && e.target && e.target.id === "webdata-contact-clear") { clearContact(); }
+    });
     webLink.fill = fillWebData;
     webLink.saved = webDataSaved;
     webLink.state = function () { return { on: webOn, busy: webBusy, doc: webDoc }; };

@@ -65,19 +65,29 @@
   }
 
   /* The contact field (write-only: never prefilled, the value is never
-     echoed; the core answers only contact_set). Shown only while the doc
-     says no contact is set; a doc without contact_set leaves it as it is
-     (show null). DATA-CONTACT-DEFAULT: contact_set is the typed contact
-     only; with none, requests carry the project's issues page, so the
-     field is an optional per-install override. */
+     echoed; the core answers only contact_set). DATA-CONTACT-DEFAULT:
+     contact_set is the typed contact only; with none, requests carry the
+     project's issues page, so the field is an optional per-install
+     override. DATA-CONTACT-CLEAR (finding DCD-3): the field stays once a
+     contact is typed, so a new one can replace it, and `clear` shows the
+     Clear button that posts contact "". A doc without contact_set (the
+     /api/rates switch echo) leaves the row as it is (show, set and clear
+     null). The note says a contact is saved, never which. */
+  var CONTACT_NOTE = "Optional. An email address or a name. poe.ninja asks who runs an app. " +
+                     "AshLight sends your contact if you add one, else its project issues page " +
+                     "when this copy has one. Stored only on this computer.";
+  var CONTACT_NOTE_SET = "Your contact is saved on this computer and is not shown here. " +
+                         "Type a new one and click Save to change it, or click Clear to remove it.";
+
   function contactView(doc) {
     var known = !!doc && typeof doc.contact_set === "boolean";
+    var set = known ? doc.contact_set === true : null;
     return {
-      show: known ? doc.contact_set !== true : null,
+      show: known ? true : null,
+      set: set,
+      clear: set,
       label: "Your contact for poe.ninja",
-      note: "Optional. An email address or a name. poe.ninja asks who runs an app. " +
-            "AshLight sends your contact if you add one, else its project issues page when this copy has one. " +
-            "Stored only on this computer."
+      note: set ? CONTACT_NOTE_SET : CONTACT_NOTE
     };
   }
 
@@ -119,6 +129,22 @@
     }
     if (blockedOf(doc) === RELEASE) { return "Contact saved on this computer. " + RELEASE_TEXT; }
     return "Contact saved on this computer. Currency values arrive within a minute.";
+  }
+
+  /* DATA-CONTACT-CLEAR: the answer to a Clear click; `doc` is the POST
+     answer to {contact: ""}. With web data on and no block, requests now
+     carry the project's issues page; in a copy with none (blocked
+     "contact not set") prices wait for a contact again. */
+  function contactClearedText(doc) {
+    if (!doc || doc.contact_set !== false) { return "Not cleared. Try again."; }
+    if (doc.web_data === true && blockedOf(doc) === NO_CONTACT) {
+      return "Contact removed. This copy has no default contact, so prices need one more step: " +
+             STEP_CONTACT + " below.";
+    }
+    if (doc.web_data === true && !blockedOf(doc)) {
+      return "Contact removed. AshLight now sends its project issues page to poe.ninja.";
+    }
+    return "Contact removed from this computer.";
   }
 
   /* ---- DATA-LEAGUE-PICKER-UI (F-141): the league picker from the GET
@@ -487,6 +513,7 @@
 
   return { num: num, ageText: ageText, webDataView: webDataView, savedText: savedText,
            contactView: contactView, contactSavedText: contactSavedText,
+           contactClearedText: contactClearedText,
            CONTACT_REFUSED: CONTACT_REFUSED, leagueView: leagueView,
            leagueSavedText: leagueSavedText, LEAGUE_REFUSED: LEAGUE_REFUSED,
            ratesPill: ratesPill, ratesView: ratesView, convert: convert, aboutText: aboutText,

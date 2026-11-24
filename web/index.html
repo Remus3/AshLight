@@ -786,17 +786,21 @@
           Use web data</label>
         <span id="webdata-status" class="row-meta one-line muted"></span>
         <!-- DATA-CONTACT-UI (F-018): the write-only contact for poe.ninja,
-             never prefilled, cleared after a save, shown only until a
-             contact is set (web/prices.js contactView); Save submits the
-             form. Its answer reuses #webdata-status (no new live region). -->
+             never prefilled, cleared after a save (web/prices.js
+             contactView); Save submits the form. DATA-CONTACT-CLEAR: the
+             row stays once a contact is set, Clear (shown only then) posts
+             contact "" and the note says a contact is saved, never which.
+             Answers reuse #webdata-status (no new live region). -->
         <span id="webdata-contact-row" class="set-row" hidden>
           <label for="webdata-contact">Your contact for poe.ninja</label>
           <input id="webdata-contact" type="text" maxlength="120" autocomplete="off"
             spellcheck="false" aria-describedby="webdata-contact-note webdata-status">
           <button id="webdata-contact-save" type="submit" class="secondary btn-28">Save</button>
+          <button id="webdata-contact-clear" type="button" class="secondary btn-28" hidden
+            aria-describedby="webdata-contact-note webdata-status">Clear</button>
           <span id="webdata-contact-note" class="row-meta muted">Optional. An email address or
             a name. poe.ninja asks who runs an app. AshLight sends your contact if you add one,
-            else its project issues page. Stored only on this computer.</span>
+            else its project issues page when this copy has one. Stored only on this computer.</span>
         </span>
         <!-- DATA-LEAGUE-PICKER-UI (F-141): the league prices follow, from the
              cached list only; the first option is automatic (poe.ninja's
