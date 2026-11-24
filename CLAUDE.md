@@ -1258,8 +1258,17 @@ of the HALT check.
   area_level and level (zone, act, area level outside acts, level band,
   nearest planned level) and never claims a step done; POST
   /api/kindler-generate op plan answers {state, plan, focus, current},
-  current null while follow is off; support applies is null until the
-  bridge reports it. KINDLER-UI-RESULT: the plan card is built on first
+  current null while follow is off; support applies comes from
+  KINDLER-SUPPORT-FIT: the bridge command support_fit reads, for each active
+  skill of the loaded build, PoB's own effectList against its supportList
+  (no own rule); calcwire turns the reply into {skill: {support: bool}}
+  bounded to 64 skills, 16 supports and 80-character names; the planner asks
+  it on its own worker in the same run as the focus probes, one composed
+  build per stage only for stages with an unanswered link (no swap calc),
+  answers cached per result key; applies is true or false from PoB, and null
+  before the run ends, with the calc off, or for a gem PoB did not
+  recognise; no new route; bridge.lua lockdown unchanged. KINDLER-UI-RESULT:
+  the plan card is built on first
   show after the editor card; stages one at a time with Previous / Next
   stage, three card pages (Skills and gems, Passives, Item focus) cut into
   parts of at most 10 rows, gem and stat names open the shared item info
@@ -1287,8 +1296,9 @@ of the HALT check.
   too few, a name collision or GGG use of the word is found, the operator
   rules generated builds out of scope, authored node lists prove too
   costly to keep, a real PoB output makes the repeat-run test
-  non-identical, the follow default annoys players in play, PoB stops
-  reporting support applicability through the bridge, attack scoring
+  non-identical, the follow default annoys players in play, PoB moves
+  support selection out of effectList / supportList, the extra stage
+  loads breach the 0024 / 0028 budgets, attack scoring
   needs items (KINDLER-WEAPON-BASE), a review rules another rank
   baseline, per-slot local mods change the focus ranking in play, the
   stage priority misfires in play, PoB stops reading a normal item's name
