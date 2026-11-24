@@ -40,6 +40,8 @@ a new or changed itemcheck template is edited here, not in design 0001.
   are `Paste a build first` (no build), `Copy an item in game first`
   (not an item) and `Only gear is compared`; an unidentified item's
   third line is `Mods hidden: identify it` (CARD-LINE-LIMIT-COPY)
+- A card whose verdict is not named reads `Not checked`; its head and
+  sentences start with the reason, not the word (TC-VERDICT-FALLBACK-WORD).
 - dashboard stat rows (Last item card, web/tc.js `statRowText`; CL-3):
   `<slot>: <mod text> (<points>)`, e.g. `Ring: +35 to maximum Life (+35
   points)` or `Ring: +Some stat 4 (not counted)` (`not counted` is the

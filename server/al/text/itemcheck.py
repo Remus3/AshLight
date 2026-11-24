@@ -100,13 +100,22 @@ def _compare_sentence(comp):
         return f"Downgrade: your main skill can't use this weapon type in {where}."
     delta = comp.get("score_delta") or 0
     if comp.get("empty"):
-        return f"{verdict}: your build has nothing in {slot} ({_signed_points(delta)})."
+        return _lead(verdict, f"your build has nothing in {slot} ({_signed_points(delta)}).")
     name = _equipped_name(comp)
     if comp.get("verdict") == "upgrade":
         return f"{verdict}: {_points(delta)} more than your {slot} ({name})."
     if comp.get("verdict") == "downgrade":
         return f"{verdict}: {_points(delta)} less than your {slot} ({name})."
-    return f"{verdict}: about the same as your {slot} ({name}), {_signed_points(delta)}."
+    return _lead(verdict, f"about the same as your {slot} ({name}), {_signed_points(delta)}.")
+
+
+def _lead(verdict, reason):
+    """"<Verdict>: <reason>"; an unnamed verdict (VERDICT_FALLBACK) leads
+    with the reason alone, since the card word already says Not checked
+    and the sentence reports a real comparison (TCVF-1)."""
+    if verdict == VERDICT_FALLBACK:
+        return reason[:1].upper() + reason[1:]
+    return f"{verdict}: {reason}"
 
 
 def _stat_rows(comp):
@@ -264,6 +273,15 @@ def _delta_head(verdict, score, slot, empty):
     slot empty", then "<Verdict> <delta>")."""
     delta = _signed(score or 0)
     deltas = [delta] + [d for d in (_whole(score),) if d]
+    if verdict == VERDICT_FALLBACK:
+        # TCVF-1: an unnamed verdict's head leads with the reason; the
+        # card word (VERDICT_FALLBACK) stays the mark word.
+        if empty:
+            heads = [f"{d} - {slot} empty" for d in deltas] + [f"{slot} empty",
+                                                               f"{delta} - slot empty"]
+        else:
+            heads = [f"{d} vs {slot}" for d in deltas] + [f"vs {slot}"]
+        return next((h for h in heads if len(h) <= LINE_FIT), delta)
     if empty:
         heads = [f"{verdict} {d} - {slot} empty" for d in deltas]
         heads += [f"{verdict}: {slot} empty", f"{verdict} {delta} - slot empty",
