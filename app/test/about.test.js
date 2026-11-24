@@ -162,11 +162,12 @@ test("main.js: one /api/version read feeds the About text and the tray tooltip",
   assert.match(main, /client\.open\(\);\s*setTrayTooltip\(\);/);
 });
 
-/* The dashboard's own copy of the words: web/app.js versionText, run alone. */
+/* The dashboard's own copy of the words: versionText, run alone
+   (web/panels/version.js since TEST-WEB-PANELS-C2). */
 function webVersionText() {
-  const src = web.source("app.js");
+  const src = web.source("version.js");
   const m = /\/\* BUILD-STAMP:begin[\s\S]*?\*\/([\s\S]*?)\/\* BUILD-STAMP:end \*\//.exec(src);
-  assert.ok(m, "BUILD-STAMP markers in web/app.js");
+  assert.ok(m, "BUILD-STAMP markers in web/panels/version.js");
   const box = {};
   vm.runInNewContext(m[1] + "\nout.f = versionText;", { out: box });
   return box.f;
@@ -199,7 +200,7 @@ test("Settings > About and data carries the same string as the footer", () => {
   assert.match(about, /<h3 id="about-title">About and data<\/h3>/);
   assert.ok(!settings.includes('id="about-fold"'), "no About fold left");
   assert.match(about, /<p id="about-version" class="muted">/);
-  const js = web.source("app.js");
+  const js = web.source("version.js");
   assert.match(js, /var ver = versionText\(doc\);\s*if \(ver\) \{\s*\$\("build-line"\)\.textContent = ver;\s*\$\("build-line"\)\.hidden = false;\s*\$\("about-version"\)\.textContent = ver;/);
 });
 

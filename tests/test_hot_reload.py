@@ -499,8 +499,10 @@ def test_web_change_sends_sse_reload(tmp_path):
 
 
 def test_dashboard_reloads_on_the_event():
-    js = srcpaths.read("app.js")
-    assert 'es.addEventListener("reload"' in js and "location.reload()" in js
+    # TEST-WEB-PANELS-C2: the feed listens in web/panels/feedpace.js; the
+    # shell's frame hook reloads the page
+    assert 'es.addEventListener("reload"' in srcpaths.read("panels/feedpace.js")
+    assert "location.reload()" in srcpaths.read("app.js")
 
 
 # ---- token hand-off --------------------------------------------------------

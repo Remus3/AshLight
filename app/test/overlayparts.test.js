@@ -14,7 +14,7 @@ const SRC = web.source("overlayparts.js");
 // the code without its comments (the header names what it never does)
 const CODE = SRC.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 const HTML = web.source("index.html");
-const APP = web.source("app.js");
+const SETIO = web.source("panels/settingsio.js");
 
 const LAYOUT_PARTS = ["zone", "timer", "level", "deaths", "status", "trade", "item",
   "moment", "hint"];
@@ -242,9 +242,10 @@ test("the page holds one labelled group with every switch, and loads the file be
   assert.ok(HTML.indexOf("</form>", HTML.indexOf('<form id="layout-form"')) < i);
   assert.ok(HTML.indexOf("/web/overlayparts.js") > 0);
   assert.ok(HTML.indexOf("/web/overlayparts.js") < HTML.indexOf("/web/app.js"));
-  // app.js wires it once and reads it on connect
-  assert.equal(APP.split("window.ALOverlayParts.wire(document, api)").length, 2);
-  assert.equal(APP.split("window.ALOverlayParts.load(document, api)").length, 2);
+  // the settings panel wires it once and reads it on connect
+  // (web/panels/settingsio.js since TEST-WEB-PANELS-C2)
+  assert.equal(SETIO.split("window.ALOverlayParts.wire(document, api)").length, 2);
+  assert.equal(SETIO.split("window.ALOverlayParts.load(document, api)").length, 2);
 });
 
 test("no timer, no clipboard, no live region, text only through textContent", () => {

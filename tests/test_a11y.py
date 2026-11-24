@@ -206,10 +206,14 @@ def test_bar_has_one_status_word_on_every_tab():
     assert not any(a.attrs.get("role") == "tabpanel" for a in reading.ancestors())
     assert [n for n in inside if n.attrs.get("id") == "bar-char"]
     assert not [n for n in every if n.attrs.get("id") == "link"]
-    app = JS["app.js"]
+    # TEST-WEB-PANELS-C2 (adjudicator ruling): the bar status word lives
+    # in web/panels/consent.js
+    app = JS["consent.js"]
     assert 'showPill("link"' not in app and "D.linkView(" not in app
+    assert 'showPill("link"' not in JS["app.js"] and "D.linkView(" not in JS["app.js"]
     assert re.search(r'showPill\("reading", D\.barStatus\(', app)
     assert len(re.findall(r'showPill\("reading"', app)) == 1
+    assert 'showPill("reading"' not in JS["app.js"]
     # the news line is a polite region that takes no room in the bar
     assert re.search(r"\.tab-news \{ position: absolute; width: 1px; height: 1px;", CSS)
 

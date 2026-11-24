@@ -133,13 +133,14 @@ test("corner names are sentence case", () => {
 });
 
 /* RUN-LEDGER-CONSENT (decision 0071): the log record's consent line, with
-   its own Allow control beside the Client.txt opt-out. web/app.js
-   ledgerView runs alone (LEDGER-VIEW markers); the markup is read as text. */
+   its own Allow control beside the Client.txt opt-out. ledgerView runs
+   alone (LEDGER-VIEW markers; TEST-WEB-PANELS-C2 moved it from web/app.js
+   to web/panels/consent.js); the markup is read as text. */
 function webLedgerView() {
   const vm = require("node:vm");
-  const src = web.source("app.js");
+  const src = web.source("consent.js");
   const m = /\/\* LEDGER-VIEW:begin[\s\S]*?\*\/([\s\S]*?)\/\* LEDGER-VIEW:end \*\//.exec(src);
-  assert.ok(m, "LEDGER-VIEW markers in web/app.js");
+  assert.ok(m, "LEDGER-VIEW markers in web/panels/consent.js");
   const box = {};
   vm.runInNewContext(m[1] + "\nout.f = ledgerView;", { out: box });
   return (tl) => JSON.parse(JSON.stringify(box.f(tl)));
@@ -199,19 +200,22 @@ test("ledger consent line with its own Allow control", () => {
   }
 
   // the click posts only the ledger flag, through the token-carrying api()
-  const app = web.source("app.js");
-  assert.match(app, /api\("POST", "\/api\/consent", \{ ledger: ledgerSend \}\)/);
-  assert.match(app, /\$\("ledger-allow"\)\.addEventListener\("click", toggleLedger\)/);
+  // (web/panels/consent.js, TEST-WEB-PANELS-C2)
+  const consent = web.source("consent.js");
+  assert.match(consent, /api\("POST", "\/api\/consent", \{ ledger: ledgerSend \}\)/);
+  assert.match(consent, /\$\("ledger-allow"\)\.addEventListener\("click", toggleLedger\)/);
 });
 
-/* RUN-FEED-TRUTH (F-175) and RUN-PERF-DASH-IDLE (F-178): web/app.js
-   feedLink and pacer run alone (FEED-PACE markers) with fake EventSource,
-   health, timers and visibility. */
+/* RUN-FEED-TRUTH (F-175) and RUN-PERF-DASH-IDLE (F-178): feedLink and
+   pacer run alone (FEED-PACE markers) with fake EventSource, health,
+   timers and visibility. TEST-WEB-PANELS-C2 (adjudicator ruling, wave 40)
+   moved the block from web/app.js to web/panels/feedpace.js; app.js calls
+   it through ALApp.host. */
 function feedPace() {
   const vm = require("node:vm");
-  const src = web.source("app.js");
+  const src = web.source("feedpace.js");
   const m = /\/\* FEED-PACE:begin[\s\S]*?\*\/([\s\S]*?)\/\* FEED-PACE:end \*\//.exec(src);
-  assert.ok(m, "FEED-PACE markers in web/app.js");
+  assert.ok(m, "FEED-PACE markers in web/panels/feedpace.js");
   const box = {};
   vm.runInNewContext(m[1] + "\nout.feedLink = feedLink; out.pacer = pacer;" +
     " out.RETRY = FEED_RETRY_MS;", { out: box });

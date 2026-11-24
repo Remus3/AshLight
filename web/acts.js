@@ -29,6 +29,35 @@
     module.exports = api;
   } else {
     root.ALActs = api;
+    /* TEST-WEB-PANELS-C2 (F-135): the Act times card registers itself
+       (web/registry.js) under the names and orders web/app.js gave it:
+       "pace" 60 (UTIL-PACE: the core's pace sentence, shown once there is
+       one; the picked character's, UTIL-MULTICHAR) and "acts" 110. */
+    if (root.ALApp && typeof root.ALApp.register === "function") {
+      root.ALApp.register({
+        name: "pace",
+        order: 60,
+        paint: function (s, c) {
+          var $ = root.ALApp.host.$;
+          var paceText = (c.pace && c.pace.text) || "";
+          root.ALApp.host.setText($("pace"), paceText);
+          $("pace").hidden = !paceText;
+        }
+      });
+      root.ALApp.register({
+        name: "acts",
+        order: 110,
+        paint: function (s, c) {
+          api.paint(document, c.acts || null, root.ALDash.clockUntil(s.tailer, root.ALApp.host.serverNow()), true);
+        },
+        // HUD-ACT: the open act split counts up with the zone timer.
+        // TEST-LIVE-EXIT: an idle log stops the act clock at its last line
+        // (the game may be closed; decision 0029).
+        tick: function (s, now) {
+          api.paint(document, s.acts, root.ALDash.clockUntil(s.tailer, now), false);
+        }
+      });
+    }
   }
 }(typeof self !== "undefined" ? self : this, function (F, searchLib, pageHost, charView) {
   "use strict";

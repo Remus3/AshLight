@@ -2,11 +2,15 @@
    The per-start token arrives in the URL fragment (#token=...), is kept in
    sessionStorage and sent as X-AL-Token (fetch) or ?token= (EventSource,
    which cannot set headers). Every text from the log goes in via
-   textContent, never innerHTML. */
+   textContent, never innerHTML.
+   TEST-WEB-PANELS-C2 (F-135): this file is the page shell: the token, the
+   state feed and its pacer, render / tick / start as loops over the
+   registered panels (web/registry.js) and A.host, what the panels share.
+   Every card registers itself: the web/panels/ files and the web/*.js
+   view modules. Only the four shared shims are named here. */
 (function () {
   "use strict";
 
-  var D = window.ALDash; // web/status.js: pure view helpers
   var F = window.ALFmt; // web/fmt.js: pad, duration, clock
   var A = window.ALApp; // web/registry.js: the panel loops of render, tick, start
   var KEY = "al.token";
@@ -14,8 +18,6 @@
   var snap = null;
   var offset = 0; // client clock minus server clock, seconds
   var renderedVersion = -1;
-  // UTIL-MULTICHAR: the character the player picked ("" = the one playing)
-  var charPick = "";
   var linkLive = false; // the state feed is live right now
   var everLive = false; // ... and was live at least once on this page
   var linkEvent = null; // the feed's last event, for the one bar word
@@ -53,260 +55,28 @@
   function serverNow() { return Date.now() / 1000 - offset; }
 
   /* While the feed is down the timers stop, so a stale page never looks
-     like it is still counting (UI-REVIEW-2). TEST-WEB-REGISTRY: the
-     panels' ticks run in their order (web/registry.js); one that throws no
-     longer stops the timers after it. */
+     like it is still counting (UI-REVIEW-2). The panels' ticks run in their
+     order (web/registry.js); the act clock stops at an idle log's last line
+     in web/acts.js (TEST-LIVE-EXIT, decision 0029). */
   function tick() {
     if (!snap || document.hidden || !linkLive) { return; }
     var now = serverNow();
-    // TEST-LIVE-EXIT: an idle log stops the zone and act clocks at its
-    // last line (the game may be closed; decision 0029).
-    var until = D.clockUntil(snap.tailer, now);
-    A.tick(snap, now, until);
+    A.tick(snap, now);
     // TD-09 region hook: every registered Play region's tick (web/regions.js)
     if (window.ALRegions) { window.ALRegions.tick(document, snap, now); }
   }
 
-  /* TEST-WEB-PANELS-C1: Run > Recent (the recent events list) lives in
-     web/panels/events.js. */
-
-  /* DESKTOP-CLIENT (decision 0041): inside the desktop client the page
-     gets one action, window.alClient.restartOverlay (app/client/preload.js);
-     in a browser there is none and the button stays hidden. */
-  var restartSaid = false; // the restart note shows until the next state push
-  function wireRestartOverlay() {
-    var c = window.alClient;
-    if (!c || typeof c.restartOverlay !== "function") { return; }
-    $("restart-overlay-row").hidden = false;
-    $("restart-overlay").addEventListener("click", function () {
-      c.restartOverlay();
-      restartSaid = true;
-      setText($("restart-overlay-said"), snap && snap.game_idle
-        ? "Restarting the overlay. It stays hidden while the game looks closed."
-        : "Restarting the overlay.");
-    });
-  }
-
-  /* ---- TC-VIEW: the loaded build lives in web/panels/build.js
-     (TEST-WEB-PANELS-A). This file keeps what it shares with the other
-     cards (el, linkOut, the card pages, the pagers, setLine) and hands it
-     over through A.host (set before the panel registrations below). */
-  function el(tag, cls, text) {
-    var e = document.createElement(tag);
-    if (cls) { e.className = cls; }
-    if (text !== undefined && text !== null) { e.textContent = text; }
-    return e;
-  }
-
-  function linkOut(l, name) {
-    var a = el("a", "out", l.label);
-    a.href = l.href;
-    a.target = "_blank";
-    a.rel = "noopener noreferrer";
-    // DATA-PRICE-NINJA-LINK: a link to a category page names itself (aria)
-    a.setAttribute("aria-label", l.aria || name + " on " + l.label + " (opens in a new tab)");
-    return a;
-  }
-
-  /* ---- PLAY-TD-19C-BUILD-GRID: card pages (plan 03 section 4). A grid
-     card (.grid-card) shows one .card-page at a time: its home page, or
-     the page a button with data-card-open names. The Back button in the
-     card head returns home and gives focus back to the button that opened
-     the page. A page changes only on a press, or when the card's home
-     changes (a build loads or goes); then a focus inside the page that is
-     hidden moves to the card's heading, never out of the card. */
-  function cardHomeName(box) { return box.getAttribute("data-home") || "main"; }
-
-  function cardShown(box) { return box.getAttribute("data-shown") || cardHomeName(box); }
-
-  function cardHeading(box) { return box.querySelector("h2"); }
-
-  function showCardPage(box, name, focusTo) {
-    var home = cardHomeName(box);
-    var active = document.activeElement;
-    var lost = false;
-    var cur = null;
-    Array.prototype.forEach.call(box.querySelectorAll(".card-page"), function (pg) {
-      var on = pg.getAttribute("data-page") === name;
-      if (!on && !pg.hidden && pg.contains(active)) { lost = true; }
-      pg.hidden = !on;
-      if (on) { cur = pg; }
-    });
-    box.setAttribute("data-shown", name);
-    var label = name === home || !cur ? "" : cur.getAttribute("data-label") || "";
-    setLine(box.querySelector("[data-card-sub]"), label);
-    var back = box.querySelector("[data-card-back]");
-    back.hidden = name === home;
-    back.setAttribute("aria-label", "Back to the first page of " + cardHeading(box).textContent);
-    if (focusTo && !focusTo.hidden) {
-      focusTo.focus();
-    } else if (lost) {
-      cardHeading(box).focus();
-    }
-  }
-
-  function cardHome(box) { showCardPage(box, cardHomeName(box), null); }
-
-  /* a new home page: the card follows only when it showed its old home */
-  function setCardHome(box, name) {
-    var atHome = cardShown(box) === cardHomeName(box);
-    box.setAttribute("data-home", name);
-    if (atHome) { cardHome(box); }
-  }
-
-  var cardOpener = {};
-
-  function wireCard(box) {
-    // the heading takes focus when a page it held goes (server/al/diag.py
-    // names the Prices heading by its exact markup, so the page sets this)
-    if (!cardHeading(box).hasAttribute("tabindex")) { cardHeading(box).setAttribute("tabindex", "-1"); }
-    Array.prototype.forEach.call(box.querySelectorAll("[data-card-open]"), function (b) {
-      b.addEventListener("click", function () {
-        cardOpener[box.id] = b;
-        showCardPage(box, b.getAttribute("data-card-open"), box.querySelector("[data-card-back]"));
-      });
-    });
-    box.querySelector("[data-card-back]").addEventListener("click", function () {
-      var o = cardOpener[box.id];
-      showCardPage(box, cardHomeName(box), o && !o.hidden && !o.disabled ? o : cardHeading(box));
-    });
-    cardHome(box);
-  }
-
-  /* the pagers of the Build card's rows: web/pager.js through web/search.js
-     (textPager; app.js reaches the regions and their helpers only through
-     the three hook calls, app/test/regions.test.js), and rowPager for rows
-     with a link. They page again when a resize changes the size class. */
-  var buildPagers = {};
-
-  function sizeClass() {
-    return window.ALSearch ? window.ALSearch.sizeClass(document) : "full";
-  }
-
-  function textPager(slotId, label, rows) {
-    var pg = buildPagers[slotId];
-    if (!pg) {
-      pg = window.ALSearch.textPager(document, { rows: rows, label: label, sizeClass: sizeClass });
-      buildPagers[slotId] = pg;
-      $(slotId).replaceChildren(pg.node);
-      return pg;
-    }
-    pg.set(rows);
-    return pg;
-  }
-
-  /* opts.full(row), when given, is the row's whole text (title and the
-     Full text page) while opts.text(row) stays the one-line list row
-     (PLAY-TD-19E-ITEM-TEXT: a gear row's raw item text) */
-  function linkPager(slotId, label, size, opts) {
-    var pg = buildPagers[slotId];
-    if (!pg) {
-      var full = typeof opts.full === "function" ? opts.full : null;
-      pg = window.ALSearch.rowPager(document, {
-        label: label, size: size, sizeClass: sizeClass, text: full || opts.text,
-        parts: full ? function (r) { return [{ text: opts.text(r) }]; } : undefined,
-        rowClass: opts.rowClass,
-        controls: function (d, r) { return r.link ? [linkOut(r.link, r.linkName)] : []; }
-      });
-      buildPagers[slotId] = pg;
-      $(slotId).replaceChildren(pg.node);
-    }
-    pg.set(opts.rows);
-    return pg;
-  }
-
-  /* a resize: every pager whose size class changed pages again */
-  function relayoutPagers() {
-    if (window.ALSearch) { window.ALSearch.relayout(); }
-  }
-
-  function setLine(node, text) {
-    node.textContent = text;
-    if (text) { node.setAttribute("title", text); } else { node.removeAttribute("title"); }
-  }
-
-  /* UTIL-FILTER (decision 0031): on the player's click, fetch the snippet
-     and hand it to the browser as a download; the player picks where it
-     goes. AshLight writes no file itself. */
-  function downloadFilter() {
-    var said = $("filter-said");
-    /* UX-B5-CARDS: no live region (the page keeps its 12); the focused
-       button's name carries the answer; most screen readers read it on
-       this click (best effort, audit 0004 U22) */
-    var btn = $("filter-download");
-    var tell = function (text) {
-      setLine(said, text);
-      setLine($("filter-merge-said"), "");  /* one outcome line for the page */
-      btn.setAttribute("aria-label", text ? "Download ashlight.filter (" + text + ")"
-        : "Download ashlight.filter");
-    };
-    tell("");
-    fetch("/api/filter", { headers: { "X-AL-Token": token }, cache: "no-store" })
-      .then(function (r) {
-        if (!r.ok) {
-          tell("Can't make the filter. Try again.");
-          return null;
-        }
-        return r.text();
-      }).then(function (text) {
-        if (text === null) { return; }
-        var url = URL.createObjectURL(new Blob([text], { type: "text/plain" }));
-        var a = document.createElement("a");
-        a.href = url;
-        a.download = "ashlight.filter";
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-        tell(text.indexOf("\nShow\n") >= 0
-          ? "Sent to your browser's downloads. Move it to the game's filter folder."
-          : "Sent to your browser's downloads, but your build has no gear bases, so it " +
-            "highlights nothing yet.");
-      }).catch(function () {
-        tell("Can't reach AshLight - is it running?");
-      });
-  }
-
-  /* UTIL-FILTER-MERGE (decision 0033): picking a file is the player's act;
-     the merged copy goes to the browser's downloads. No live region (the
-     page keeps its 12): as for downloadFilter, the focused input's name
-     carries the answer (best effort, audit 0004 U22). */
-  function mergeFilter() {
-    var input = $("filter-merge-file");
-    var file = input.files && input.files[0];
-    window.ALFilterMerge.run(file, {
-      fetch: function (url, opts) { return fetch(url, opts); },
-      token: token,
-      tell: function (text) {
-        setLine($("filter-merge-said"), text);
-        if (text) { setLine($("filter-said"), ""); }
-        if (text) {
-          input.setAttribute("aria-label", "Your loot filter file (" + text + ")");
-        } else {
-          input.removeAttribute("aria-label");
-        }
-      },
-      save: function (blob, name) {
-        var url = URL.createObjectURL(blob);
-        var a = document.createElement("a");
-        a.href = url;
-        a.download = name;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-      }
-    }).then(function () { input.value = ""; });  /* the same file can be picked again */
-  }
-
-  /* ---- TEST-WEB-PANELS-C1: the Last item card (TC-EVAL-UI) lives in
-     web/panels/itemcheck.js and the Prices card with the last price check
-     (DATA-NINJA-UI / PRICE-1-UI, decision 0016) in web/panels/rates.js.
-     On their wires they fill these links: evalLink with price(rows),
-     ratesLink with getRatesDoc, renderRates, renderPrice, loadRates and
-     paintPricesList; the host's rates helpers below forward to it. */
+  /* Links a panel fills on its wire, so the shell reaches a card it does
+     not name: evalLink (web/panels/itemcheck.js: price), ratesLink
+     (rates.js: getRatesDoc, renderRates, renderPrice, loadRates,
+     paintPricesList), webLink (webdata.js: fill, saved, state), readLink
+     (consent.js: show, the bar status word) and charLink (web/chars.js:
+     view, the picked character's numbers). */
   var evalLink = {};
   var ratesLink = {};
+  var webLink = {};
+  var readLink = {};
+  var charLink = {};
 
   function viaRates(name, none) {
     return function () {
@@ -314,12 +84,6 @@
       return typeof f === "function" ? f.apply(null, arguments) : none;
     };
   }
-
-  /* TEST-WEB-PANELS-B: the web data switch, the contact field and the
-     league picker live in web/panels/webdata.js. On its wire that panel
-     fills this link with fill(doc), saved(doc) and state() (on, busy, doc),
-     so the rates follow the switch without owning it. */
-  var webLink = {};
 
   function webState() {
     return typeof webLink.state === "function" ? webLink.state() : { on: false, busy: false, doc: null };
@@ -329,430 +93,68 @@
     if (typeof webLink.saved === "function") { webLink.saved(doc); }
   }
 
-  /* ---- TEST-WEB-REGISTRY (F-135): the dashboard panels. Each paint, tick
-     and wire that render(), tick() and start() called in one sequence is
-     one registered entry; the explicit order keeps today's paint order and
-     so the order of the live-region announcements. render() calls
-     paint(s, c) (the state push and the picked character's view), tick()
-     calls tick(snap, now, until), start() calls wire(). A throwing panel
-     is caught and said once on the console; the panels after it still
-     run. A new card registers its own entry; no shared function changes. */
-  /* TEST-WEB-PANELS-A: what a panel file in web/panels/ reaches of this
-     page. Set here, before start(), and read by a panel on its first
-     paint or wire (web/panels/build.js). The snapshot is a getter: snap
-     changes on every push.
-     TEST-WEB-PANELS-B: the settings-side panels (web/panels/layout.js,
-     weights.js, webdata.js, gfx.js) also get sizeClass, the rates helpers
-     (getRatesDoc, renderRates, renderPrice, loadRates), the web data link
-     (webLink, above) and onConnect(fn): a panel's first read, run by
-     connect() in wire order, only while the page has its token. */
-  A.host = {
+  /* TEST-WEB-PANELS-A to -C2: what a panel reaches of this page, read on
+     its first paint or wire. web/panels/pager.js (el, linkOut, setLine, the
+     card pages, the pagers) and feedpace.js (feedLink, pacer) add theirs
+     when they load, before this file, so these are merged in. snap is a
+     getter; onConnect(fn, late): a first read run by connect() in wire
+     order (late: after the rates); onPush(fn): run on every state push;
+     repaint(): paint the last push again in full. */
+  var own = {
     $: $, api: api, token: token, getSnap: function () { return snap; },
-    serverNow: serverNow, el: el, linkOut: linkOut, setLine: setLine,
-    linkPager: linkPager, textPager: textPager, cardShown: cardShown,
-    cardHome: cardHome, setCardHome: setCardHome, showCardPage: showCardPage,
-    cardHeading: cardHeading, cardOpener: cardOpener, webDataSaved: webDataSaved,
-    sizeClass: sizeClass, getRatesDoc: viaRates("getRatesDoc", null),
+    serverNow: serverNow, webDataSaved: webDataSaved,
+    getRatesDoc: viaRates("getRatesDoc", null),
     renderRates: viaRates("renderRates"), renderPrice: viaRates("renderPrice"),
     loadRates: viaRates("loadRates"), webLink: webLink, onConnect: onConnect,
     clock: clock, setText: setText, setPill: setPill, isLive: function () { return linkLive; },
-    webState: webState, evalLink: evalLink, ratesLink: ratesLink
+    webState: webState, evalLink: evalLink, ratesLink: ratesLink, readLink: readLink,
+    charLink: charLink, render: render, repaint: repaint, onPush: onPush,
+    getLink: function () { return { event: linkEvent, everLive: everLive }; }
   };
-  A.register({
-    name: "build",
-    order: 10,
-    // TEST-WEB-PANELS-A: the loaded build's paint and listeners are the
-    // "loaded-build" panel (web/panels/build.js, order 9); this entry keeps
-    // the Build and items cards' page plumbing and their first empty paint
-    wire: function () {
-      ["buildbox", "healthbox", "searchbox", "evalbox", "pricesbox", "weightsbox"].forEach(function (id) {
-        wireCard($(id));
-      });
-      window.addEventListener("resize", relayoutPagers);
-      if (window.ALSearch) { window.ALSearch.paint(document, null, navigator); }
-      if (window.ALHealth) { window.ALHealth.paint(document, null, navigator); }
-    }
-  });
-  A.register({
-    name: "chars",
-    order: 50,
-    paint: function (s) {
-      if (window.ALChars) { window.ALChars.paint(document, s, charPick); }
-    },
-    wire: function () {
-      if (window.ALChars) {
-        window.ALChars.wire(document, function (name) {
-          charPick = name;
-          if (snap) { renderedVersion = -1; render(snap); }
-        });
-      }
-    }
-  });
-  A.register({
-    name: "pace",
-    order: 60,
-    // UTIL-PACE: the core's pace sentence in the Act times card, shown once
-    // there is one (the picked character's, UTIL-MULTICHAR)
-    paint: function (s, c) {
-      var paceText = (c.pace && c.pace.text) || "";
-      setText($("pace"), paceText);
-      $("pace").hidden = !paceText;
-    }
-  });
-  A.register({
-    name: "consent",
-    order: 70,
-    // the opt-in is region C's setup card (web/setupcard.js); the opt-out,
-    // the log path and the reading state are in Settings, Reading and web
-    // data (PLAY-TD-21A-SETTINGS-RAIL), where the bar status word leads
-    paint: function (s) {
-      var tl = s.tailer || {};
-      var rv = readingView(tl);
-      setText($("reading-state"), rv.state);
-      setText($("reading-path"), rv.path);
-      if ($("reading-path").getAttribute("title") !== rv.path) {
-        $("reading-path").setAttribute("title", rv.path);
-      }
-      $("reading-path").hidden = !rv.path;
-      if (window.ALLogPath) { window.ALLogPath.paint(document, s); } // SEC-LOG-PATH-FIELD
-      $("consent-no").hidden = !rv.stop;
-      $("events-empty").textContent = D.emptyText(!!tl.consented);
-      paintLedger(tl);
-    },
-    wire: function () {
-      $("consent-no").addEventListener("click", stopReading);
-      if (window.ALLogPath) { window.ALLogPath.wire(document, api, render); }
-      $("ledger-allow").addEventListener("click", toggleLedger);
-    }
-  });
-  A.register({
-    name: "reading",
-    order: 80,
-    paint: function () { showReading(); }
-  });
-  A.register({
-    name: "acts",
-    order: 110,
-    paint: function (s, c) {
-      if (window.ALActs) { window.ALActs.paint(document, c.acts || null, D.clockUntil(s.tailer, serverNow()), true); }
-    },
-    // HUD-ACT: the open act split counts up with the zone timer.
-    tick: function (s, now, until) {
-      if (window.ALActs) { window.ALActs.paint(document, s.acts, until, false); }
-    }
-  });
-  A.register({
-    name: "runs",
-    order: 120,
-    paint: function (s) {
-      if (window.ALRuns) { window.ALRuns.paint(document, s, serverNow(), true); }
-    },
-    // UTIL-MAPS: the open map's time counts up while the player is in it.
-    tick: function (s, now) {
-      if (window.ALRuns) { window.ALRuns.paint(document, s, now, false); }
-    }
-  });
-  A.register({
-    name: "summary",
-    order: 130,
-    // UTIL-SESSION-SUMMARY: the last play stretch's card, by itself
-    paint: function (s) {
-      if (window.ALSummary) { window.ALSummary.paint(document, s); }
-    }
-  });
-  A.register({
-    name: "zonenote",
-    order: 140,
-    // PLAY-LEGACY-OUT-2: the zone note is region C's (town mode) and the old
-    // Zone tip box is gone, so this panel paints nothing. It stays only
-    // while app/test/registry.test.js pins today's panel list; the package
-    // that widens to that test deletes this entry.
-    paint: function () {}
-  });
-  A.register({
-    name: "history",
-    order: 150,
-    // UTIL-UNDERLEVEL / UTIL-RUN-HISTORY: the core's sentences, by themselves
-    paint: function (s, c) {
-      if (window.ALHistory) { window.ALHistory.paint(document, c); }
-    },
-    // UTIL-RUN-HISTORY: the player's clicks
-    wire: function () {
-      if (window.ALHistory) { window.ALHistory.wire(document, api); }
-    }
-  });
-  A.register({
-    name: "pricewatch",
-    order: 160,
-    // UTIL-PRICE-WATCH: moved prices of the items the player checked, on
-    // top of the Prices card list (PLAY-TD-19D-ITEMS-GRID)
-    paint: function (s) {
-      if (window.ALPriceWatch && window.ALPriceWatch.paint(document, s)) { viaRates("paintPricesList")(); }
-    },
-    wire: function () {
-      if (window.ALPriceWatch) { window.ALPriceWatch.wire(document, api); }
-    }
-  });
-  A.register({
-    name: "hints",
-    order: 170,
-    // NEWBIE-HINTS: the tip itself is a region N notice (PLAY-LEGACY-OUT-2);
-    // this keeps only the Settings click "Show new-character tips again".
-    // The empty tick stays only while app/test/registry.test.js pins the
-    // tick order; the package that widens to that test deletes it.
-    tick: function () {},
-    wire: function () {
-      if (window.ALHints) { window.ALHints.wire(document, api); }
-    }
-  });
-  A.register({
-    name: "checks",
-    order: 180,
-    // DIAG-SELF / LANG-GUARD: the core's checks and language notice
-    // REL-UPDATE-NOTICE-UI: the version lines and the update line
-    // (web/updates.js) paint right after the checks, so the Settings tab's
-    // "fix" mark wins over "update"; the OK click acknowledges the wording
-    paint: function (s) {
-      if (window.ALChecks) { window.ALChecks.paint(document, s); }
-      if (window.ALUpdates) { window.ALUpdates.paint(document, s); }
-    },
-    wire: function () {
-      if (window.ALUpdates) {
-        // REL-AUTOSTART-SETTINGS: 'Update now' posts with no body, so it
-        // gets the page's fetch and token instead of api()
-        window.ALUpdates.wire(document, api, function () { return webState().doc; }, webDataSaved,
-          { fetch: function (url, opts) { return fetch(url, opts); }, token: token });
-      }
-      if (window.ALChecks) {
-        var store = null;
-        try { store = window.localStorage; } catch (e) { store = null; }
-        // RUN-REPORT-ROUTE: api builds the report on the click (GET /api/report)
-        window.ALChecks.wire(document, function () { return snap; }, navigator, store, api);
-      }
-    }
-  });
-  A.register({
-    name: "zoneguide",
-    order: 190,
-    paint: function (s) {
-      if (window.ALZoneGuide) { window.ALZoneGuide.paint(document, s); }
-    }
-  });
-  // the tools and settings that only wire the player's clicks.
-  // TEST-WEB-PANELS-B: "layout" (200), "weights" (220), "gfx" (230) and
-  // "webdata" (250) register from their web/panels/ files with the same
-  // names and orders, so the page keeps today's wire order.
-  A.register({
-    name: "filter",
-    order: 210,
-    wire: function () {
-      $("filter-download").addEventListener("click", downloadFilter);
-      $("filter-merge-file").addEventListener("change", mergeFilter);
-    }
-  });
-  A.register({
-    name: "restart-overlay",
-    order: 240,
-    // REL-AUTOSTART-SETTINGS: the 'Start with Windows' row beside it
-    // (web/autostart.js; the client's three autostart actions)
-    wire: function () {
-      wireRestartOverlay();
-      if (window.ALAutostart) { window.ALAutostart.wire(document, window.alClient); }
-    }
-  });
-  A.register({
-    name: "settingsio",
-    order: 260,
-    // UX-SETTINGS-IO: the player's clicks
-    wire: function () {
-      // OVL-KEYS-WEB: the two change-key fields, saved on change (POST /api/hotkeys)
-      if (window.ALHotkeys) {
-        window.ALHotkeys.wire(document, { fetch: function (url, opts) { return fetch(url, opts); },
-          token: token });
-      }
-      // OVL-PARTS-WEB: the 'Overlay shows' group, saved on change (POST
-      // /api/overlay-layout); its first read runs on connect, beside the layout's
-      if (window.ALOverlayParts) {
-        window.ALOverlayParts.wire(document, api);
-        onConnect(function () { window.ALOverlayParts.load(document, api); });
-      }
-      if (!window.ALSettingsIO) { return; }
-      window.ALSettingsIO.wire(document, {
-        fetch: function (url, opts) { return fetch(url, opts); },
-        token: token,
-        save: function (blob, name) {
-          var url = URL.createObjectURL(blob);
-          var a = document.createElement("a");
-          a.href = url;
-          a.download = name;
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-        }
-      });
-    }
-  });
+  A.host = A.host || {};
+  Object.keys(own).forEach(function (k) { A.host[k] = own[k]; });
 
   /* UTIL-MULTICHAR: level, pace, deaths, act times and run history of the
-     picked character (the one playing unless the player picks); the
-     playing one's numbers when the view cannot be made. */
+     picked character (web/chars.js); the playing one's without a view. */
   function charView(s) {
-    if (!window.ALChars) { return s; }
-    try { return window.ALChars.view(s, charPick); } catch (e) { return s; }
+    return typeof charLink.view === "function" ? charLink.view(s) : s;
   }
-
-  /* FEED-PACE:begin (app/test/dashboard.test.js runs this block alone;
-     keep it self-contained ES5)
-     RUN-FEED-TRUTH (F-175): the state feed says what really happened.
-     When the EventSource is closed for good (readyState 2: the core
-     answered with something other than a stream), the page asks
-     /api/health once. A 401 after a live feed means the core restarted
-     with a new token: the bar says so and the page stops trying (the
-     client window reloads itself with the new token). A 401 before any
-     live feed is a wrong link. Anything else (an error, no answer) opens
-     the feed again FEED_RETRY_MS later, so it retries every 3 s. A feed
-     that is only reconnecting (readyState 0) is left to the browser,
-     which retries on the core's "retry: 3000".
-     o: open() -> a new EventSource; health() -> a promise of the HTTP
-     status (0 or a rejection when nothing answered); link(event) with
-     "open" | "error" | "restarted" | "notoken"; frame(name, m) for each
-     named message; later(fn, ms); everLive() -> bool; retry() (optional,
-     else open()) is what a retry runs. */
-  var FEED_RETRY_MS = 3000;
-
-  function feedLink(o) {
-    var es = null;
-    var asking = false;
-    var waiting = false;
-    var over = false;
-
-    function onError(src) {
-      if (src !== es || over) { return; }
-      o.link("error");
-      if (es.readyState !== 2 || asking || waiting) { return; }
-      asking = true;
-      var settle = function (code) {
-        asking = false;
-        if (over) { return; }
-        if (code === 401) {
-          over = true;
-          o.link(o.everLive() ? "restarted" : "notoken");
-          return;
-        }
-        waiting = true;
-        o.later(function () {
-          waiting = false;
-          if (typeof o.retry === "function") { o.retry(); } else { open(); }
-        }, FEED_RETRY_MS);
-      };
-      var p;
-      try { p = o.health(); } catch (e) { p = null; }
-      if (!p || typeof p.then !== "function") { settle(0); return; }
-      p.then(settle, function () { settle(0); });
-    }
-
-    function open() {
-      if (over) { return null; }
-      if (es) { es.close(); }
-      var src = o.open();
-      es = src;
-      src.addEventListener("open", function () { if (src === es) { o.link("open"); } });
-      src.addEventListener("error", function () { onError(src); });
-      // the state frames and the HOT-RELOAD notice (decision 0042)
-      es.addEventListener("state", function (m) { if (src === es) { o.frame("state", m); } });
-      es.addEventListener("reload", function (m) { if (src === es) { o.frame("reload", m); } });
-      return src;
-    }
-
-    return { open: open, over: function () { return over; } };
-  }
-
-  /* RUN-PERF-DASH-IDLE (F-178): the page rests while nobody can see it
-     and while the game is idle. push(s) is the state push: false while
-     the page is hidden (the newest snapshot is held and painted once when
-     the page shows again, through shown()); true when the caller paints.
-     The 1 s ticker runs only while the page shows and the game is not
-     idle (snapshot game_idle, decision 0029): a fresh log line clears
-     game_idle and the next push starts it again.
-     o: hidden() -> bool; paint(s); tick(); every(fn, ms) -> handle;
-     stop(handle). */
-  function pacer(o) {
-    var held = null;
-    var idle = false;
-    var ticker = null;
-
-    function sync() {
-      var on = !idle && !o.hidden();
-      if (on && ticker === null) {
-        ticker = o.every(o.tick, 1000);
-      } else if (!on && ticker !== null) {
-        o.stop(ticker);
-        ticker = null;
-      }
-    }
-
-    function push(s) {
-      idle = !!(s && s.game_idle === true);
-      sync();
-      if (o.hidden()) { held = s; return false; }
-      held = null;
-      return true;
-    }
-
-    function shown() {
-      sync();
-      if (o.hidden()) { return; }
-      if (held) {
-        var s = held;
-        held = null;
-        o.paint(s);
-      } else {
-        o.tick();
-      }
-    }
-
-    return { push: push, shown: shown, sync: sync,
-      ticking: function () { return ticker !== null; },
-      held: function () { return held !== null; } };
-  }
-  /* FEED-PACE:end */
 
   var pace = null; // pacer(), made in start()
+  var pushHooks = []; // host.onPush, in the order the panels wired
+
+  function onPush(fn) {
+    if (typeof fn === "function") { pushHooks.push(fn); }
+  }
 
   function render(s) {
     snap = s;
     offset = Date.now() / 1000 - s.now;
     // RUN-PERF-DASH-IDLE: a hidden page paints nothing; one paint on return
     if (pace && !pace.push(s)) { return; }
-    // MERGE-SEAMS F5: the restart-overlay note clears on the next state push
-    if (restartSaid) { restartSaid = false; setText($("restart-overlay-said"), ""); }
+    // MERGE-SEAMS F5: the restart-overlay note clears on the next state
+    // push, before the same-version return (web/panels/restart.js)
+    pushHooks.forEach(function (fn) { fn(s); });
     // decision 0029 amendment: say why the overlay is hidden (no live region)
     $("overlay-idle-note").hidden = s.game_idle !== true;
     if (s.version === renderedVersion) { tick(); return; }
     renderedVersion = s.version;
-    // OVL-KEYS-WEB: every named key is the bound one; the change fields and
-    // the Play line while the overlay is off (web/hotkeys.js)
-    if (window.ALHotkeys) { window.ALHotkeys.paint(document, s); }
     A.render(s, charView(s));
     // TD-09 region hook: every registered Play region paints after the panels
     if (window.ALRegions) { window.ALRegions.paint(document, s, serverNow()); }
     tick();
   }
 
-  function showPill(id, p) { setPill($(id), p.state, p.glyph, p.word); }
-
-  /* PLAY-TD-09C-BAR: the one bar status word, the worse of the
-     Client.txt reading state and the feed state (MERGE-SEAMS F2) */
-  function showReading() {
-    showPill("reading", D.barStatus(snap ? snap.tailer : null, linkEvent, everLive));
+  function repaint() {
+    if (snap) { renderedVersion = -1; render(snap); }
   }
 
+  /* PLAY-TD-09C-BAR: the one bar status word (web/panels/consent.js) */
   function setLink(event) {
     linkEvent = event;
     linkLive = event === "open";
     if (linkLive) { everLive = true; }
-    showReading();
+    if (typeof readLink.show === "function") { readLink.show(); }
   }
 
   function api(method, path, body) {
@@ -767,137 +169,11 @@
     });
   }
 
-  /* "Stop reading Client.txt": the opt-out click. The failure line is not
-     a live region; the button points at it (aria-describedby). */
-  function stopReading() {
-    var said = $("consent-said");
-    said.textContent = "";
-    api("POST", "/api/consent", { consent: false }).then(function (res) {
-      render(res.state);
-    }).catch(function (e) {
-      said.textContent = "Your choice was not saved. Try again.";
-      console.warn("consent failed: " + e.message);
-    });
-  }
-
-  /* READING-VIEW:begin (app/test/rail.test.js runs this function alone;
-     keep it self-contained ES5)
-     PLAY-TD-21A-SETTINGS-RAIL: the Reading and web data section's first
-     rows from the snapshot's tailer block: the reading state in plain
-     words, the log file AshLight uses ("" for none) and whether "Stop
-     reading Client.txt" shows (only while the player has allowed it). */
-  function readingView(tl) {
-    tl = tl || {};
-    var path = typeof tl.path === "string" ? tl.path.trim() : "";
-    var state;
-    if (tl.consented !== true) {
-      state = "AshLight is not reading Client.txt. The setup card on Play asks first.";
-    } else if (tl.reading === true) {
-      state = "AshLight is reading Client.txt.";
-    } else {
-      state = "Allowed, but AshLight is not reading Client.txt now. Checks says why.";
-    }
-    return { state: state, path: path ? "Log file: " + path : "", stop: tl.consented === true };
-  }
-  /* READING-VIEW:end */
-
-  /* LEDGER-VIEW:begin (app/test/dashboard.test.js runs this function alone;
-     keep it self-contained ES5)
-     RUN-LEDGER-CONSENT (decision 0071): the log record's consent line from
-     the snapshot's tailer block. Shown only while Client.txt is read; the
-     record is on only when the core says ledger === true (the Client.txt
-     opt-in alone never turns it on). `send` is what the button posts. */
-  function ledgerView(tl) {
-    tl = tl || {};
-    var shown = tl.consented === true;
-    var on = shown && tl.ledger === true;
-    var what = " AshLight counts the kinds of log lines it reads and keeps " +
-      "their shapes on this computer. Names, chat and item words are blanked " +
-      "out. Nothing is sent.";
-    if (on) {
-      return { shown: true, on: true, send: false, button: "Stop the log record",
-               text: "Log record: on." + what + " Stopping it deletes the file." };
-    }
-    return { shown: shown, on: false, send: true, button: "Allow the log record",
-             text: "Log record: off. When on," + what };
-  }
-  /* LEDGER-VIEW:end */
-
-  var ledgerSend = true;
-
-  function paintLedger(tl) {
-    var v = ledgerView(tl);
-    ledgerSend = v.send;
-    $("ledger-line").hidden = !v.shown;
-    setText($("ledger-text"), v.text);
-    setText($("ledger-allow"), v.button);
-  }
-
-  /* The log record's own Allow / Stop click (decision 0071): posts only the
-     ledger flag; the failure line is not a live region. */
-  function toggleLedger() {
-    var said = $("ledger-said");
-    said.textContent = "";
-    api("POST", "/api/consent", { ledger: ledgerSend }).then(function (res) {
-      render(res.state);
-    }).catch(function (e) {
-      said.textContent = "Your choice was not saved. Try again.";
-      console.warn("ledger consent failed: " + e.message);
-    });
-  }
-
-  /* BUILD-STAMP:begin (app/test/about.test.js runs this function alone and
-     holds it to app/about.js versionLine; keep it self-contained ES5)
-     RUN-BUILD-STAMP-UI (F-027, decision 0082 part 2): the version line
-     from the core's build string '<x.y.z>[+<12 hex>][.dev]':
-     "Version 0.1.0, build 0123456789ab", ", dev" while hot reload is on;
-     "" for anything else. */
-  function versionText(doc) {
-    var raw = doc && (typeof doc.build === "string" ? doc.build : doc.version);
-    if (typeof raw !== "string" || raw.length > 100) { return ""; }
-    var plus = raw.indexOf("+");
-    var ver = plus < 0 ? raw : raw.slice(0, plus);
-    if (!/^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$/.test(ver)) { return ""; }
-    var meta = plus < 0 ? [] : raw.slice(plus + 1).split(".");
-    var commit = "";
-    var dev = false;
-    for (var i = 0; i < meta.length; i++) {
-      if (meta[i] === "dev" && !dev) { dev = true; continue; }
-      if (/^[0-9a-f]{12}$/.test(meta[i]) && !commit && !dev) { commit = meta[i]; continue; }
-      return "";
-    }
-    return "Version " + ver + (commit ? ", build " + commit : "") + (dev ? ", dev" : "");
-  }
-  /* BUILD-STAMP:end */
-
-  /* TC-SNAP-UI: the full game-data credits in Settings > About and data
-     (PLAY-TD-21B-SETTINGS-ABOUT moved them out of the footer), read on
-     every connect, so a snapshot made by the build shows up without a
-     click. RUN-BUILD-STAMP-UI: the same read fills the footer's version
-     line and the About and data version, so a core restart on a new build
-     shows it. */
-  function loadDataCredit() {
-    api("GET", "/api/version").then(function (doc) {
-      var text = D.dataCreditText(doc);
-      var p = $("data-credit");
-      p.textContent = text;
-      p.hidden = !text;
-      $("credits").hidden = !text; // the About and data group around it
-      var ver = versionText(doc);
-      if (ver) {
-        $("build-line").textContent = ver;
-        $("build-line").hidden = false;
-        $("about-version").textContent = ver;
-      }
-    }).catch(function () { /* keep the last line; the next connect retries */ });
-  }
-
-  /* TEST-WEB-PANELS-B: a panel's first read (host.onConnect), kept in the
-     order the panels wired and run by connect() where it read them itself */
   var connectReads = [];
+  var lateReads = [];
 
-  function onConnect(fn) {
-    if (typeof fn === "function") { connectReads.push(fn); }
+  function onConnect(fn, late) {
+    if (typeof fn === "function") { (late ? lateReads : connectReads).push(fn); }
   }
 
   function connect() {
@@ -905,22 +181,22 @@
       setLink("notoken");
       return;
     }
-    // TEST-WEB-PANELS-B: the overlay layout, the stat weights and the web
-    // data setting, read by their panels (onConnect, in wire order)
+    // the panels' first reads in wire order, the rates, then the late reads
+    // (the version and game-data credit line, web/panels/version.js)
     connectReads.forEach(function (fn) { fn(); });
     A.host.loadRates();
-    loadDataCredit();
+    lateReads.forEach(function (fn) { fn(); });
     api("GET", "/api/state").then(render).catch(function () {
       // a feed that found the core restarted keeps saying so
       if (!linkLive && !(feed && feed.over())) { setLink("error"); }
     });
-    if (!feed) { feed = feedLink(feedHooks()); }
+    if (!feed) { feed = A.host.feedLink(feedHooks()); }
     feed.open();
   }
 
-  /* RUN-FEED-TRUTH: the page's side of feedLink (FEED-PACE above). A
-     retry runs the whole connect(), so the panels' first reads come again
-     after a core restart that kept its token. */
+  /* RUN-FEED-TRUTH: the page's side of feedLink (web/panels/feedpace.js).
+     A retry runs the whole connect(), so the panels' first reads come
+     again after a core restart that kept its token. */
   var feed = null;
 
   function feedHooks() {
@@ -940,8 +216,7 @@
           return;
         }
         /* HOT-RELOAD (decision 0042): a dashboard file changed on disk
-           (source checkout only); load the new page. The token stays in
-           sessionStorage. */
+           (source checkout only); load the new page. */
         var d = null;
         try { d = JSON.parse(m.data); } catch (e) { d = null; }
         if (d && d.target === "web") { location.reload(); }
@@ -954,8 +229,8 @@
 
   function start() {
     // RUN-PERF-DASH-IDLE (F-178): the 1 s ticker and the painters rest
-    // while the page is hidden or the game is idle (pacer, FEED-PACE above)
-    pace = pacer({
+    // while the page is hidden or the game is idle (web/panels/feedpace.js)
+    pace = A.host.pacer({
       hidden: function () { return document.hidden; },
       paint: render,
       tick: tick,
@@ -963,17 +238,10 @@
       stop: function (h) { clearInterval(h); }
     });
     document.addEventListener("visibilitychange", pace.shown);
-    // TEST-WEB-REGISTRY: every panel's wire, in its order (web/registry.js)
+    // every panel's wire, in its order, before the first push; the last are
+    // the 'Tried in game' card (web/checks.js) and the Settings rail
+    // (web/panels/consent.js)
     A.start();
-    // RUN-VERDICTS-UI: the 'Tried in game' card (one read, then clicks only)
-    if (window.ALVerdicts) { window.ALVerdicts.wire(document, api); }
-    // PLAY-TD-21A-SETTINGS-RAIL: the Settings rail, the bar status word's
-    // jump and the data-jump buttons; before the first push, so a failing
-    // check shows the Checks section (web/rail.js)
-    if (window.ALRail) {
-      window.ALRail.start(document, { tabs: window.ALTabs || null,
-        observe: typeof window.ResizeObserver === "function" ? window.ResizeObserver : null });
-    }
     // TD-09 region hook: wire every registered Play region before the first push
     if (window.ALRegions) {
       window.ALRegions.start(document, {

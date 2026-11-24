@@ -12,6 +12,16 @@
     module.exports = api;
   } else {
     root.ALZoneGuide = api;
+    /* TEST-WEB-PANELS-C2 (F-135): the zone guide registers itself
+       (web/registry.js) as "zoneguide", order 190, the name and order
+       web/app.js gave it. */
+    if (root.ALApp && typeof root.ALApp.register === "function") {
+      root.ALApp.register({
+        name: "zoneguide",
+        order: 190,
+        paint: function (s) { api.paint(document, s); }
+      });
+    }
   }
 }(typeof self !== "undefined" ? self : this, function () {
   "use strict";

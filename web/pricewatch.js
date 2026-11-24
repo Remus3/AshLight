@@ -19,6 +19,22 @@
     module.exports = api;
   } else {
     root.ALPriceWatch = api;
+    /* TEST-WEB-PANELS-C2 (F-135): UTIL-PRICE-WATCH registers itself
+       (web/registry.js) as "pricewatch", order 160, the name and order
+       web/app.js gave it: moved prices of the items the player checked,
+       on top of the Prices card list (PLAY-TD-19D-ITEMS-GRID; the list is
+       painted again through app.js's ratesLink, web/panels/rates.js). */
+    if (root.ALApp && typeof root.ALApp.register === "function") {
+      root.ALApp.register({
+        name: "pricewatch",
+        order: 160,
+        paint: function (s) {
+          var rates = root.ALApp.host.ratesLink;
+          if (api.paint(document, s) && typeof rates.paintPricesList === "function") { rates.paintPricesList(); }
+        },
+        wire: function () { api.wire(document, root.ALApp.host.api); }
+      });
+    }
   }
 }(typeof self !== "undefined" ? self : this, function () {
   "use strict";

@@ -11,7 +11,8 @@ so the first mods fit the 3 x 47 page (design-reviewer D-1). A row
 without text keeps its one-line text there. No
 details fold comes back (a fold can grow a fixed card, PLAY-TD-19C).
 
-Static checks read web/app.js (linkPager, the shared pager plumbing) and
+Static checks read web/panels/pager.js (linkPager, the shared pager
+plumbing, moved there from web/app.js by TEST-WEB-PANELS-C2) and
 web/panels/build.js (renderBuild, moved there by TEST-WEB-PANELS-A;
 adjudicated 2026-11-21). One behavioural check drives web/search.js
 rowPager under node with the options linkPager builds, one runs
@@ -27,6 +28,7 @@ import pytest
 import srcpaths
 
 APP = srcpaths.read("app.js")
+PAGER = srcpaths.read("panels/pager.js")
 BUILD = srcpaths.read("panels/build.js")
 
 
@@ -42,7 +44,7 @@ def _gear_call():
 
 
 def _link_pager():
-    return _block(APP, "function linkPager(", r"\n  \}\n")
+    return _block(PAGER, "function linkPager(", r"\n    \}\n")
 
 
 def _gear_full_src():
@@ -89,7 +91,8 @@ def test_no_details_fold_comes_back():
     assert "details" not in call.lower()
     render = _block(BUILD, "function renderBuild()", r"\n  \}\n")
     assert "details" not in render.lower()
-    assert "createElement(\"details\")" not in APP and "createElement('details')" not in APP
+    for src in (APP, PAGER):
+        assert "createElement(\"details\")" not in src and "createElement('details')" not in src
     html = srcpaths.index_html()
     m = re.search(r'<div id="build-gear"[^>]*>(.*?)</div>', html, re.S)
     assert m and "<details" not in m.group(1)

@@ -1,6 +1,8 @@
 /* TEST-WEB-REGISTRY (F-135): web/registry.js runs the dashboard's panels
-   in their order with a try / catch per panel; web/app.js registers one
-   entry per paint, tick and wire it used to call in one sequence. */
+   in their order with a try / catch per panel. TEST-WEB-PANELS-C2: every
+   card registers its own entry (the web/panels/ files and the web/*.js
+   view modules) under the name and order web/app.js gave it; app.js
+   registers none. */
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert/strict");
@@ -183,17 +185,31 @@ test("registry.js is the page's second script, pure and ASCII", () => {
 });
 
 /* Run web/app.js against a fake page that never starts, so only its
-   registrations happen; the panels land in the shared-registry slot. */
-function appRegistry() {
+   registrations happen; the panels land in the shared-registry slot.
+   TEST-WEB-PANELS-C2: app.js registers nothing itself any more; every
+   card registers from its own file (the web/panels/ files and the view
+   modules), so `files` names the files to run beside it. */
+const FMT = web.load("fmt.js");
+
+function runFile(name, reg) {
+  const sandbox = { ALApp: reg, ALFmt: FMT };
+  sandbox.window = sandbox;
+  vm.runInNewContext(web.source(name), sandbox, { filename: name });
+}
+
+function appRegistry(files, opts) {
   const reg = R.create({ warn() {} });
+  const ticks = [];
+  if (opts && opts.ticks) {
+    const plain = reg.register;
+    reg.register = (spec) => {
+      if (spec && typeof spec.tick === "function") { ticks.push(spec.name); }
+      return plain(spec);
+    };
+  }
+  (files || []).forEach((f) => runFile(f, reg));
   const noop = () => {};
-  const win = {
-    ALApp: reg,
-    ALDash: {},
-    ALFmt: { duration: noop, clock: noop, pad: noop },
-    ALTc: {},
-    ALPrices: {}
-  };
+  const win = { ALApp: reg, ALFmt: { duration: noop, clock: noop, pad: noop } };
   const sandbox = {
     window: win,
     document: { readyState: "loading", addEventListener: noop, getElementById: noop },
@@ -204,41 +220,45 @@ function appRegistry() {
   };
   Object.keys(win).forEach((k) => { sandbox[k] = win[k]; });
   vm.runInNewContext(APP, sandbox, { filename: "app.js" });
+  reg.ticks = ticks;
   return reg;
 }
 
 // today's paint sequence (the live regions announce in this order), then
-// the wire-only tools and settings
-const PANELS = ["build", "eval", "price", "chars", "pace", "consent", "reading",
-  "events", "acts", "runs", "summary", "zonenote", "history", "pricewatch", "hints",
+// the wire-only tools and settings. TEST-WEB-PANELS-C2: the key paint
+// render() ran before the panels is the "hotkeys" entry (order 0); the
+// 'Tried in game' card and the Settings rail, wired right after the
+// panels, are "verdicts" (300) and "rail" (310); "version" (270) only
+// queues the version read connect() made after the rates. The empty
+// "zonenote" entry and the hints' empty tick are gone.
+const PANELS = ["hotkeys", "loaded-build", "build", "eval", "price", "chars", "pace", "consent",
+  "reading", "events", "acts", "runs", "summary", "history", "pricewatch", "hints",
   "checks", "zoneguide", "layout", "filter", "weights", "gfx", "restart-overlay", "webdata",
-  "settingsio"];
+  "settingsio", "version", "verdicts", "rail"];
 
-/* TEST-WEB-PANELS-B and -C1: these entries register from their own
-   web/panels/ files under the name and order app.js gave them before the
-   move */
-const MOVED = { eval: "itemcheck.js", price: "rates.js", events: "events.js",
-  layout: "layout.js", weights: "weights.js", gfx: "gfx.js", webdata: "webdata.js" };
+/* every file that registers a dashboard panel: the web/panels/ files
+   (pager.js and settingsio.js by their panels/ path: web/ has a file of
+   the same name) and the web/*.js view modules */
+const PANEL_FILES = ["build.js", "panels/pager.js", "itemcheck.js", "rates.js", "events.js",
+  "consent.js", "layout.js", "filter.js", "weights.js", "gfx.js", "restart.js", "webdata.js",
+  "panels/settingsio.js", "version.js"];
+const VIEW_FILES = ["acts.js", "chars.js", "checks.js", "hints.js", "history.js",
+  "pricewatch.js", "runs.js", "summary.js", "zoneguide.js"];
+const ALL_FILES = PANEL_FILES.concat(VIEW_FILES);
 
-test("app.js registers its panels in today's order", () => {
-  const reg = appRegistry();
-  assert.deepEqual(reg.names(), PANELS.filter((n) => !(n in MOVED)));
-  // with the moved panel files (the page links them before app.js) the
-  // page keeps today's whole order
-  Object.values(MOVED).forEach((file) => {
-    const sandbox = { ALApp: reg };
-    sandbox.window = sandbox;
-    vm.runInNewContext(web.source(file), sandbox, { filename: file });
-  });
-  assert.deepEqual(reg.names(), PANELS);
+test("app.js registers no panel and no adapter entry; every card registers itself", () => {
+  assert.deepEqual(appRegistry().names(), []);
+  assert.ok(!APP.includes("A.register("), "an adapter entry is left in app.js");
+  // with every panel file and view module (the page links them before
+  // app.js) the page keeps today's whole order, whatever order they load in
+  assert.deepEqual(appRegistry(ALL_FILES).names(), PANELS);
+  assert.deepEqual(appRegistry(ALL_FILES.slice().reverse()).names(), PANELS);
 });
 
-test("app.js keeps today's tick order: clocks, act split, map time, tip", () => {
-  const reg = appRegistry();
-  const order = [...APP.matchAll(/A\.register\(\{\s*name: "([a-z-]+)",\s*order: (\d+),([\s\S]*?)\n  \}\);/g)]
-    .filter((m) => /\n    tick: function/.test(m[3])).map((m) => m[1]);
-  assert.deepEqual(order, ["acts", "runs", "hints"]);
-  assert.deepEqual(reg.names().filter((n) => order.includes(n)), order);
+test("the page keeps today's tick order: act split, map time", () => {
+  const reg = appRegistry(ALL_FILES, { ticks: true });
+  assert.deepEqual(reg.ticks, ["acts", "runs"]);
+  assert.deepEqual(reg.names().filter((n) => reg.ticks.includes(n)), ["acts", "runs"]);
 });
 
 test("render, tick and start are loops over the registry", () => {
@@ -252,12 +272,13 @@ test("render, tick and start are loops over the registry", () => {
   const tick = body("tick");
   const start = body("start");
   assert.match(render, /A\.render\(s, charView\(s\)\);/);
-  assert.match(tick, /A\.tick\(snap, now, until\);/);
+  assert.match(tick, /A\.tick\(snap, now\);/);
   assert.match(start, /A\.start\(\);/);
   // no panel is called by name from the three loops any more
   for (const src of [render, tick, start]) {
     for (const name of ["ALActs", "ALRuns", "ALHints", "ALChars", "ALHistory", "ALPriceWatch",
-      "ALChecks", "ALZoneGuide", "ALSummary", "ALBuildLive", "ALSettingsIO",
+      "ALChecks", "ALZoneGuide", "ALSummary", "ALBuildLive", "ALSettingsIO", "ALHotkeys",
+      "ALVerdicts", "ALRail", "ALDash",
       "renderEval", "renderPrice", "renderEvents", "renderTrades", "renderBuildYou"]) {
       assert.ok(!src.includes(name), name);
     }

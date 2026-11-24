@@ -55,6 +55,45 @@
     module.exports = api;
   } else {
     root.ALChecks = api;
+    /* TEST-WEB-PANELS-C2 (F-135): the Checks tool registers itself
+       (web/registry.js) under the names and orders web/app.js gave it.
+       "checks" 180: DIAG-SELF / LANG-GUARD, the core's checks and language
+       notice; REL-UPDATE-NOTICE-UI: the version lines and the update line
+       (web/updates.js) paint right after the checks, so the Settings tab's
+       "fix" mark wins over "update"; the OK click acknowledges the wording.
+       "verdicts" 300: RUN-VERDICTS-UI, the 'Tried in game' card (one read,
+       then clicks only), wired after every other card, where app.js wired
+       it right after the panels' wires. */
+    if (root.ALApp && typeof root.ALApp.register === "function") {
+      root.ALApp.register({
+        name: "checks",
+        order: 180,
+        paint: function (s) {
+          api.paint(document, s);
+          if (root.ALUpdates) { root.ALUpdates.paint(document, s); }
+        },
+        wire: function () {
+          var host = root.ALApp.host;
+          if (root.ALUpdates) {
+            // REL-AUTOSTART-SETTINGS: 'Update now' posts with no body, so it
+            // gets the page's fetch and token instead of api()
+            root.ALUpdates.wire(document, host.api, function () { return host.webState().doc; },
+              host.webDataSaved, { fetch: function (url, opts) { return fetch(url, opts); }, token: host.token });
+          }
+          var store = null;
+          try { store = root.localStorage; } catch (e) { store = null; }
+          // RUN-REPORT-ROUTE: api builds the report on the click (GET /api/report)
+          api.wire(document, function () { return host.getSnap(); }, navigator, store, host.api);
+        }
+      });
+      root.ALApp.register({
+        name: "verdicts",
+        order: 300,
+        wire: function () {
+          if (root.ALVerdicts) { root.ALVerdicts.wire(document, root.ALApp.host.api); }
+        }
+      });
+    }
   }
 }(typeof self !== "undefined" ? self : this, function () {
   "use strict";
