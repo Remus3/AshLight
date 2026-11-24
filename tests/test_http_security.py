@@ -273,7 +273,7 @@ GET_ROUTES = ("/", "/index.html", "/web/app.js", "/tokens.css", "/favicon.ico",
               "/api/build", "/api/filter", "/api/buildfile", "/api/settings-export",
               "/api/weights", "/api/gfx", "/api/rates", "/api/web-data", "/events",
               "/no-such-route")
-POST_ROUTES = ("/api/clipboard-read", "/api/consent", "/api/overlay-layout",
+POST_ROUTES = ("/api/consent", "/api/overlay-layout",
                "/api/trade-dismiss", "/api/build-code", "/api/eval", "/api/web-data",
                "/api/filter-merge", "/api/settings-import", "/api/run-history",
                "/api/price-watch", "/api/hints", "/no-such-route")
@@ -524,11 +524,6 @@ def test_consent_gate(srv):
     r, _ = req(srv, "POST", "/api/consent", {**auth(), "Content-Type": "application/json"},
                body=json.dumps({"consent": False}))
     assert r.status == 200 and core.tailer is None
-
-
-def test_clipboard_read_is_a_501_stub(srv):
-    r, _ = req(srv, "POST", "/api/clipboard-read", auth())
-    assert r.status == 501
 
 
 def _sse_open(server, query=""):
