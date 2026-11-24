@@ -395,3 +395,37 @@ test("the click-only switch: shows the core's state and saves one allow-listed k
   assert.equal(label[1], U.CLICK_LABEL);
   for (const t of [U.TEXT.clickOn, U.TEXT.clickOff]) { assert.ok(t.length <= U.LINE_MAX, t); }
 });
+
+test("SAVE-FAIL-SAY: a failed OK ack or click-only save is also said on the polite line", async () => {
+  const said = [];
+  const tabs = { say(doc, text) { said.push(text); } };
+  // the OK ack refused by the core
+  const doc = fakeDoc(BOX_IDS);
+  U.wire(doc, () => Promise.reject(new Error("x")), () => ({ wording_version: 1 }), null, { tabs });
+  doc.getElementById("update-ack").fire("click");
+  await tick(); await tick();
+  assert.equal(doc.getElementById("update-said").textContent, U.TEXT.notSaved);
+  assert.deepEqual(said, [U.TEXT.notSaved]);
+  // no wording version known: nothing is sent, the same words are said
+  const d2 = fakeDoc(BOX_IDS);
+  U.wire(d2, () => Promise.resolve({}), () => null, null, { tabs });
+  d2.getElementById("update-ack").fire("click");
+  await tick();
+  assert.deepEqual(said, [U.TEXT.notSaved, U.TEXT.notSaved]);
+  // the click-only switch not applied
+  const d3 = fakeDoc(BOX_IDS);
+  U.wire(d3, () => Promise.resolve({ applied: [] }), () => null, null, { tabs });
+  const box = d3.getElementById("update-click-only");
+  box.checked = true;
+  box.fire("change");
+  await tick(); await tick();
+  assert.equal(d3.getElementById("update-click-said").textContent, U.TEXT.notSaved);
+  assert.deepEqual(said, [U.TEXT.notSaved, U.TEXT.notSaved, U.TEXT.notSaved]);
+  // a save that works says nothing on the polite line (its own line shows it)
+  const d4 = fakeDoc(BOX_IDS);
+  U.wire(d4, () => Promise.resolve({ acked: true }), () => ({ wording_version: 1 }), null, { tabs });
+  d4.getElementById("update-ack").fire("click");
+  await tick(); await tick();
+  assert.equal(d4.getElementById("update-said").textContent, U.TEXT.acked);
+  assert.equal(said.length, 3);
+});

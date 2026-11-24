@@ -13,6 +13,12 @@
    reached through window.ALApp.host, which app.js sets before start().
 
    Changes and clicks only: no clipboard, no new timer, no new request.
+   SAVE-FAIL-SAY (design finding WD-3): a failed save or reset is also said
+   in the page's one shared polite line, the header's #tab-news, through
+   ALTabs.say (failed() below; design 0001 N6), but only while the card's
+   own polite #weights-status is not shown (the card folded, its tab
+   hidden): a shown status line speaks for itself, so the words are never
+   said twice (review W1).
 
    UMD like web/fmt.js: CommonJS for node --test (app/test/panels.test.js)
    exports {name, order, panel}; in the page the file registers itself with
@@ -56,6 +62,27 @@
   }
 
   function textRow(s) { return { text: s }; }
+
+  /* True while the player can see the status line: it exists, it is laid
+     out (offsetParent is null under any display: none, a hidden tab panel
+     included) and no folded card or hidden element holds it. */
+  function statusShown(node) {
+    if (!node || node.offsetParent === null) { return false; }
+    return !(typeof node.closest === "function" &&
+      node.closest("[data-collapsed=\"true\"], [hidden]"));
+  }
+
+  /* A failed save or reset: the card's status line (itself a polite
+     region), and the same words in the header's polite #tab-news
+     (ALTabs.say) only while that line is not shown, so they are said once;
+     a page without tabs says only the status line. */
+  function failed(text) {
+    var line = $("weights-status");
+    if (line) { line.textContent = text; }
+    if (statusShown(line)) { return; }
+    var t = window.ALTabs;
+    if (t && typeof t.say === "function") { t.say(document, text); }
+  }
 
   /* Stat weights editor: saves on change (PUT /api/weights). */
   var weightsBusy = false;
@@ -269,7 +296,7 @@
         focusAfter = null;
         $("weights-status").textContent = "Back to the default.";
       }).catch(function () {
-        $("weights-status").textContent = "Not reset. Try again.";
+        failed("Not reset. Try again.");
       }).then(function () {
         weightsBusy = false;
         if (weightsAgain) { weightsAgain = false; saveWeights(); }
@@ -289,7 +316,7 @@
         $("weights-status").textContent = "Back to the defaults.";
         showCardPage($("weightsbox"), "main", cardHeading($("weightsbox")));
       }).catch(function () {
-        $("weights-status").textContent = "Not reset. Try again.";
+        failed("Not reset. Try again.");
       }).then(function () { weightsBusy = false; });
   }
 
@@ -336,7 +363,7 @@
         $("weights-status").textContent = getSnap() && getSnap().eval
           ? "Saved. The last item was checked again." : "Saved.";
       }).catch(function () {
-        $("weights-status").textContent = "Not saved. Check that each value is a number, then try again.";
+        failed("Not saved. Check that each value is a number, then try again.");
       }).then(function () {
         weightsBusy = false;
         if (weightsAgain) { weightsAgain = false; saveWeights(); }
