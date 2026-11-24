@@ -1290,6 +1290,18 @@ of the HALT check.
   weapon note, which never reaches a player) live in
   server/al/text/kindler.py, listed in docs/design/copy/kindler.md under
   "Server words".
+  KINDLER-FIT-MEASURE: tests/test_play_fit.py opens a Kindler tab on a
+  static copy of the assembled page (real web/kindler.js, fake core, one
+  srcdoc iframe per size, read by --dump-dom, no core and no port) and
+  measures the editor card at all 5 cockpit and 2 flow sizes, new tab and
+  worst case (6 tabs with 32-character labels, full note, stale partial,
+  longest status words; tools, rename and confirm modes), and the plan
+  card on every stage, page and part, each keeping the G4 slack and
+  clipping nothing (flow sizes: no horizontal scroll); kindler.css keeps
+  New and the head words on one line and the status beside Generate in the
+  cockpit, and in the compact class the Build panel shows two equal
+  columns while a plan shows (full keeps editor in column 1, plan in
+  columns 2-3).
   Reverses if: PoB drift makes route XML unreliable,
   12 candidates in 60 s breach the 0024 / 0028 budgets,
   automatic regeneration is wanted and shown to cost no FPS, 6 tabs prove
@@ -1302,8 +1314,11 @@ of the HALT check.
   needs items (KINDLER-WEAPON-BASE), a review rules another rank
   baseline, per-slot local mods change the focus ranking in play, the
   stage priority misfires in play, PoB stops reading a normal item's name
-  line as its base, a template needs a weapon per stage, or a stale
-  cached result is seen after a base_items refresh.
+  line as its base, a template needs a weapon per stage, a stale
+  cached result is seen after a base_items refresh, the plan or editor
+  card gains rows that break the measured slack, the compact two-column
+  split feels cramped in use, or `@media not (...)` fails in the pinned
+  Electron.
 - DATA-GEMS-SNAP: snapshot.SOURCES adds repoe-fork's poe2 gems.json, cached
   as the gems.json that theorycraft/archetypes.py reads (GEMS_FILE), with
   the same web_data opt-in, cache, User-Agent and attribution as base_items
