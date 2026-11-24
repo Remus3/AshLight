@@ -51,6 +51,20 @@ overwrites a note: a zone that already has a note here keeps it
 ("notes_kept"), a new zone gets the file's note ("notes_added") while the
 notes file's bounds allow ("notes_full" counts the rest); a bad block
 refuses the whole file. A file without the block leaves the notes alone.
+
+KINDLER-STORE (decision 0081 point 7, decision 0036): the Kindler tabs
+are a separate top-level "gen_builds" block, {"tabs": [tab without id]}
+(theorycraft/genstore.py export_block), never a key of ALLOWED or
+"settings". with_gen_builds() adds it when it validates and keeps the
+file within MAX_BYTES (else it is left out, like the weights block);
+gen_builds_of() checks an imported block strictly (genstore.check_block,
+at most genstore.MAX_TABS tabs, no item text, no path); a bad block
+refuses the whole file. An import adds the file's tabs after the
+player's own while there is room and never overwrites one
+(merge_gen_builds); a file without the block leaves the tabs alone. The
+block carries no web_data and no other setting, so it never turns web
+data on. The core wiring (Core.export_settings / import_settings) is a
+follow-up row (ruling 2026-11-23, KINDLER-STORE option C).
 """
 
 import json
@@ -59,6 +73,7 @@ import re
 from . import hotkeys
 from . import layout as layout_mod
 from . import playernotes
+from .theorycraft import genstore
 from .theorycraft import weights as weights_mod
 
 KIND = "ashlight-settings"
@@ -77,6 +92,9 @@ NOTES_KEY = "notes"
 NOTES_LEFT_OUT = "notes_left_out"
 NOTES_LABEL = "zone notes"
 NOTE_FIELDS = ("character", "area_id", "text")
+# KINDLER-STORE: the optional Kindler tabs block (decision 0081 point 7)
+GEN_KEY = "gen_builds"
+GEN_LABEL = "Kindler tabs"
 
 _NAME = re.compile(r"^[^\x00-\x1f\x7f]{0,64}$")
 
@@ -346,3 +364,42 @@ def merge_notes(book, rows):
         total += 1
         names.add(name)
     return adds, {"notes_added": len(adds), "notes_kept": kept, "notes_full": full}
+
+
+# -- KINDLER-STORE: the Kindler tabs block (decision 0081 point 7) -----------
+
+def with_gen_builds(doc, block):
+    """doc plus the Kindler tabs block (GenStore.export_block()), or doc
+    unchanged when block is None, does not validate, or would push the
+    file past MAX_BYTES."""
+    if block is None:
+        return doc
+    try:
+        clean = genstore.check_block(block)
+    except genstore.GenError:
+        return doc
+    out = dict(doc, **{GEN_KEY: clean})
+    if len(_text(out).encode("ascii")) > MAX_BYTES:
+        return doc
+    return out
+
+
+def gen_builds_of(doc):
+    """The checked Kindler tabs of an imported file ([tab without id]), or
+    None when the file has no block. Raises SettingsError (nothing
+    applied) for a block the store would not keep."""
+    if not isinstance(doc, dict) or GEN_KEY not in doc:
+        return None
+    try:
+        return genstore.check_block(doc[GEN_KEY])["tabs"]
+    except genstore.GenError:
+        raise SettingsError(f"The {GEN_LABEL} in that file are not valid.") from None
+
+
+def merge_gen_builds(store, tabs):
+    """Add imported tabs to a GenStore after the player's own while there
+    is room (never overwriting one). The report part:
+    {"gen_tabs_added", "gen_tabs_full"}. An OSError from the write is the
+    caller's (the tabs stay in memory)."""
+    added, full = store.import_tabs(tabs or [])
+    return {"gen_tabs_added": added, "gen_tabs_full": full}

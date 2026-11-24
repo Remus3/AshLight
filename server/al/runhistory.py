@@ -26,11 +26,20 @@ local config, or the dashboard switch) and clear it (dashboard button).
 RUN-DURABLE-STORE-FILES (F-014, decision 0036 amendment 2026-11-18): the
 file is written with one `.bak` of its last good copy and read with the
 .bak restore; clear() removes the .bak with the data.
+
+KINDLER-STORE (decision 0081 point 7, decision 0036): RunHistory.on_clear
+is a per-instance list of callables run after clear(), so a store a plug
+attaches (the Kindler tabs, plug/genbuilds.py) is emptied by the same
+Clear run history click. A hook that raises is logged and skipped; it
+never stops the clear or the hooks after it.
 """
 
+import logging
 from pathlib import Path
 
 from . import jsonfile, num
+
+log = logging.getLogger("al.runhistory")
 
 FILE_NAME = "run_history.json"
 CONFIG_KEY = "run_history"
@@ -194,6 +203,7 @@ class RunHistory:
 
     def __init__(self, path):
         self.path = Path(path)
+        self.on_clear = []  # KINDLER-STORE: run after clear()
         try:
             migrate(self.path)
         except OSError:
@@ -224,10 +234,18 @@ class RunHistory:
 
     def clear(self):
         """Forget every run: the file holds an empty list and its .bak
-        is removed."""
+        is removed; then every on_clear hook runs (KINDLER-STORE). A
+        failed run history write still runs the hooks, then raises."""
         self.runs = []
-        save(self.path, self.runs)
-        drop_bak(self.path)
+        try:
+            save(self.path, self.runs)
+            drop_bak(self.path)
+        finally:
+            for hook in list(self.on_clear):
+                try:
+                    hook()
+                except Exception as exc:  # noqa: BLE001 - one store never stops the clear
+                    log.warning("a clear hook failed: %s", type(exc).__name__)
 
     def view(self, current=None, enabled=True, character=None):
         """The snapshot `run_history` part. current: the live run record
