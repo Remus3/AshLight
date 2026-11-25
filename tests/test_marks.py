@@ -230,6 +230,21 @@ def test_minus_m_timing_lists_the_timing_files_and_not_fuzz(timing_rows):
     assert any(r["file"] == FUZZ for r in timing_rows)
 
 
+def test_timing_calc_stream_holds_every_live_calc_timing_test(calc_rows, timing_rows):
+    """TEST-SERIAL-PHASE-CUT: the phase 2 calc stream (suite_run
+    CALC_TIMING_FILES) names only files with timing tests, and every timing
+    test that also runs the live calc is in it, so the other stream never
+    starts a calc beside it."""
+    sys.path.insert(0, str(ROOT / "tools"))
+    import suite_run
+    timed = {r["nodeid"]: r["file"] for r in timing_rows if r["selected"]}
+    live = {r["nodeid"] for r in calc_rows if r["selected"]}
+    stream = set(suite_run.CALC_TIMING_FILES)
+    assert stream <= set(timed.values()), sorted(stream - set(timed.values()))
+    outside = sorted(n for n, f in timed.items() if n in live and f not in stream)
+    assert not outside, outside
+
+
 def test_supervisor_files_share_one_worker_group(calc_rows):
     for rel in SUPERVISOR:
         rows = [r for r in calc_rows if r["file"] == rel]
