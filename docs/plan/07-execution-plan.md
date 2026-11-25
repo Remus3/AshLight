@@ -2447,6 +2447,28 @@ AUTO-26 proves agent worktrees land under the sidecar now that decision
 
 - AUTO-26 [session, S 20m, review, P1] WT-SIDECAR-WIRE: prove agent worktrees land under the sidecar. Files: tests/test_wt_sidecar_hook.py. Deps: LOOP-DECISION-TIDY.
 
+### Wave 61: in-game verdict records
+
+RUN-VERDICTS-CLOSE and RUN-BUILDFILE-LIVE-CLOSE record the in-game verdicts
+now in ops/runtime/verdicts.json (2026-11-22) in research 0025, 0022 and
+0027 and file the fix rows, tagged for the operator's re-try because the
+clicks carry no note.
+
+- Session 17; width 0 worktree + 2 main-checkout, 0 loop rows released.
+- Hotspots: none.
+- Integrator: ROADMAP.md rows of all 2 packages; AL-NEXT-SESSION.txt:
+  RUN-VERDICTS-CLOSE.
+- Gate: per package: its named tests as a file-named run; main-checkout acts
+  one at a time in merge order; per merge batch of 4 on the integration
+  worktree: merge, then the integrator's edits for the batch as one commit,
+  then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python
+  tools/suite_run.py and npm test --prefix app, green, then main moves; then
+  python tools/plan_check.py check; the wave closes when every session row
+  is flipped and main is clean.
+
+- RUN-VERDICTS-CLOSE [session, S 25m, review, P2] Record the three remaining in-game tries (search string, filter, merged filter). Files: docs/research/0025-search-box-and-filter-syntax.md, docs/research/0022-loot-filters.md. Deps: RUN-VERDICTS-CORE, RUN-VERDICTS-UI.
+- RUN-BUILDFILE-LIVE-CLOSE [session, S 20m, review, P1] Record the in-game result of an AshLight-made .build. Files: docs/research/0027-build-file-passive-ids.md. Deps: RUN-VERDICTS-CORE, RUN-VERDICTS-UI.
+
 <!-- plan_check waves end -->
 
 ## Hotspot schedule
