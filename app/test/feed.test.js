@@ -449,10 +449,14 @@ test("a long item name: buyer and verb stay whole, only the item truncates (PLAY
     assert.equal(it.getAttribute("title"), LONG);
   });
   // CSS: the item takes the ellipsis and gives way first; the buyer shrinks
-  // last; the verb (the row's own text) is set at the title size
+  // last, with a factor of 1 (a factor sum under 1 leaves the row
+  // overflowing: PLAY-FEED-VERB-FIT); the verb (the row's own text) is set
+  // at the title size
   const body = CSS.replace(/\/\*[\s\S]*?\*\//g, "");
-  assert.ok(/\.feed-item \{ flex: 0 1000 auto; min-width: 3em; \}/.test(body));
-  assert.ok(/\.feed-trade \.feed-buyer \{ flex: 0 0\.001 auto; \}/.test(body));
+  assert.ok(/\.feed-item \{ flex: 0 1000000 auto; min-width: 3em; \}/.test(body));
+  assert.ok(/\.feed-trade \.feed-right \{ flex: 0 1000 auto; \}/.test(body));
+  assert.ok(/\.feed-buyer \{ flex: 0 1 auto; \}/.test(body));
+  assert.ok(!/\.feed-buyer \{ flex: 0 0\.\d+ auto; \}/.test(body), "no buyer shrink under 1");
   assert.ok(/\.feed-trade \{[^}]*font-size: var\(--al-fs-title\)/.test(body));
   assert.ok(!/feed-verb/.test(body), "no verb element to clip");
 });
