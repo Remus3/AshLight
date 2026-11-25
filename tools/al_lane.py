@@ -52,8 +52,11 @@ SEED_FRESH = ("ops/runtime/watch/live1_report.json",)
 # Headless -p has no prompt to approve edits; code lanes run in acceptEdits so
 # file edits land in the lane worktree. Bash stays on the project allow list
 # plus the gate commands below; commits and merges are done by the main session.
+# LOOP-NOCHANGE-OPEN: tools/docs_fresh.py makes no request and writes nothing
+# (DOCS-FRESH); tools/electron_pin.py fetches and writes, so it stays out.
 GATE_TOOLS = ("Bash(python -m pytest:*),Bash(npm test:*),Bash(node --test:*),"
-              "Bash(python tools/leak_sweep.py:*),Bash(python tools/shots.py:*)")
+              "Bash(python tools/leak_sweep.py:*),Bash(python tools/shots.py:*),"
+              "Bash(python tools/docs_fresh.py:*)")
 # A dependency-bump item needs npm and git add of a regenerated lockfile.
 # Dependabot bumps are re-applied in the main checkout by
 # tools/dependabot_reapply.py, so no gh is granted to a lane.
