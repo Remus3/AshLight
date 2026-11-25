@@ -2,7 +2,7 @@ AL NEXT SESSION
 ---------------
 SESSION: 28   (FLEET item 13 counter; /done writes n+1)
 
-WAVE POINTER: wave 60 done (AUTO-26 merged 9c51889), next wave 61 (planned: RUN-VERDICTS-CLOSE, RUN-BUILDFILE-LIVE-CLOSE; session 17)
+WAVE POINTER: wave 61 done (RUN-VERDICTS-CLOSE merged f7fa26a, RUN-BUILDFILE-LIVE-CLOSE merged b1ed431; four fix rows filed BLOCKED: operator act), next wave 62
 NOTE (session 27 /done): waves 58-59 (plan eb8fb6e) closed, all merged and pushed (origin/main ed42473 before this hand-off): batch 1 PLAY-FIT-B-WORDS, PLAY-A11Y-COMPARE-ORDER, PLAY-FEED-VERB-CLIP, LOOP-NOCHANGE-OPEN (6a0a6ae plan widen, 1ccbdfb); batch 2 TEST-SERIAL-PHASE-CUT (phase 2 split into two concurrent serial streams, soaks 122.6/119.6/121.3 s, median 121.3 s, 120 s bound restored in decision 0060 and CLAUDE.md) and ELECTRON-45-4-1 (cdbf598, 1cb5c7a, 0fc377c); batch 3 PLAY-FIT-SR-COUNT (G5 counts visible elements only, cap 94 + 6 per open trade, adjudicator) and PLAY-FEED-VERB-FIT (real overflow fix in web/feed.css) (2369ae7, 2b711c4, ed42473). Loop: LOOP-NOCHANGE-OPEN landed; loop records DOCS-FRESH-20261121 (re-dispatch with docs_fresh.py on the lane allow-list) and ELECTRON-45-4-1 (row closed) recycled. Fold 77151c0 (11 row files applied, 8 done rows archived; new row TEST-SPLIT-B1-WATCH, BLOCKED: session). Full session 26 record: archive block "SESSION 27 /done" of AL-2026-11-24.txt. Still open: TC-TREE-URL ascendancy byte unverified (TC-TREE-URL-ASC-CHECK, BLOCKED: operator act). Next free decision number: 0087.
 NOTE (session 25): isolated worktree agents could not write ops/loop/control/progress/*.json in the main checkout directly; ops/fleet_kit/fleet_headless.write_progress(root, ...) worked. Tell package agents to use it. Session 28 (wave 60 close): the refusal is the harness's own worktree-isolation write boundary on Write / Edit, not a kit or tree hook: fleet_claims.py hook exempts ops/loop/control/progress/* and fleet_subagent_first.py allows any sub-agent (both probed with a synthetic worktree Write / Edit payload: no decision), and claims.jsonl holds no deny for the AUTO-26 agent's progress file. No FIX note to MAIN; no tree fix. Package agents write progress through Bash (python with fleet_headless.write_progress).
 NOTE (session 27 reap): reap --apply: "reap applied: 1 removed, 9 kept, 0 listed (base main)": removed agent-ab9afbdd289795291 (merged, branch deleted); kept 6 merged agent worktrees (agent-a0e926f73c6e8e2d5, -a3df6958dff38f6fc, -a5c335bb710a3ac88, -a6aa4e8684bc3a43b, -a6c6bb5464e803d7d, -af6121399e9af15da; owner pid of the live session) plus lane-0..2. Read back "reap dry-run: 0 removable, 9 kept, 0 listed (base main)". Re-run fleet_done.py reap --apply next session to remove the six. The ~300 MB Electron download scratch copy el4541 under the session scratchpad went to the Recycle Bin (read back: absent).
@@ -144,7 +144,16 @@ Carried forward (not acted on yet):
   answers 404) and OA-13 (the release phrase). (l) paste one real GGG
   passive tree link of a character with an ascendancy (row
   TC-TREE-URL-ASC-CHECK; checks the ruled ascendancy byte of
-  server/al/theorycraft/treeurl.py).
+  server/al/theorycraft/treeurl.py); (m) redo the four in-game checks
+  that came back refused 2026-11-22 (all seven clicks within 19 s, no
+  note), each with a short note saying what the game showed: a copied
+  search string in a game search box (LIVE-SEARCHSTR), the downloaded
+  filter snippet (LIVE-FILTER), a merged filter (LIVE-FILTER-MERGE), an
+  AshLight .build loaded in game (TC-BUILDFILE-LIVE); Checks > Tried in
+  game, type the note, click Worked or Refused (rows *-FIX, wave 61). Act
+  (a): OVL-FPS has a worked verdict but no ovl_check report in the
+  sidecar Logs, so its row still needs one map with tools/ovl_check.py
+  armed.
 - OPERATOR DECISION: phone view needs LAN access; CLAUDE.md keeps LAN off
   (OA-27, ruling Q-11; default P0, no network path; units CARRY-19,
   OPEN-18, F-205; no package until the operator names a design).
@@ -177,9 +186,10 @@ Carried forward (not acted on yet):
   the core runs (RUN-LIVE-CLICKS-STRIKE w1, -CLOSE parked; the floor bars
   game input); OVL-BUDGET in-map (RUN-BUDGET-LOG-CORE / -CLIENT w14,
   RUN-OVL-BUDGET-CLOSE parked); OVL-FPS in-map (OVL-CHECK w21, OVL-FPS
-  parked); TC-BUILDFILE-LIVE, load an AshLight .build once
-  (RUN-BUILDFILE-LIVE-CLOSE parked); LIVE-FILTER, LIVE-FILTER-MERGE,
-  LIVE-SEARCHSTR (RUN-VERDICTS-CLOSE parked); LIVE-WAYSTONE
+  parked); TC-BUILDFILE-LIVE, LIVE-FILTER, LIVE-FILTER-MERGE,
+  LIVE-SEARCHSTR refused 2026-11-22 with no note (close rows done wave 61;
+  retry rows TC-BUILDFILE-LIVE-FIX, LIVE-FILTER-FIX, LIVE-FILTER-MERGE-FIX,
+  LIVE-SEARCHSTR-FIX, OPERATOR ACTS (m)); LIVE-WAYSTONE
   (RUN-LEDGER-WIRE w16, RUN-LIVE1-FIXTURES parked).
 - LAUNCH-GATE (AUTO-07, wave 16): the launch gate (rows GATE-POE2-10 and
   GATE-ACT5-SEEN) opens UTIL-10-DATA, UTIL-10-NOTES and UTIL-10-LOG by
