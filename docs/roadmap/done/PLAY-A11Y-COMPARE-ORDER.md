@@ -1,1 +1,0 @@
- -- done 2026-11-24 (session wave 58; verified; stat span first in DOM order, points a text node, no element added)

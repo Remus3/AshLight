@@ -1,1 +1,0 @@
- -- done 2026-11-24 (session wave 58; verified; phase 2 two concurrent serial streams timing-calc and timing-rest, soaks 122.6 / 119.6 / 121.3 s, median 121.3 s, 120 s bound restored in decision 0060 and CLAUDE.md)
