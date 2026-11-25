@@ -41,23 +41,27 @@
 #play-i .ic-row { min-height: var(--al-lh-body); color: var(--al-text-body); }
 #play-i .ic-row.muted { color: var(--fk-text-muted); }
 
-/* compare: its label and 5 rows; a row is its text with its points
-   floated to the right, so the text takes the ellipsis and the points
-   stay whole (PLAY-FIT-G5-TOTALS: no wrapper elements) */
+/* compare: its label and 5 rows; a row is its stat text (the one span,
+   first in reading order: PLAY-A11Y-COMPARE-ORDER) and then its points as
+   a text node. The row is a flex line: the text (flex-basis 0) takes the
+   free width and, as .one-line, the ellipsis in the cockpit and its wrap
+   elsewhere; the points keep their whole width on the right
+   (PLAY-FIT-G5-TOTALS: no wrapper elements) */
 #play-i .ic .ic-label { min-height: var(--al-lh-meta); margin-top: var(--al-space-2); }
 #play-i .ic .ic-rows { list-style: none; padding: 0; margin-bottom: var(--al-space-2); }
 #play-i .ic-cmp-row {
-  display: block;
+  display: flex;
+  align-items: baseline;
+  gap: var(--al-space-2);
   min-height: var(--al-lh-body);
   min-width: 0;
-  color: var(--al-text-body);
-}
-#play-i .ic-cmp-value {
-  float: right;
-  margin-left: var(--al-space-2);
-  white-space: nowrap;
   font-variant-numeric: tabular-nums;
   color: var(--fk-text);
+}
+#play-i .ic-cmp-text {
+  flex: 1 1 0;
+  font-variant-numeric: normal;
+  color: var(--al-text-body);
 }
 
 /* price row, one element (PLAY-FIT-G5-TOTALS): the value at 20 px as its
