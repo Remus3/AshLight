@@ -986,8 +986,12 @@ of the HALT check.
   an untagged row by committing the tag first and the loop's item record
   wins; a wave holds folders with ops/loop/control/wave_owned.json and
   merges under the loop's merge lock; HALT is removed only after the six
-  checks (decision 0055). Reverses if: a row is worked twice in practice,
-  or the tag traffic on ROADMAP.md causes merge conflicts.
+  checks (decision 0055). Amended 2026-11-24 (LOOP-NOCHANGE-OPEN): an
+  empty plan run on a still-open row is refused (MAX_ATTEMPTS, then
+  gave-up) and an old no-change record on an open row is listed on the
+  checklist. Reverses if: a row is worked twice in practice, the tag
+  traffic on ROADMAP.md causes merge conflicts, or open rows are retried
+  enough to waste runs.
 - Plug-in folder for ticks, Checks rows and routes: a new core tick,
   Checks row or token-gated /api/ route is one new module under
   server/al/plug/ (attach / facts / rows / ROUTES, discovered by name);

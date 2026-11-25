@@ -1,0 +1,1 @@
+ -- done 2026-11-24 (session wave 58; verified; campaign-death tip cut to 13 words, state b 150 words at 1280x760, WORDS_STATE_MAX["b"] 150, BUILD_FIX unchanged; plan widened 6a0a6ae)

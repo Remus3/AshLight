@@ -1,0 +1,1 @@
+ -- done 2026-11-24 (session wave 58; verified; verb a bare text node, only the item span ellipsizes with its title; real-layout case filed as PLAY-FEED-VERB-FIT)
