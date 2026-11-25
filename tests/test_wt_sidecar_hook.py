@@ -127,23 +127,21 @@ def test_decision_snippet_is_the_wired_command():
 
 
 def test_settings_wire_worktree_create_and_remove():
-    """WT-SIDECAR activation: once wired, both events run the hook with no
-    matcher (the harness ignores one on these events). Agents cannot write
-    .claude/settings.json (harness-protected), so until the operator pastes the
-    decision 0012 snippet this skips; a half or wrong wiring fails."""
+    """WT-SIDECAR activation: both events run the hook with no matcher (the
+    harness ignores one on these events). Wired in commit 021c7b7 and proven by
+    an isolated spawn landing under the sidecar Worktree folder (AUTO-26), so
+    a missing, half or wrong wiring now fails instead of skipping."""
     create, remove = _wired("WorktreeCreate"), _wired("WorktreeRemove")
-    if create is None and remove is None:
-        pytest.skip("WT-SIDECAR hook not wired yet (operator act, decision 0012)")
     assert create == remove == WIRED_CMD
 
 
 def test_wired_command_lands_worktree_under_sidecar(repo, tmp_path):
-    """Run the settings.json command (or, before activation, the decision 0012
-    snippet) the way the harness does (project dir expanded, posix quoting) for
+    """Run the settings.json command the way the harness does (project dir expanded, posix quoting) for
     a fresh agent name: the printed path is under the sidecar Worktree dir,
     never the repo's .claude/worktrees/."""
     import shlex
-    cmd = _wired("WorktreeCreate") or WIRED_CMD
+    cmd = _wired("WorktreeCreate")
+    assert cmd == WIRED_CMD
     argv = shlex.split(cmd.replace("$CLAUDE_PROJECT_DIR", ROOT.as_posix()))
     argv[0] = sys.executable
     env = dict(os.environ)
@@ -157,7 +155,8 @@ def test_wired_command_lands_worktree_under_sidecar(repo, tmp_path):
     wt.relative_to((tmp_path / "AL" / "Worktree").resolve())
     assert (wt / "a.txt").is_file()
     assert not (repo / ".claude" / "worktrees").exists()
-    cmd_rm = _wired("WorktreeRemove") or WIRED_CMD
+    cmd_rm = _wired("WorktreeRemove")
+    assert cmd_rm == WIRED_CMD
     argv = shlex.split(cmd_rm.replace("$CLAUDE_PROJECT_DIR", ROOT.as_posix()))
     argv[0] = sys.executable
     r = subprocess.run(argv, input=json.dumps({"hook_event_name": "WorktreeRemove",
