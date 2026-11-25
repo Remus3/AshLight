@@ -1,1 +1,0 @@
- -- done 2026-11-24 (session wave 61; verified; tools/live_verdicts.py lists TC-BUILDFILE-LIVE refused 2026-11-22, recorded in research 0027 section 5 with the same 19 s no-note caveat; fix row TC-BUILDFILE-LIVE-FIX filed BLOCKED: operator act; merge b1ed431)

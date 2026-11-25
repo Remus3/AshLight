@@ -30,6 +30,10 @@ operator phrase.`
   BLOCKED: operator plays one map with tools/ovl_check.py armed (Q-18, B19); the loop skips it until
   then (operator).
 - [ ] TC-TREE-URL-ASC-CHECK (build) Verify the ruled ascendancy byte of the version 7 tree link (server/al/theorycraft/treeurl.py: 1 + the 0-based position in the class ascendancies list of the cached tree export, placeholders kept) against a real GGG passive tree link that includes an ascendancy; decode it, compare, add it as a fixture and fix the mapping if it differs. ACCEPT: python -m pytest -q tests/test_tc_treeurl.py passes with the real link as a fixture. ZERO-CLICK: the operator pastes one tree link from the game once; the check is automatic. DEPENDS: TC-TREE-URL. BLOCKED: operator act (paste one real GGG tree link with an ascendancy chosen).
+- [ ] LIVE-FILTER-FIX (build) Fix what the game refused: The downloaded AshLight filter snippet imported in game (verdict refused 2026-11-22, research 0022 section 5; the clicks landed within 19 s with no note, so no cause is known yet). Once the retry note says what the game showed, find the cause and fix it, or record a worked verdict if the retry works. ACCEPT: python tools/live_verdicts.py lists a worked verdict for LIVE-FILTER. ZERO-CLICK: One more try by the player ends in one click plus a short note; the fix is automatic from there. DEPENDS: RUN-VERDICTS-CLOSE. BLOCKED: operator act (one more try in game, with a note saying what the game showed).
+- [ ] LIVE-FILTER-MERGE-FIX (build) Fix what the game refused: A merged filter (your filter plus AshLight's blocks) loaded in game (verdict refused 2026-11-22, research 0022 section 5; the clicks landed within 19 s with no note, so no cause is known yet). Once the retry note says what the game showed, find the cause and fix it, or record a worked verdict if the retry works. ACCEPT: python tools/live_verdicts.py lists a worked verdict for LIVE-FILTER-MERGE. ZERO-CLICK: One more try by the player ends in one click plus a short note; the fix is automatic from there. DEPENDS: RUN-VERDICTS-CLOSE. BLOCKED: operator act (one more try in game, with a note saying what the game showed).
+- [ ] LIVE-SEARCHSTR-FIX (build) Fix what the game refused: A copied search string pasted into a game search box (verdict refused 2026-11-22, research 0025 section 4; the clicks landed within 19 s with no note, so no cause is known yet). Once the retry note says what the game showed, find the cause and fix it, or record a worked verdict if the retry works. ACCEPT: python tools/live_verdicts.py lists a worked verdict for LIVE-SEARCHSTR. ZERO-CLICK: One more try by the player ends in one click plus a short note; the fix is automatic from there. DEPENDS: RUN-VERDICTS-CLOSE. BLOCKED: operator act (one more try in game, with a note saying what the game showed).
+- [ ] TC-BUILDFILE-LIVE-FIX (build) Fix what the game refused: An AshLight-made .build file loaded in game (verdict refused 2026-11-22, research 0027 section 5; the clicks landed within 19 s with no note, so no cause is known yet). Once the retry note says what the game showed, find the cause and fix it, or record a worked verdict if the retry works. ACCEPT: python tools/live_verdicts.py lists a worked verdict for TC-BUILDFILE-LIVE. ZERO-CLICK: One more try by the player ends in one click plus a short note; the fix is automatic from there. DEPENDS: RUN-BUILDFILE-LIVE-CLOSE. BLOCKED: operator act (one more try in game, with a note saying what the game showed).
 
 ## Lane: data
 
@@ -47,7 +51,6 @@ operator phrase.`
 
 ## Lane: review
 
-- [ ] WT-SIDECAR-WIRE (review) Reopened WT-SIDECAR: agent worktrees must land under the AL sidecar through the decision 0012 hooks, not only by the hand-run hook. ACCEPT: python -m pytest -q tests/test_wt_sidecar_hook.py -rs reports no skip and git worktree list after one isolated agent spawn shows its path under the sidecar Worktree folder. ZERO-CLICK: One paste by the operator, once; every later wave spawn lands in the sidecar by itself. BLOCKED: session (hook entries wired into .claude/settings.json 2026-11-24 on the operator's order, test_wt_sidecar_hook.py -rs reads no skip; left: one isolated agent spawn read back under the sidecar Worktree folder, in a session started after the wiring); AUTO-26 flips it when its proof passes.
 - [ ] TEST-SPLIT-B1-WATCH (review) B1 test_real_loop_body red once at 0.920 percent (3 clock steps, 46.9 ms) in the wave 59 batch 3 whole suite while the concurrent timing-calc stream of TEST-SERIAL-PHASE-CUT ran; 3 isolated gated reruns passed (0.616, 0.000, 0.000) and the next whole suite was green. If it reds again under the split phase 2, apply decision 0060's split reverses-if (SPLIT_TIMING False, or run B1 after both streams), never move the budget. ACCEPT: 5 later gated whole suites green on B1, or the split change landed with a soak. ZERO-CLICK: test-side only. DEPENDS: TEST-SERIAL-PHASE-CUT. BLOCKED: session (watch).
 
 
@@ -428,14 +431,6 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   unblocks when the operator reports whether Alt+Shift+E / Alt+Shift+A flip the keyboard layout with
   two layouts installed and names one unbound Ctrl+letter next to C from the game's key binds
   (operator).
-- [ ] AUTO-26 (review) WT-SIDECAR-WIRE: prove agent worktrees land under the sidecar. ACCEPT:
-  `python -m pytest -q tests/test_wt_sidecar_hook.py -rs` reports no skip, and `git worktree list`
-  after one isolated agent spawn shows its path under the sidecar Worktree folder. ZERO-CLICK: One
-  paste by the operator, once; every later wave spawn lands in the sidecar by itself. DEPENDS:
-  LOOP-DECISION-TIDY. BLOCKED: the WorktreeCreate and WorktreeRemove hook entries of decision 0012
-  are not in .claude/settings.json (an agent may not edit settings); unblocks when
-  .claude/settings.json names tools/wt_sidecar_hook.py under both WorktreeCreate and WorktreeRemove
-  (operator).
 - [ ] DATA-NINJA-RELEASE-ON (build) Turn release-build poe.ninja polling on after poe.ninja's yes.
   ACCEPT: python -m pytest -q tests/test_price_cadence.py passes and the decision file quotes the
   answer with its date. ZERO-CLICK: Nothing for players. DEPENDS: DATA-PRICE-CADENCE. BLOCKED:
@@ -535,26 +530,12 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   normal play with the budget log on (no operator act); closes from the log.
 - (TC-OAUTH-REG: its row is replaced in place under '## Theorycraft and item optimization (decision 0004, research 0010)'.)
 - (OVL-FPS: its row is replaced in place under '## Lane: build'.)
-- [ ] RUN-BUILDFILE-LIVE-CLOSE (review) Record the in-game result of an AshLight-made .build.
-  ACCEPT: python tools/live_verdicts.py lists a verdict for TC-BUILDFILE-LIVE and python -m pytest
-  -q tests/test_ascii_lf.py tests/test_research_numbers.py tests/test_leak_sweep.py passes.
-  ZERO-CLICK: One download click, one file move by the player, one verdict click. DEPENDS:
-  RUN-VERDICTS-CORE, RUN-VERDICTS-UI. BLOCKED: the operator loads one AshLight-made .build in game
-  and clicks Worked or Refused; unblocks when ops/runtime/verdicts.json holds a TC-BUILDFILE-LIVE
-  verdict (operator).
 - [ ] GP-15 (review) Release settings: immutable releases and the tag ruleset. ACCEPT: `gh api
   "repos/$R/immutable-releases" --jq .enabled` prints true, `gh api "repos/$R/rulesets" --jq
   '.[].name'` lists release-tags, and `gh release list --repo "$R"` is empty. ZERO-CLICK: Agent step
   with gh; tags are pushed only by the release procedure of plan 05. DEPENDS: GP-12,
   PUB-SETTINGS-FILES. BLOCKED: the public flip; unblocks when `gh repo view "$R" --json visibility
   --jq .visibility` prints PUBLIC (package GP-12).
-- [ ] RUN-VERDICTS-CLOSE (review) Record the three remaining in-game tries (search string, filter,
-  merged filter). ACCEPT: python tools/live_verdicts.py lists verdicts for LIVE-SEARCHSTR,
-  LIVE-FILTER and LIVE-FILTER-MERGE and python -m pytest -q tests/test_ascii_lf.py
-  tests/test_research_numbers.py tests/test_leak_sweep.py passes. ZERO-CLICK: Each try ends in one
-  click; no typed report. DEPENDS: RUN-VERDICTS-CORE, RUN-VERDICTS-UI. BLOCKED: three in-game tries
-  by the operator, one verdict click each; unblocks when ops/runtime/verdicts.json holds verdicts
-  for LIVE-SEARCHSTR, LIVE-FILTER and LIVE-FILTER-MERGE (operator).
 - [ ] LOOP-KIT-REPORT-SEND (review) KIT-REPORT: send the drafted note once a destination inbox
   exists. ACCEPT: The last line for the note in ops/loop/control/delivery.jsonl reads `"reached":
   true` with `"count": "1/1"`. ZERO-CLICK: Sent by the tick's own note path (InboxMixin.deliver_note
