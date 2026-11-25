@@ -197,3 +197,60 @@ kit changes item 16c to forbid ungated file-named runs.
   median exceeds 145 s (bisect, do not move the number), or the
   operator rules the interim bound tightened or the 120 s target
   dropped.
+
+## Amendment 2026-11-24 (TEST-SERIAL-PHASE-CUT, adjudicator)
+
+- Measured first (gated, file-named): phase 2 was 21 timing tests in
+  52.05 s, about 51 s of it test time and about 1 s of extra whole-tree
+  collection. The calc timing tests (live PoB through LuaJIT, plus the
+  fake slow calc) took about 35 s: test_fullstack_calc_on_leg 12.1 s
+  (10.9 s of it the measured cold first press), killed calc 5.7 s,
+  body_upgrade 5.0 s, luajit memory 4.2 s. The other timing tests took
+  about 17 s, with the B1 real loop body's fixed 5 s window at 5.45 s,
+  core idle CPU 3.6 s and soak bounded 4.8 s. Each slow test's time is
+  the thing its budget measures, so no per-test cut reaches 12 s.
+  test_soak bounded and luajit memory red under load (decisions 0084,
+  0086), so they are not moved to phase 1.
+- Decision: phase 2 of tools/suite_run.py runs as two serial pytest
+  streams side by side, still after phase 1 and never beside its xdist
+  workers. timing-calc runs the timing tests of CALC_TIMING_FILES
+  (test_fullstack, test_math_e2e_live, test_math_perf,
+  test_tc_press_staged). timing-rest runs every other timing test: the
+  tree with those files ignored, so a newly marked file still runs. One
+  switch (SPLIT_TIMING) turns the split off. No assert or budget number
+  changes. tests/test_marks.py checks that every timing test that also
+  runs the live calc sits in the calc stream.
+- Soak: three exclusive runs of python tools/suite_run.py through the
+  suite gate on the package commit, 16 CPUs, 12 workers. Every phase was
+  green in every run (5932 passed plus 9 skipped in phase 1, 9 calc plus
+  12 other timing tests in phase 2) and no timing test was red. Gate
+  holds 122.6, 119.6 and 121.3 s, median 121.3 s. Phase 1 took 86.0,
+  83.7 and 86.1 s. Phase 2 took about 36 s (timing-calc 35.9, 35.2 and
+  34.6 s beside timing-rest 23.9, 22.5 and 22.5 s), against about 55 s
+  as one serial run.
+- Bound: the soak median is at or under 125 s, so the reverse condition
+  of the 2026-11-22 GATE-HOLD amendment is met. The 120 s gated median is
+  the bound again, the soak bound is a median under 125 s, and the
+  145 s interim bound (soak 150 s) is withdrawn. The TEST-SUITE-HOLD-75
+  line "phase 2 stays serial" now reads: each phase 2 stream is serial.
+- Alternatives: B, small cuts only (pass the timing files explicitly,
+  about 1 s; overlap phase 2 start with the phase 1 tail, 2 to 3 s),
+  which comes to about 133 s and misses 125 s; C, drop the row now with
+  no soak. C gives up the one lever with a path to the target before it
+  is tried.
+- Why: phase 2 is about 52 s, about 35 s of calc work and 17 s of the
+  rest, so only overlapping the two reaches 125 s. The CPU-share tests
+  (B1 loop body, idle CPU, sampler cost) read their own process CPU
+  time, which the other process does not add to. The calc tests are
+  wall-clock press budgets beside a mostly idle stream on a 16-CPU box.
+  The rule that changes is the TEST-TIMING-ALONE "alone, serial"
+  isolation, a process choice of research 0049 R3, not a ToS floor or
+  a settled budget.
+- Reverses if: a later 3-run gated soak median exceeds 125 s, or any
+  timing test reds under the split with only this change applied (B1
+  real_loop_body at 3 or more clock steps, a calc press budget, an idle
+  CPU test). In either case set SPLIT_TIMING to False, restore the
+  single serial phase 2 and the 145 s interim bound, and record the
+  figures. It also reverses if a later kit change forbids concurrent
+  serial streams, or if a soak median exceeds 145 s (bisect, do not
+  move the number).
