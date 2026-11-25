@@ -76,8 +76,14 @@
 /* a row's parts sit in the row itself, with no lead wrapper
    (PLAY-FIT-G5-TOTALS): a trade is buyer, "wants <item>", price, the right
    segment and Dismiss (no tag: design 0001 ruling 2026-11-24); an event is tag, sentence and right segment.
-   The right segment takes the free space on its left. */
-#play-t .feed-trade { gap: 0 var(--al-space-1); }
+   The right segment takes the free space on its left. The verb is a bare
+   text node (PLAY-FEED-VERB-CLIP): an anonymous flex item in the row's
+   title size that never shrinks below its word, so it is never clipped. */
+#play-t .feed-trade {
+  gap: 0 var(--al-space-1);
+  font-size: var(--al-fs-title);
+  line-height: var(--al-lh-title);
+}
 #play-t .feed-trade .feed-dismiss { margin-left: var(--al-space-1); }
 #play-t .feed-trade .feed-buyer,
 #play-t .feed-trade .feed-item,
@@ -103,14 +109,18 @@
 #play-t .feed-row button:focus-visible { outline: 3px solid var(--fk-accent); outline-offset: -3px; }
 #play-t .feed-empty { margin: 0; }
 
-/* the cockpit classes: one line a row; the item name gives way first */
+/* the cockpit classes: one line a row; the item name gives way first and
+   keeps a few letters plus "..." (its full name in its title), then the
+   right segment; the buyer keeps its whole name and takes the ellipsis
+   only as a last guard after both (PLAY-FEED-VERB-CLIP) */
 @media (min-width: 64em) and (min-height: 43.75em) {
   #play-t .feed-row { flex-wrap: nowrap; height: 2rem; }
   #play-t .feed-buyer, #play-t .feed-item, #play-t .feed-right, #play-t .feed-text {
     overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   #play-t .feed-buyer { flex: 0 1 auto; }
+  #play-t .feed-trade .feed-buyer { flex: 0 0.001 auto; }
   #play-t .feed-price { flex: none; white-space: nowrap; }
-  #play-t .feed-item { flex: 0 1000 auto; }
+  #play-t .feed-item { flex: 0 1000 auto; min-width: 3em; }
   #play-t .feed-text { flex: 0 1 auto; min-width: 0; }
   #play-t .feed-right { flex: 0 10 auto; white-space: nowrap; }
 }

@@ -206,7 +206,7 @@
       var pos = L >= 1 ? "" : r.pos;
       var where = tab ? (pos ? tab + " " + pos : tab) : "";
       return { kind: r.kind, key: r.key, id: r.id, tag: r.tag, buyer: r.buyer, verb: r.verb,
-               item: item, price: L >= 9 ? "" : r.price,
+               item: item, itemFull: r.item, price: L >= 9 ? "" : r.price,
                right: joinRight([r.isNew ? "new" : "", where, L >= 6 ? "" : r.age]),
                title: r.title, from: r.from };
     }
@@ -362,10 +362,14 @@
 
     function tradeNode(doc, r) {
       var li = el(doc, "li", "feed-row feed-trade edge edge-accent");
-      // flat (PLAY-FIT-G5-TOTALS): the row's parts sit in the row itself;
-      // the verb leads the item span ("wants Grim Bane Ruby Ring")
+      // flat (PLAY-FIT-G5-TOTALS): the row's parts sit in the row itself.
+      // The verb is a bare text node between buyer and item
+      // (PLAY-FEED-VERB-CLIP): no element of its own (a trade row stays 6
+      // elements), and as an anonymous flex item it never shrinks below
+      // its word, so only the item name takes the ellipsis.
       var parts = {
         buyer: el(doc, "span", "feed-buyer"),
+        verb: doc.createTextNode(""),
         item: el(doc, "span", "feed-item"),
         price: el(doc, "span", "feed-price"),
         right: el(doc, "span", "feed-right"),
@@ -374,6 +378,7 @@
       parts.btn.type = "button";
       parts.btn.addEventListener("click", function (ev) { dismiss(doc, r.id, keyboard(ev)); });
       li.appendChild(parts.buyer);
+      li.appendChild(parts.verb);
       li.appendChild(parts.item);
       li.appendChild(parts.price);
       li.appendChild(parts.right);
@@ -405,7 +410,11 @@
       if (r.kind === "trade") {
         setText(p.buyer, r.buyer);
         setHidden(p.buyer, !r.buyer);
-        setText(p.item, [r.verb, r.item].filter(Boolean).join(" "));
+        if (p.verb.data !== r.verb) { p.verb.data = r.verb; }
+        setText(p.item, r.item);
+        setHidden(p.item, !r.item);
+        // the item name is the one part that truncates: its full text here
+        setAttr(p.item, "title", r.itemFull || null);
         setText(p.price, r.price);
         setHidden(p.price, !r.price);
         setAttr(p.btn, "aria-label", "Dismiss trade request from " + (r.from || "unknown player"));
