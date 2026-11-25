@@ -968,6 +968,18 @@
    "milestones": [
     "Play state b meets 150 words and the suite holds its 120 s target or records why not"
    ]
+  },
+  {
+   "n": 16,
+   "title": "Session 16: wave 60",
+   "waves": [
+    60
+   ],
+   "est_wall_min": 60,
+   "session_packages": 1,
+   "milestones": [
+    "agent worktrees land under the sidecar by the wired decision 0012 hooks"
+   ]
   }
  ],
  "reserved_decisions": [
@@ -2037,6 +2049,15 @@
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
   },
   {
+   "n": 60,
+   "title": "Wave 60: worktree hook proof",
+   "goal": "AUTO-26 proves agent worktrees land under the sidecar now that decision 0012's hooks are wired (021c7b7); flips WT-SIDECAR-WIRE.",
+   "merge_order": [
+    "AUTO-26"
+   ],
+   "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
+  },
+  {
    "n": 99,
    "title": "Parked",
    "goal": "Blocked packages with their unblock conditions; a package joins the next open wave once its condition reads true.",
@@ -2052,7 +2073,6 @@
     "TC-WAYSTONE-TUNE-UI",
     "TC-IMPORT-UI",
     "OVL-ITEM-KEY-CTRL",
-    "AUTO-26",
     "DATA-NINJA-RELEASE-ON",
     "PLAY-MAP-MODE-ON",
     "DATA-GUIDE-ACTS-5-6",
@@ -20542,14 +20562,10 @@
    "isolation": "worktree",
    "lane": "review",
    "design_review": false,
-   "blocked": {
-    "on": "the WorktreeCreate and WorktreeRemove hook entries of decision 0012 are not in .claude/settings.json (an agent may not edit settings)",
-    "who": "operator",
-    "unblock": ".claude/settings.json names tools/wt_sidecar_hook.py under both WorktreeCreate and WorktreeRemove"
-   },
+   "blocked": null,
    "operator_act": "OA-12 (docs/plan/09): Paste the two hook entries of decision 0012 (WorktreeCreate and WorktreeRemove, each running tools/wt_sidecar_hook.py) into .claude/settings.json. Default until then (docs/plan/08 section 2, decision 0012; adjudicator LE-92): the unwired sidecar method, because the probe passed (it ran on 2026-11-18 in the planning session): a wave builder makes its own worktree under the sidecar Worktree folder by running tools/wt_sidecar_hook.py by hand. Only if a later session is refused edits under the sidecar path: .claude/worktrees inside the repository (gitignored), taken without waiting as a temporary fallback, recorded with one NOTE line in the hand-off and reaped at /done.",
-   "notes": "The wiring test (tests/test_wt_sidecar_hook.py line 136) skips while neither entry exists and fails on a half or wrong wiring; after the paste turn the skip into a failure so the wiring cannot silently vanish. Should precede the first isolated wave spawn; when the paste has not happened the waves run with the default above. File overlap outside this cluster: .claude/settings.json itself is the operator's (units F-200, GP-07 (folded into PUB-README-PLAYERS), GP-16 also ask for a line there).",
-   "wave": 99,
+   "notes": "The wiring test (tests/test_wt_sidecar_hook.py line 136) skips while neither entry exists and fails on a half or wrong wiring; after the paste turn the skip into a failure so the wiring cannot silently vanish. Should precede the first isolated wave spawn; when the paste has not happened the waves run with the default above. File overlap outside this cluster: .claude/settings.json itself is the operator's (units F-200, GP-07 (folded into PUB-README-PLAYERS), GP-16 also ask for a line there). Unblocked 2026-11-24 (session 28): the hook entries were wired into .claude/settings.json on the operator order (commit 021c7b7); planned into wave 60.",
+   "wave": 60,
    "owner": "session",
    "tier": "P1",
    "cluster": "LOOP"

@@ -2428,6 +2428,25 @@ tests/test_play_fit.py).
 
 - PLAY-FIT-SR-COUNT [session, M 45m, review, DR] Ruling: screen-reader-only elements in the G5 count. Files: app/test/cdp/play_fit.mjs, docs/design/0001-design-system.md, tests/test_play_fit.py, docs/design/play-fit-figures.md. Deps: PLAY-FIT-G5-TOTALS, PLAY-FIT-B-WORDS.
 
+### Wave 60: worktree hook proof
+
+AUTO-26 proves agent worktrees land under the sidecar now that decision
+0012's hooks are wired (021c7b7); flips WT-SIDECAR-WIRE.
+
+- Session 16; width 1 worktree + 0 main-checkout, 0 loop rows released.
+- Hotspots: none.
+- Integrator: ROADMAP.md rows of all 1 packages; AL-NEXT-SESSION.txt:
+  AUTO-26.
+- Gate: per package: its named tests as a file-named run; main-checkout acts
+  one at a time in merge order; per merge batch of 4 on the integration
+  worktree: merge, then the integrator's edits for the batch as one commit,
+  then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python
+  tools/suite_run.py and npm test --prefix app, green, then main moves; then
+  python tools/plan_check.py check; the wave closes when every session row
+  is flipped and main is clean.
+
+- AUTO-26 [session, S 20m, review, P1] WT-SIDECAR-WIRE: prove agent worktrees land under the sidecar. Files: tests/test_wt_sidecar_hook.py. Deps: LOOP-DECISION-TIDY.
+
 <!-- plan_check waves end -->
 
 ## Hotspot schedule

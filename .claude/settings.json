@@ -13,8 +13,7 @@
    "Bash(npm test:*)",
    "Bash(node --test:*)",
    "Bash(python tools/eta.py:*)",
-   "Bash(python tools/leak_sweep.py:*)",
-   "Bash(python tools/ash_lane.py:*)"
+   "Bash(python tools/leak_sweep.py:*)"
   ],
   "deny": []
  },
