@@ -262,8 +262,10 @@ Settings > Overlay card time choice. The Play region headings as
 shipped: "At a glance" (G), "Right now" (C), "Trades N" or "Recent" (T,
 visible), "Notices" (N), "Your build" (B), "Item check" (I) and "Best
 checks" (U, visible); the others are for screen readers only.
-- Decision: visible elements at most 100 plus 6 per open trade row (a
-  trade row is the row, buyer, item, price, right segment and Dismiss);
+- Decision: elements at most 100 plus 6 per open trade row, counting
+  screen-reader-only ones (amended the same day to 94 visible elements
+  plus 6 per open trade row by the G5 screen-reader count ruling below;
+  a trade row is the row, buyer, item, price, right segment and Dismiss);
   a trade row has no "Trade" tag (the head "Trades N", the verb, the
   price and Dismiss say it); event rows keep their Death, Level and Zone
   tags (the one quick type cue). Words: at most 250, 110 on first run,
@@ -279,10 +281,44 @@ checks" (U, visible); the others are for screen readers only.
   grow with the player's own open requests, as G6 already allows one
   Dismiss per trade.
 - Reverses if: a trade row grows past 6 elements; the counter skips
-  visually hidden elements (then recompute the allowance); players miss
+  visually hidden elements (then recompute the allowance; met and
+  superseded by the G5 screen-reader count ruling below); players miss
   the Trade tag in play; a state with no trade measures over 100 after
   this package. State b stays at 150: server text that pushes it past
   150 is cut, and the number does not move.
+
+G5 screen-reader count ruling (2026-11-24, PLAY-FIT-SR-COUNT, adjudicator
+call; figures in `docs/design/play-fit-figures.md`). It amends the
+element half of the G5 totals ruling above and meets its first
+Reverses-if (the allowance is recomputed).
+- Decision: G5 counts visible elements only. An element is visually
+  hidden, and not counted, when it or an ancestor computes clip
+  rect(0px, 0px, 0px, 0px) or clip-path inset(50%) (`.sr-only`, the
+  region headings, the empty strip cell words, the feed's status line
+  while it is not shown). The harness reports them apart as "hidden". The
+  allowance is at most 94 visible elements plus 6 per open trade row.
+  Words still count screen-reader text. G6 still counts every control,
+  a visually hidden one included.
+- Alternatives: keep counting hidden elements (the number mixes visual
+  clutter with DOM size, and the screen-reader headings spend the
+  visual budget); skip them and keep the base at 100 (it loosens the
+  budget by about 6 with no design reason); skip them and tighten to
+  about 90 (state c, two trades, reads 104 of 106 today and would fail
+  with no extra clutter); drop screen-reader text from the word count
+  too (words are reading load, and screen-reader users bear it too).
+- Why: G5 limits what the eye has to take in, and screen-reader-only
+  elements are not seen. The old 100 held 6 to 8 of them in every
+  state (the 6 hidden region headings in all), so 94 keeps today's
+  effective limit and nothing loosens quietly. Trade rows hold no
+  hidden element, so the 6 per row stands. Measured at 1280x760: the
+  heaviest state with no trade reads 76 of 94 (e), one trade 92 of 100
+  (f, g), two trades 104 of 106 (c), five trades 110 of 124.
+- Reverses if: an element the clip test skips proves visible in play;
+  a hiding method in use escapes the clip test (then widen the test,
+  not the number); a real state passes 94 plus 6 per trade with no
+  extra clutter; the harness goes back to counting hidden elements
+  (then restore 100); or the operator rules screen-reader text out of
+  the word count.
 
 ## 5. Colour
 
