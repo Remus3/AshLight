@@ -1,5 +1,5 @@
 "use strict";
-/* AshLight overlay shell (Electron 45.3.3).
+/* AshLight overlay shell (Electron 45.4.1).
 
    One frameless, transparent, always-on-top, click-through, non-focusable
    window. It reads the AshLight core's SSE feed and draws only when a

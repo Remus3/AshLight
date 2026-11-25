@@ -18,7 +18,7 @@ transparent click-through Electron overlay).
   no framework, no CDN, styled only with the fleet kit design tokens
   (`ops/fleet_kit/tokens.css`). Opens in any browser or an Edge `--app`
   window on the second screen.
-- **Overlay (`app/`)**: Electron, exact pin `45.3.3`. One frameless,
+- **Overlay (`app/`)**: Electron, exact pin `45.4.1`. One frameless,
   transparent, always-on-top, click-through (`setIgnoreMouseEvents(true)`),
   non-focusable window; toggled by an Electron `globalShortcut`. It renders
   the same SSE feed and draws nothing when nothing changes.
