@@ -311,8 +311,8 @@ EXPECT = {
         "events": {"death": "Emberdemo died in Clearfell", "level": "Emberdemo reached level 4",
                    "zone": "Entered Clearfell"},
         "notices": [(6, "[-]", "Tip", "Campaign deaths",
-                     ["Deaths in the campaign cost no experience. The Death",
-                      "recap card shows where each one happened."], "")],
+                     ["Campaign deaths cost no experience. The Deaths card",
+                      "shows where each one happened."], "")],
         "build": ("none", "No build", "", "Copy a PoB code, press the item key."),
     },
 }
@@ -320,8 +320,8 @@ C_TRADES = [("Secondbuyer_WithALongAccountName wants Example Unique Quarterstaff
              " - 40 exalted", "new, tab Sale (1,10)"),
             ("Firstbuyer wants Grim Bane Ruby Ring - 5 exalted", "new, tab Sale (11,11)")]
 CAMPAIGN_TIP = (6, "[-]", "Tip", "Campaign deaths",
-                ["Deaths in the campaign cost no experience. The Death",
-                 "recap card shows where each one happened."], "")
+                ["Campaign deaths cost no experience. The Deaths card",
+                 "shows where each one happened."], "")
 WRONG_CLASS = ("wrong_class", "Wrong class", "Ranger, level 80",
                "Copy a PoB code, press the item key.")
 for _name in ("c", "c2", "d", "c5"):
