@@ -1,11 +1,12 @@
 AL NEXT SESSION
 ---------------
-SESSION: 28   (FLEET item 13 counter; /done writes n+1)
+SESSION: 29   (FLEET item 13 counter; /done writes n+1)
 
-WAVE POINTER: wave 61 done (RUN-VERDICTS-CLOSE merged f7fa26a, RUN-BUILDFILE-LIVE-CLOSE merged b1ed431; four fix rows filed BLOCKED: operator act), next wave 62
+WAVE POINTER: wave 61 done (RUN-VERDICTS-CLOSE merged f7fa26a, RUN-BUILDFILE-LIVE-CLOSE merged b1ed431; four fix rows filed BLOCKED: operator act), next wave 62 (nothing dispatchable at session 28 /done)
+NOTE (session 28 /done): settings edit in-tree: decision 0012 WorktreeCreate / WorktreeRemove hooks wired in .claude/settings.json (021c7b7), stale ash_lane.py permission dropped (4f456e6); OA-12 (hooks paste) is no longer an operator ask. Wave 60 AUTO-26 (isolated agent worktree proven under the sidecar Worktree folder; the wiring test fails instead of skipping) merged 9c51889, integrated 8faf6f4. Wave 61 planned d608925; RUN-VERDICTS-CLOSE merged f7fa26a, RUN-BUILDFILE-LIVE-CLOSE merged b1ed431, integrated e491415, pushed (origin/main read back e491415 before the fold). Four fix rows filed BLOCKED: operator act: LIVE-SEARCHSTR-FIX, LIVE-FILTER-FIX, LIVE-FILTER-MERGE-FIX, TC-BUILDFILE-LIVE-FIX (read back in ROADMAP.md Lane: build after fold 301f05d). ADJUDICATED: the 2026-11-22 refused verdicts (7 clicks in 19 s, no note) are treated as not real tries (alternatives: treat them as real refusals and debug blind; drop the checks); why: no note and click timing show no in-game attempt; reverses if the operator says they were real tries. Wave 62: nothing dispatchable (every open row is BLOCKED on an operator act, a gate or GGG; DOCS-FRESH-20261121 is loop-owned and retried by the loop; GP-12 public flip only on the operator's word; OVL-FPS has a worked verdict but no ovl_check report). Fold 301f05d: 8 row files applied, 4 done rows archived (AUTO-26, WT-SIDECAR-WIRE, RUN-VERDICTS-CLOSE, RUN-BUILDFILE-LIVE-CLOSE). Next free decision number: 0087.
 NOTE (session 27 /done): waves 58-59 (plan eb8fb6e) closed, all merged and pushed (origin/main ed42473 before this hand-off): batch 1 PLAY-FIT-B-WORDS, PLAY-A11Y-COMPARE-ORDER, PLAY-FEED-VERB-CLIP, LOOP-NOCHANGE-OPEN (6a0a6ae plan widen, 1ccbdfb); batch 2 TEST-SERIAL-PHASE-CUT (phase 2 split into two concurrent serial streams, soaks 122.6/119.6/121.3 s, median 121.3 s, 120 s bound restored in decision 0060 and CLAUDE.md) and ELECTRON-45-4-1 (cdbf598, 1cb5c7a, 0fc377c); batch 3 PLAY-FIT-SR-COUNT (G5 counts visible elements only, cap 94 + 6 per open trade, adjudicator) and PLAY-FEED-VERB-FIT (real overflow fix in web/feed.css) (2369ae7, 2b711c4, ed42473). Loop: LOOP-NOCHANGE-OPEN landed; loop records DOCS-FRESH-20261121 (re-dispatch with docs_fresh.py on the lane allow-list) and ELECTRON-45-4-1 (row closed) recycled. Fold 77151c0 (11 row files applied, 8 done rows archived; new row TEST-SPLIT-B1-WATCH, BLOCKED: session). Full session 26 record: archive block "SESSION 27 /done" of AL-2026-11-24.txt. Still open: TC-TREE-URL ascendancy byte unverified (TC-TREE-URL-ASC-CHECK, BLOCKED: operator act). Next free decision number: 0087.
 NOTE (session 25): isolated worktree agents could not write ops/loop/control/progress/*.json in the main checkout directly; ops/fleet_kit/fleet_headless.write_progress(root, ...) worked. Tell package agents to use it. Session 28 (wave 60 close): the refusal is the harness's own worktree-isolation write boundary on Write / Edit, not a kit or tree hook: fleet_claims.py hook exempts ops/loop/control/progress/* and fleet_subagent_first.py allows any sub-agent (both probed with a synthetic worktree Write / Edit payload: no decision), and claims.jsonl holds no deny for the AUTO-26 agent's progress file. No FIX note to MAIN; no tree fix. Package agents write progress through Bash (python with fleet_headless.write_progress).
-NOTE (session 27 reap): reap --apply: "reap applied: 1 removed, 9 kept, 0 listed (base main)": removed agent-ab9afbdd289795291 (merged, branch deleted); kept 6 merged agent worktrees (agent-a0e926f73c6e8e2d5, -a3df6958dff38f6fc, -a5c335bb710a3ac88, -a6aa4e8684bc3a43b, -a6c6bb5464e803d7d, -af6121399e9af15da; owner pid of the live session) plus lane-0..2. Read back "reap dry-run: 0 removable, 9 kept, 0 listed (base main)". Re-run fleet_done.py reap --apply next session to remove the six. The ~300 MB Electron download scratch copy el4541 under the session scratchpad went to the Recycle Bin (read back: absent).
+NOTE (session 28 reap): reap --apply read back "reap applied: 0 removed, 9 kept, 0 listed (base main)": the six merged agent worktrees under .claude/worktrees are still kept because owner pid 4912 (the live session) is alive; re-run fleet_done.py reap --apply next session to remove them. Session 27 reap: removed agent-ab9afbdd289795291 (merged, branch deleted); kept 6 merged agent worktrees (agent-a0e926f73c6e8e2d5, -a3df6958dff38f6fc, -a5c335bb710a3ac88, -a6aa4e8684bc3a43b, -a6c6bb5464e803d7d, -af6121399e9af15da; owner pid of the live session) plus lane-0..2. The ~300 MB Electron download scratch copy el4541 under the session scratchpad went to the Recycle Bin (read back: absent).
 OPERATOR NOTES (session 24; the operator may overrule): (1) the test_budgets loop-body CPU check effectively passes up to ~0.81 percent (two Windows clock steps) while the budget stays 0.5 percent, accepted as clock noise (TEST-BUDGET-LOOPBODY-NOISE, w51). (2) The CP-2 builder ran a forbidden `git reset -q` (unstaged only its own files; history verified clean).
 NOTE (session 23, still open): open design findings DN-2..DN-4, UH-1, UH-2 (S4 OPEN, reviews.log). Plug routes may answer PUT after the guard (UI-CARD-COLLAPSE; route table GET 19, POST 21, PUT 2).
 SESSION-23 FINDING still open: builders edited tests/test_security_surface.py route counts and Checks-row-order tests outside their files, and git merges identical count edits silently wrong: re-read the counts after every merge (plan fix: derive the counts, or one owner per wave).
@@ -17,15 +18,17 @@ WAVE-16 FOLLOW-UPS: design findings OPEN (reviews.log): RUN-LEDGER-WIRE LW-1..LW
 WAVE-15 FOLLOW-UPS: tools/docs_fresh.py EXPECTED_STALE (36 entries) can be emptied. OPEN design findings: PLAY-TD-22B TF-1 (news inside the 10 s grace not retried), RUN-METRICS-SITES RL-1..RL-3 (log record consent copy vague, no polite announcement, Client.txt stop also stops it unstated), TEST-STATE-TEXT-4 TST4-1 (design 0001 names state.py as text home). Decisions 0050/0069 want a note that the watcher's GitHub-metadata read of GGG's tree-export repo passes watch_gate though webfetch refuses GGG repos for dives. LOOP-WATCH-SETTLED's hand-off edit (drop the REG_OPEN start check) waits until SHAPE_ALL_PAGES is on, HALT is absent and a dry-run tick files TC-OAUTH-REG-OPEN. TC-WORN-KEY wear key is bound in app/main.js, not the hotkeys registry, with no snapshot / Settings UI.
 Closed records: docs/handoff-archive/AL-2026-11-19.txt to AL-2026-11-24.txt, one block per session headed "SESSION <n> /done", each listing what it moved: 11-17 indexed in "SESSION 18 /done" (AL-2026-11-21.txt); 19-21 in AL-2026-11-22.txt (19: session 18-19 lines, PUB-HOOK-RELEASE-CHECK ruling, WATCH gate-hold history, BUDGETLOG; 20: waves 26-28; 21: waves 31-33, GATE-HOLD-C, plan-07 drift); 22-23 in AL-2026-11-23.txt (22: waves 34-37 plan; 23: waves 38-45 merges, plan, operator requests, session 22 status); 24-26 in AL-2026-11-24.txt (24-25: sessions 23-24 NOTE, reap, findings, Do NOT redo, SESSION-21 ROWS; 26: session 25 lines, the session 26 full NOTE, the session 23 NOTE with w42-int).
 
-Next action: plan the next waves (60 on) in docs/plan/packages.json from the
-open ROADMAP rows (none planned past wave 59), then run them (PLAN / W<n> /
-CLOSE as sessions 25-27: one package agent per package, at most 2 at once,
-design-reviewer for web/ or text/ changes, one integrator per merge batch).
-Session-taggable rows first, plus any wave-99 package whose condition holds.
-Disjoint files, dependencies earlier; `python tools/plan_check.py waves
---write` and `check`; commit; run. Ask the operator nothing; the main
-session only dispatches. Push main before spawning isolated agents (OA-12).
-1. Waves 10 to 59 are closed (sessions 12 to 27; GATE-HOLD-D dropped).
+Next action: put the batched operator ask (one message, all optional): (m)
+redo the four in-game checks that came back refused 2026-11-22, each with a
+short note saying what the game showed (rows LIVE-SEARCHSTR-FIX,
+LIVE-FILTER-FIX, LIVE-FILTER-MERGE-FIX, TC-BUILDFILE-LIVE-FIX), and the GP-12
+public-flip word; then plan wave 62 in docs/plan/packages.json from whatever
+unblocks (PLAN / W<n> / CLOSE as sessions 25-28: one package agent per
+package, at most 2 at once, design-reviewer for web/ or text/ changes, one
+integrator per merge batch; `python tools/plan_check.py waves --write` and
+`check`; commit; run; push main before spawning isolated agents). If nothing
+unblocks: loop work only, no wave. The main session only dispatches.
+1. Waves 10 to 61 are closed (sessions 12 to 28; GATE-HOLD-D dropped).
 Orchestrator lessons (full text: archive blocks "SESSION 18 /done", "SESSION
 19 /done"): dispatch the next step right after each child report; builders
 and verifiers also run tests/test_test_layout.py; fresh integrator per batch;
@@ -37,7 +40,7 @@ element-cap red is fixed, never the cap moved (KINDLER-UI-TABS).
 Session start checks: if ops/runtime/ggg_docs/REG_OPEN exists, GGG reopened
 OAuth app registration: update ROADMAP TC-OAUTH-REG, put the apply act in the
 batched operator ask (OA-36); application docs/ops/ggg-oauth-application.md
-(decision 0048). Read back 2026-11-24 (session 27 /done): absent.
+(decision 0048). Read back 2026-11-24 (session 28 /done): absent.
 
 Operator records (the three lines below stay in this file, verbatim):
 OPERATOR GO Q-23 step 1 (2026-11-18): "The operator has ordered going public. Record that as a decision (docs/decisions/NNNN-go-public.md: decision, alternatives, why, reverses if), update CLAUDE.md "Public-repo hygiene" and ROADMAP, and flip .githooks/pre-push from refuse-all to the normal guarded push (fleet_identity pre-push check stays)."
@@ -53,7 +56,7 @@ and 5 (step 4, OA-2). If a line is lost or edited, the Q-23 default holds:
 stay local, nothing is pushed.
 
 Carried forward (not acted on yet):
-- TEST-SPLIT-B1-WATCH (row filed, BLOCKED: session): B1 test_real_loop_body red once at 0.920 percent (3 clock steps, 46.9 ms) in the wave 59 batch 3 whole suite under the split phase 2; 3 isolated gated reruns passed (0.616/0.000/0.000), next whole suite green. If it reds again, apply decision 0060's split reverses-if (SPLIT_TIMING False, or B1 after both streams), never move the budget.
+- TEST-SPLIT-B1-WATCH (row filed, BLOCKED: session): B1 test_real_loop_body red once at 0.920 percent (3 clock steps, 46.9 ms) in the wave 59 batch 3 whole suite under the split phase 2; 3 isolated gated reruns passed (0.616/0.000/0.000), every whole suite since green (session 28: three, incl. /done). If it reds again, apply decision 0060's split reverses-if (SPLIT_TIMING False, or B1 after both streams), never move the budget.
 - ELECTRON (session 27): app/node_modules still holds Electron 45.3.3 (npm ci not run, the client was running); the next setup with the client closed moves it to 45.4.1. Electron 45.5.0 released 2026-11-24, eligible under decision 0070 from 2026-11-27 (the watcher should file its row; file it by hand if it has not by then).
 - PLAY-FEED-VERB-FIT low design notes (reviews.log, low priority): flow and text-spacing sizes unmeasured for trade rows; the price / Dismiss edge check uses the row outer edge.
 - Design findings open without a row: TD23-1 (folds into PLAY-F-189A, wave 35); nits CP-3, PN6-1, TD23-E (OPEN FINDINGS line).
@@ -223,14 +226,16 @@ Carried forward (not acted on yet):
 Context: CLAUDE.md (Settled list), docs/plan/07-execution-plan.md, 08-orchestration.md, 09-operator-acts.md, docs/plan/packages.json (plan of record; tools/plan_check.py check / wave <n> / rows), ROADMAP.md (open rows; done rows pruned into docs/roadmap/archive/2026-11.md; docs/roadmap/new|done row files folded by /done), docs/decisions/README.md, docs/design/reviews.log, ops/loop/control/HALT, ops/runtime/ggg_docs/.
 Operator orders (sessions 5 and 6), live state notes: archive block "SESSION 20 /done" of AL-2026-11-22.txt (probe /api/health before touching the app; a wave agent never starts or stops the app, core, overlay or loop).
 
-Acceptance: a session group from wave 60 is in packages.json (plan_check check green, waves --write applied) and closed as 08 section 7 says (open-row command prints "none open" or only DEFERRED ids, status empty on main, leak sweep clean, last batch suite and npm test green, WAVE POINTER moved to the group's last wave), every package merged or re-deferred with a reason.
+Acceptance: the operator ask is out (or answered); any unblocked row is planned as wave 62 in packages.json (plan_check check green, waves --write applied) and closed as 08 section 7 says (open-row command prints "none open" or only DEFERRED / BLOCKED ids, status empty on main, leak sweep clean, last batch suite and npm test green, WAVE POINTER moved), every package merged or re-deferred with a reason.
+
+Do NOT redo (session 28, pushed): hooks wiring 021c7b7 and settings line drop 4f456e6 (OA-12 done); wave 60 merge 9c51889 / integrate 8faf6f4; wave 61 plan d608925, merges f7fa26a and b1ed431, integrate e491415; the four *-FIX rows are filed (fold 301f05d); the progress-file refusal is the harness worktree boundary (5c497de), no FIX note to MAIN.
 
 Do NOT redo (session 27, pushed): plan eb8fb6e (waves 58-59); integrates 1ccbdfb (w58 b1), 0fc377c (w58 b2), ed42473 (w59 b3); TEST-SERIAL-PHASE-CUT 120 s restore already in decision 0060 and CLAUDE.md; DOCS-FRESH-20261121 and ELECTRON-45-4-1 loop records already recycled; fold and worktree reap (NOTEs).
 
 Do NOT redo (sessions 6 to 26): docs/handoff-archive/ (closed blocks per session).
 
-In flight: none (no orchestrator, agent or progress row of this tree running). Loop live, do not touch; HALT absent; REG_OPEN absent (read back session 27 /done).
+In flight: none (no orchestrator, agent or progress row of this tree running; fleet_checklist stale: none). Loop live, do not touch; HALT absent; REG_OPEN absent (read back session 28 /done).
 
-Status (session 27 /done, 2026-11-24, fresh): gate suite from Bash: parallel 5945 passed / 9 skipped (91.71 s), timing-calc 9 passed (34.66 s), timing-rest 12 passed (23.64 s), rc 0; npm 882/882; leak sweep armed, no HALT; main ed42473 = origin/main before the fold 77151c0 and this hand-off. Inbox: 1 MAIN TERMINAL note, skipped. Board skipped (opt-out).
+Status (session 28 /done, 2026-11-24, fresh): gate suite from Bash: parallel 5946 passed / 8 skipped (86.41 s), timing-calc 9 passed (34.36 s), timing-rest 12 passed (24.53 s), rc 0; npm 882/882; leak sweep armed (44 needles), no HALT; main e491415 = origin/main before the fold 301f05d and this hand-off. Inbox: 1 MAIN TERMINAL note, skipped. Board skipped (opt-out).
 
 Start with: read this file, then CLAUDE.md, ROADMAP.md, git log -10.
