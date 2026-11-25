@@ -1,0 +1,1 @@
+ -- done 2026-11-24 (session wave 59; verified; G5 counts visible elements only, cap 94 plus 6 per open trade row by adjudicator call, ruling in design 0001, figures re-measured)
