@@ -102,6 +102,12 @@ function fakeDoc() {
     return false;
   }
   doc.createElement = node;
+  // a text node: no class, no children, its text in data (shownText reads _text)
+  doc.createTextNode = (text) => ({
+    nodeType: 3, className: "", hidden: false, children: [], parentNode: null, data: String(text),
+    get _text() { return this.data; },
+    get textContent() { return this.data; }
+  });
   doc.getElementById = (id) => doc.byId[id] || null;
   const region = node("section");
   region.id = "play-t";
@@ -409,6 +415,46 @@ test("paint: every open trade has a row with its own Dismiss; Dismiss all from 2
   const rows = ui.rows();
   assert.ok(rows.every((r) => r.className.indexOf("edge-accent") >= 0));
   assert.ok(F.words(shownText(ui.doc.region)) <= F.WORD_CAP);
+});
+
+test("a long item name: buyer and verb stay whole, only the item truncates (PLAY-FEED-VERB-CLIP)", () => {
+  const ui = setup();
+  const LONG = "Grim Bane Ruby Ring of the Everlasting Ember and the Quiet Fox of Clearfell";
+  ui.paint(snapOf([trade(1, "Quietfox", LONG, "5 exalted", NOW - 5)]));
+  const row = ui.rows()[0];
+  const buyer = find(row, "feed-buyer")[0];
+  const item = find(row, "feed-item")[0];
+  const i = row.children.indexOf(buyer);
+  const verb = row.children[i + 1];
+  // the verb is a bare text node right after the buyer: not inside the
+  // item span (the one part that takes the ellipsis) and no element
+  assert.equal(verb.nodeType, 3);
+  assert.equal(verb.data, "wants");
+  assert.equal(row.children[i + 2], item);
+  assert.equal(buyer.textContent, "Quietfox");
+  assert.ok(item.textContent.indexOf("wants") < 0, "the item span never holds the verb");
+  assert.equal(item.getAttribute("title"), LONG, "the item's full name is its title");
+  // a trade row stays 6 elements (design 0001): li, buyer, item, price, right, Dismiss
+  const elements = (n) => (n.nodeType === 3 ? 0 : 1 + n.children.reduce((a, c) => a + elements(c), 0));
+  assert.equal(elements(row), 6);
+  // a word ladder cut shortens only the item; buyer and verb stay, the title keeps it all
+  const five = fiveLong().map((t) => Object.assign({}, t, { item: LONG,
+    text: t.from + " wants " + LONG + " - 1 exalted" }));
+  ui.paint(snapOf(five, EVENTS));
+  ui.rows().forEach((r) => {
+    const b = find(r, "feed-buyer")[0];
+    const it = find(r, "feed-item")[0];
+    assert.equal(r.children[r.children.indexOf(b) + 1].data, "wants");
+    assert.ok(/^Firstbuyer/.test(b.textContent) && b.textContent.indexOf("...") < 0);
+    assert.equal(it.getAttribute("title"), LONG);
+  });
+  // CSS: the item takes the ellipsis and gives way first; the buyer shrinks
+  // last; the verb (the row's own text) is set at the title size
+  const body = CSS.replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.ok(/\.feed-item \{ flex: 0 1000 auto; min-width: 3em; \}/.test(body));
+  assert.ok(/\.feed-trade \.feed-buyer \{ flex: 0 0\.001 auto; \}/.test(body));
+  assert.ok(/\.feed-trade \{[^}]*font-size: var\(--al-fs-title\)/.test(body));
+  assert.ok(!/feed-verb/.test(body), "no verb element to clip");
 });
 
 test("status: a new request is said once in at most 12 words, never on first paint", () => {
