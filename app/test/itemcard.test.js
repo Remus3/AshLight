@@ -176,17 +176,45 @@ test("rows are reserved: 2 sentence rows and 5 compare rows in every card", () =
   rows.forEach((r) => assert.equal(shown(r), true));
   sent.forEach((r) => assert.equal(shown(r), true));
   assert.equal(doc.getElementById("ic").getAttribute("data-stage"), "weights");
+  assert.equal(rows[0].children[0].textContent, "");
   assert.equal(rows[0].children[1].textContent, "");
   // the full card fills the same nodes
   IC.paint(doc, snapWith(card()));
   assert.equal(doc.all.length, before + 2, "only the two links are new");
-  // a row: its points (floated right) first, then its text as a text node
-  assert.equal(rows[0].children[1].textContent, "+30 to maximum Life");
+  // a row: its stat text (the one span) first, then its points as a text node
+  assert.equal(rows[0].children[0].textContent, "+30 to maximum Life");
   assert.equal(rows[0].getAttribute("title"), "+30 to maximum Life");
-  assert.equal(rows[0].children[0].textContent, "+30 points");
+  assert.equal(rows[0].children[1].textContent, "+30 points");
   assert.equal(sent[0].textContent, "21 points more than your Gloves.");
   assert.equal(sent[0].getAttribute("title"), "21 points more than your Gloves.");
   assert.equal(txt(doc, "ic-label"), "vs Old Grip");
+});
+
+test("a compare row reads its stat label before its points (PLAY-A11Y-COMPARE-ORDER)", () => {
+  IC.reset();
+  const doc = makeDoc();
+  IC.wire(doc, { tabs: Tabs });
+  IC.paint(doc, snapWith(card()));
+  const rows = doc.all.filter((n) => n.nodeType === 1 && n.className.split(" ").includes("ic-cmp-row"));
+  assert.equal(rows.length, 5);
+  rows.forEach((r) => {
+    // exactly two parts and no wrapper: the label span, then the points text
+    assert.equal(r.children.length, 2);
+    const [label, points] = r.children;
+    assert.equal(label.nodeType, 1);
+    assert.equal(label.tagName, "SPAN");
+    assert.ok(label.className.split(" ").includes("ic-cmp-text"));
+    assert.equal(points.nodeType, 3);
+    assert.ok(r.children.indexOf(label) < r.children.indexOf(points), "label first");
+  });
+  // the filled row: the reading order is stat, then points
+  assert.equal(rows[0].textContent, "+30 to maximum Life+30 points");
+  assert.ok(rows[0].textContent.indexOf("+30 to maximum Life") <
+    rows[0].textContent.indexOf("+30 points"));
+  // the points stay on the right: the row is a flex line and the text takes the free width
+  assert.match(CSS, /#play-i \.ic-cmp-row \{[^}]*display: flex;/);
+  assert.match(CSS, /#play-i \.ic-cmp-text \{[^}]*flex: 1 1 0;/);
+  assert.doesNotMatch(CSS, /float: right/);
 });
 
 test("at most 2 links: https only, a new tab, never a trade call", () => {

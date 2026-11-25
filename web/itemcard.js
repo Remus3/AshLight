@@ -257,10 +257,12 @@
     n.label = n.body.appendChild(el(doc, "p", "ic-label row-meta muted one-line", "ic-label"));
     var list = n.body.appendChild(el(doc, "ul", "ic-rows"));
     for (var j = 0; j < COMPARE_ROWS; j++) {
-      // one row: its points float to the right, its text takes the ellipsis
-      var li = list.appendChild(el(doc, "li", "ic-cmp-row row-body one-line"));
-      var v = li.appendChild(el(doc, "span", "ic-cmp-value"));
-      var t = li.appendChild(doc.createTextNode(""));
+      // one row: its stat text first in reading order (it takes the
+      // ellipsis), then its points as a text node kept whole on the right
+      // (PLAY-A11Y-COMPARE-ORDER: a screen reader says the stat first)
+      var li = list.appendChild(el(doc, "li", "ic-cmp-row row-body"));
+      var t = li.appendChild(el(doc, "span", "ic-cmp-text one-line"));
+      var v = li.appendChild(doc.createTextNode(""));
       n.rows.push({ li: li, text: t, value: v });
     }
     // the price row is one element: its value as text, then its source
