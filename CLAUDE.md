@@ -454,22 +454,23 @@ of the HALT check.
   its diff, file-named, outside the suite gate (no timing tests, at most
   90 s per subset; timing and budget tests go through the gate); main moves
   only after one whole green suite through the gate per merge batch
-  (decision 0060). Amended 2026-11-21 (decision 0060 amendment,
-  TEST-SUITE-HOLD-75; amended 2026-11-22, GATE-HOLD, research 0063): the
-  gated whole-suite hold has an interim bound of a 145 s median (soak
-  150 s) while the 120 s median stays the target, recovered by five
-  test-side packages; phase 1 runs min(12, CPUs - 4) workers, never under
-  2; phase 2 stays serial. The interim bound reverses if a soak median
-  after the packages is at or under 125 s (restore 120 s), the calc split
-  shows under 90 s (tighten), or a soak median exceeds 145 s (bisect, do
-  not move the number). Amended 2026-11-24 (TEST-XDIST-GROUP-RESTORE):
-  tests/conftest.py restores xdist_group under pytest 9.2.0 with xdist
-  3.8.0 (pins unchanged) and the test_shots render runs first; soaks
-  135.6 / 137.7 / 136.9 s, median 136.9 s, the 145 s bound does not
-  move; reverses if a fixed xdist sets the group through Node._id (drop
-  the wrapper). Reverses if: subset runs cause machine
-  contention or missed regressions, or MAIN's kit changes item 16c to
-  forbid ungated file-named runs.
+  (decision 0060). The gated whole-suite hold is bounded by a 120 s
+  median, soak median under 125 s (decision 0060 amendment 2026-11-24,
+  TEST-SERIAL-PHASE-CUT; the 2026-11-22 interim 145 s bound, research
+  0063, is withdrawn); phase 1 runs min(12, CPUs - 4) workers, never
+  under 2; phase 2 runs after phase 1 as two serial streams side by side
+  (timing-calc: the calc timing files; timing-rest: every other timing
+  test), SPLIT_TIMING in tools/suite_run.py restores one serial stream;
+  soaks 122.6 / 119.6 / 121.3 s, median 121.3 s. tests/conftest.py
+  restores xdist_group under pytest 9.2.0 with xdist 3.8.0 (pins
+  unchanged) and the test_shots render runs first
+  (TEST-XDIST-GROUP-RESTORE); reverses if a fixed xdist sets the group
+  through Node._id (drop the wrapper). The split reverses if a 3-run
+  gated soak median exceeds 125 s or a timing test reds under it with
+  only that change applied (then SPLIT_TIMING False and the 145 s interim
+  bound back), or the kit forbids concurrent serial streams. Reverses if:
+  subset runs cause machine contention or missed regressions, or MAIN's
+  kit changes item 16c to forbid ungated file-named runs.
 - Clipboard / screen only per AshLight hotkey press, never a watcher, never
   input to the game (decision 0003). Reverses if: GGG's overlay rules change.
 - Theorycraft via Path of Building PoE2 interop (codes first, then an
