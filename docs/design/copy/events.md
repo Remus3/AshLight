@@ -84,6 +84,21 @@ in design 0001.
   reading, so their zones aren't known. New deaths show here with
   their zone and level.`, else `<n> death(s) came before AshLight
   started reading.` after the worst-zone line (UX-NEW-CARDS)
+- first-hours tips (NEWBIE-HINTS, `server/al/hints.py` HINTS; shown
+  once per new character in the event list and as the Play notice
+  `Tip`; the campaign-death tip fits region N's 2 rows,
+  tests/test_play_view.py): first level-up `New
+  character: this page follows your game by itself. Your zone, level,
+  deaths and act times update as you play. The badge at the top shows
+  when AshLight reads Client.txt.`; first town or hideout `To check an
+  item, copy it in the game with Ctrl+C. Then press <key>. AshLight
+  reads the clipboard once for each press.` (no bound key: `the item
+  check key from Settings, Keys`); first campaign death `Campaign deaths
+  cost no experience. The Deaths card shows where each one happened.`
+  (PLAY-FIT-B-WORDS: 13 words, so state b keeps its 150-word maximum);
+  first map `Your first map. Unlike the campaign, deaths in endgame maps
+  cost experience. The Maps card times each map and sorts them by map
+  level.`
 - last session (UTIL-SESSION-SUMMARY, `server/al/summary.py`,
   `web/summary.js`): dashboard only, hidden until the first card; lines
   `Played <m:ss|h:mm:ss> and reached level <n>.` (no levels gained: `at

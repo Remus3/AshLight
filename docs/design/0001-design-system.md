@@ -267,9 +267,9 @@ checks" (U, visible); the others are for screen readers only.
   a trade row has no "Trade" tag (the head "Trades N", the verb, the
   price and Dismiss say it); event rows keep their Death, Level and Zone
   tags (the one quick type cue). Words: at most 250, 110 on first run,
-  and 153 in a plain campaign zone (the measured state b; the 3 words
-  over 150 are server text, the notice tip and the build line, outside
-  the web files; back to 150 once that text is cut).
+  and 150 in a plain campaign zone (state b; it measured 153 until
+  PLAY-FIT-B-WORDS cut the campaign-death notice tip from 16 words to
+  13, which also names the card by its title, Deaths).
 - Alternatives: a flat 100 met by cutting content (compare rows, strip
   labels); a flat 125; a counter that skips visually hidden elements
   (the 6 screen-reader headings and the trade status; a harness change,
@@ -281,8 +281,8 @@ checks" (U, visible); the others are for screen readers only.
 - Reverses if: a trade row grows past 6 elements; the counter skips
   visually hidden elements (then recompute the allowance); players miss
   the Trade tag in play; a state with no trade measures over 100 after
-  this package; the server text of state b is cut (then b goes back to
-  150).
+  this package. State b stays at 150: server text that pushes it past
+  150 is cut, and the number does not move.
 
 ## 5. Colour
 

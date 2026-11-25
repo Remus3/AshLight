@@ -96,8 +96,9 @@ Words and visible elements on Play at 1280x760 (the full class, the
 heaviest size; the compact class hides the notice rows), before and
 after the package, from `python tests/test_play_fit.py --figures` (13
 states x 7 sizes in about 13 s). The element maximum is 100 plus 6 per
-open trade row; the word maxima are 250, 110 in state a and 153 in
-state b (design 0001 section 4, G5 totals ruling).
+open trade row; the word maxima are 250, 110 in state a and 150 in
+state b (design 0001 section 4, G5 totals ruling; b read 153 after this
+package and is back to 150 since PLAY-FIT-B-WORDS, below).
 
 | State | Open trades | Words before | Words after | Elements before | Elements after | Element max |
 |---|---|---|---|---|---|---|
@@ -115,5 +116,21 @@ state b (design 0001 section 4, G5 totals ruling).
 | c5 | 5 | 213 | 214 | 155 | 116 | 130 |
 | rows10 | 0 | 118 | 102 | 87 | 69 | 100 |
 
+State b now reads 150; see "State b words" below.
+
 The feed spends the words its cut tags freed on longer item names (its
 own 50-word ladder), so long and c5 read one word more than before.
+
+## State b words (PLAY-FIT-B-WORDS, 2026-11-24)
+
+State b measured 153 words against the G5 maximum of 150; the 3 words
+over were server text. The campaign-death notice tip
+(server/al/hints.py) went from 16 words to 13 and now names the card by
+its title: before "Deaths in the campaign cost no experience. The Death
+recap card shows where each one happened.", after "Campaign deaths cost
+no experience. The Deaths card shows where each one happened." Region N
+reads 17 words (was 20), so state b reads 150 at 1280x760, and
+WORDS_STATE_MAX["b"] in tests/test_play_fit.py is 150 again. The build
+line (server/al/playview.py BUILD_FIX, "Copy a PoB code, press the item
+key.") is unchanged. States c, c2, d, c5 and long show the same tip, so
+each reads 3 words fewer (c 211, c2 182, d 153, c5 and long 211).

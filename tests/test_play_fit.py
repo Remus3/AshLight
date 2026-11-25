@@ -79,10 +79,10 @@ SLACK_MIN = {1: 2, 1.25: 3}           # G4
 I_SLACK_MIN = {"full": 16, "compact": 6}
 WORD_CAPS = {"g": 20, "c": 52, "t": 50, "n": 22, "b": 16, "i": 60, "u": 24}  # G5
 WORDS_MAX = 250
-# plain campaign zone, first run; b is the measured 153 by the design 0001
-# ruling 2026-11-24 (PLAY-FIT-G5-TOTALS): its last 3 words over 150 are
-# server text (the notice tip and the build line), back to 150 once cut
-WORDS_STATE_MAX = {"b": 153, "a": 110}
+# plain campaign zone, first run; b is back to 150 since PLAY-FIT-B-WORDS
+# cut the campaign-death notice tip by 3 words (design 0001 G5 totals
+# ruling 2026-11-24)
+WORDS_STATE_MAX = {"b": 150, "a": 110}
 ELEMENTS_MAX = 100
 # design 0001 ruling 2026-11-24 (PLAY-FIT-G5-TOTALS): each open trade row
 # adds its own 6 elements (li, buyer, item, price, right, Dismiss), as G6

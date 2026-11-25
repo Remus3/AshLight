@@ -51,8 +51,8 @@ HINTS = collections.OrderedDict([
               "badge at the top shows when AshLight reads Client.txt."),
     ("town", "To check an item, copy it in the game with Ctrl+C. Then press "
              "{key}. AshLight reads the clipboard once for each press."),
-    ("campaign_death", "Deaths in the campaign cost no experience. The Death "
-                       "recap card shows where each one happened."),
+    ("campaign_death", "Campaign deaths cost no experience. The Deaths card "
+                       "shows where each one happened."),
     ("first_map", "Your first map. Unlike the campaign, deaths in endgame "
                   "maps cost experience. The Maps card times each map and "
                   "sorts them by map level."),
