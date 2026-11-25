@@ -2392,7 +2392,7 @@ Deferred GATE-HOLD-D after the grouping fix (both edit decision 0060).
 Session-tagged ROADMAP follow-ups of session 26 (disjoint files).
 
 - Session 15; width 4 worktree + 0 main-checkout, 0 loop rows released.
-- Hotspots: none.
+- Hotspots: docs/design/0001-design-system.md (PLAY-FIT-B-WORDS).
 - Integrator: ROADMAP.md rows of all 4 packages; docs/design/reviews.log:
   PLAY-FIT-B-WORDS, PLAY-A11Y-COMPARE-ORDER, PLAY-FEED-VERB-CLIP; CLAUDE.md:
   TEST-SERIAL-PHASE-CUT.
@@ -2404,7 +2404,7 @@ Session-tagged ROADMAP follow-ups of session 26 (disjoint files).
   python tools/plan_check.py check; the wave closes when every session row
   is flipped and main is clean.
 
-- PLAY-FIT-B-WORDS [session, S 40m, build, DR] Play state b back under 150 words. Files: server/al/hints.py, server/al/playview.py, docs/design/copy/buildlive.md, docs/design/play-fit-figures.md, tests/test_play_fit.py (+3 more). Deps: PLAY-FIT-G5-TOTALS.
+- PLAY-FIT-B-WORDS [session, S 40m, build, DR] Play state b back under 150 words. Files: server/al/hints.py, server/al/playview.py, docs/design/copy/buildlive.md, docs/design/play-fit-figures.md, tests/test_play_fit.py (+5 more). Deps: PLAY-FIT-G5-TOTALS.
 - PLAY-A11Y-COMPARE-ORDER [session, S 30m, build, DR] Item compare row reads its stat label first. Files: web/itemcard.js, web/itemcard.css, app/test/itemcard.test.js. Deps: PLAY-FIT-G5-TOTALS.
 - PLAY-FEED-VERB-CLIP [session, S 35m, build, DR] Trade row keeps buyer and verb whole. Files: web/feed.js, web/feed.css, app/test/feed.test.js. Deps: PLAY-FIT-G5-TOTALS.
 - TEST-SERIAL-PHASE-CUT [session, L 90m, build] Cut the serial timing phase of the gated suite. Files: tests/test_fullstack.py, tests/test_budgets.py, tests/test_tc_press_staged.py, tests/test_marks.py, tools/suite_run.py (+2 more). Deps: TEST-XDIST-GROUP-RESTORE.

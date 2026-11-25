@@ -24569,7 +24569,9 @@
     "tests/test_play_fit.py",
     "tests/test_newbie_hints.py",
     "tests/test_play_view.py",
-    "app/test/buildline.test.js"
+    "app/test/buildline.test.js",
+    "docs/design/0001-design-system.md",
+    "docs/design/copy/events.md"
    ],
    "new_files": [],
    "integrator_edits": [
@@ -24602,7 +24604,7 @@
    "design_review": true,
    "blocked": null,
    "operator_act": "",
-   "notes": "Session 26 follow-up (ROADMAP row PLAY-FIT-B-WORDS). No sheet under docs/design/copy/ quotes the hints.py start tip or BUILD_FIX today (checked 2026-11-24); buildlive.md is the build-line sheet, so the new words are recorded there, or the package widens its files with a chore(plan) commit if tests/test_structure.py asks for another sheet. play-fit-figures.md quotes the state b total. Card words changed: run the design-reviewer agent before the commit.",
+   "notes": "Session 26 follow-up (ROADMAP row PLAY-FIT-B-WORDS). No sheet under docs/design/copy/ quotes the hints.py start tip or BUILD_FIX today (checked 2026-11-24); buildlive.md is the build-line sheet, so the new words are recorded there, or the package widens its files with a chore(plan) commit if tests/test_structure.py asks for another sheet. play-fit-figures.md quotes the state b total. Card words changed: run the design-reviewer agent before the commit. Widened 2026-11-24 (integrator wave 58): docs/design/0001-design-system.md (G5 ruling state b total back to 150) and docs/design/copy/events.md (the campaign-death tip is a hint template of the events sheet), both changed by the package commit d6bd8a1.",
    "wave": 58,
    "owner": "session"
   },
