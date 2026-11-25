@@ -1,0 +1,1 @@
+ -- done 2026-11-24 (session wave 60; verified; isolated spawn after 021c7b7 created its worktree under the sidecar Worktree folder, test_wt_sidecar_hook.py -rs no skip, the missing-wiring skip is now a failure; merge 9c51889)

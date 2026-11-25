@@ -1,0 +1,1 @@
+ -- done 2026-11-24 (session wave 60; verified by AUTO-26; decision 0012 hooks wired in 021c7b7 on the operator order, one isolated spawn read back under the sidecar Worktree folder)

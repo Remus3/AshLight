@@ -2,7 +2,7 @@ AL NEXT SESSION
 ---------------
 SESSION: 28   (FLEET item 13 counter; /done writes n+1)
 
-WAVE POINTER: wave 59 done, next wave 60 (nothing planned past wave 59)
+WAVE POINTER: wave 60 done (AUTO-26 merged 9c51889), next wave 61
 NOTE (session 27 /done): waves 58-59 (plan eb8fb6e) closed, all merged and pushed (origin/main ed42473 before this hand-off): batch 1 PLAY-FIT-B-WORDS, PLAY-A11Y-COMPARE-ORDER, PLAY-FEED-VERB-CLIP, LOOP-NOCHANGE-OPEN (6a0a6ae plan widen, 1ccbdfb); batch 2 TEST-SERIAL-PHASE-CUT (phase 2 split into two concurrent serial streams, soaks 122.6/119.6/121.3 s, median 121.3 s, 120 s bound restored in decision 0060 and CLAUDE.md) and ELECTRON-45-4-1 (cdbf598, 1cb5c7a, 0fc377c); batch 3 PLAY-FIT-SR-COUNT (G5 counts visible elements only, cap 94 + 6 per open trade, adjudicator) and PLAY-FEED-VERB-FIT (real overflow fix in web/feed.css) (2369ae7, 2b711c4, ed42473). Loop: LOOP-NOCHANGE-OPEN landed; loop records DOCS-FRESH-20261121 (re-dispatch with docs_fresh.py on the lane allow-list) and ELECTRON-45-4-1 (row closed) recycled. Fold 77151c0 (11 row files applied, 8 done rows archived; new row TEST-SPLIT-B1-WATCH, BLOCKED: session). Full session 26 record: archive block "SESSION 27 /done" of AL-2026-11-24.txt. Still open: TC-TREE-URL ascendancy byte unverified (TC-TREE-URL-ASC-CHECK, BLOCKED: operator act). Next free decision number: 0087.
 NOTE (session 25): isolated worktree agents could not write ops/loop/control/progress/*.json in the main checkout directly; ops/fleet_kit/fleet_headless.write_progress(root, ...) worked. Tell package agents to use it.
 NOTE (session 27 reap): reap --apply: "reap applied: 1 removed, 9 kept, 0 listed (base main)": removed agent-ab9afbdd289795291 (merged, branch deleted); kept 6 merged agent worktrees (agent-a0e926f73c6e8e2d5, -a3df6958dff38f6fc, -a5c335bb710a3ac88, -a6aa4e8684bc3a43b, -a6c6bb5464e803d7d, -af6121399e9af15da; owner pid of the live session) plus lane-0..2. Read back "reap dry-run: 0 removable, 9 kept, 0 listed (base main)". Re-run fleet_done.py reap --apply next session to remove the six. The ~300 MB Electron download scratch copy el4541 under the session scratchpad went to the Recycle Bin (read back: absent).
@@ -58,7 +58,6 @@ Carried forward (not acted on yet):
 - PLAY-FEED-VERB-FIT low design notes (reviews.log, low priority): flow and text-spacing sizes unmeasured for trade rows; the price / Dismiss edge check uses the row outer edge.
 - Design findings open without a row: TD23-1 (folds into PLAY-F-189A, wave 35); nits CP-3, PN6-1, TD23-E (OPEN FINDINGS line).
 - SESSION-22 DESIGN FINDINGS OPEN (docs/design/reviews.log, waves 34 to 37; session items, none blocking): UN-1..UN-4 (REL-UPDATE-NOTICE-UI; UN-2 needs the 'update' tab-mark word in design 0001 section 4), FT-1 (move the link_restarted word into status_words.json) and FT-2 (RUN-FEED-TRUTH), F189-1..F189-3 (PLAY-F-189A), AS-1..AS-4 (REL-AUTOSTART-SETTINGS), PL-1 (PLAY-F-189B), WD-1..WD-5 (TC-WEIGHTS-DELTA-UI). UN-1, AS-1 and WD-3 were row SAVE-FAIL-SAY (merged wave 47). OVL-1 (full-opacity flash on overlay reload) is re-pointed to OVL-TD05-PLATE.
-- OPERATOR ACT (rows WT-SIDECAR-WIRE / AUTO-26, OA-12 with OA-6; optional, no wave waits; rulings LE-92, LE-99, LE-100): paste decision 0012's WorktreeCreate / WorktreeRemove hook entries into .claude/settings.json; until then harness worktree isolation lands in .claude/worktrees (spawn without isolation and run tools/wt_sidecar_hook.py by hand). Observed session 27: without the hooks, Agent-tool worktrees land in .claude/worktrees and branch from origin/main, not local HEAD, so push main before spawning isolated agents.
 - OPERATOR ACT REL-CUTOVER-LIVE (session 19): prep done; run once, any time
   (it waits for game_idle by itself): powershell -NoProfile
   -ExecutionPolicy Bypass -File <AL sidecar>\Scratch\cutover\cutover.ps1 .
@@ -140,8 +139,8 @@ Carried forward (not acted on yet):
   (OA-36); (e) logon autostart scripts\autostart.ps1 -Enable (OA-7;
   decision 0011, OFF by default); (g) UA contact in config/local.json +
   web_data on (OA-8); (k) review decision 0017 (trade link only), say if
-  it should be reversed (OA-9). Act (d) is done by GP-09; act (f) is
-  OA-12. After the first push: OA-3 (immutable releases, only if the API
+  it should be reversed (OA-9). Act (d) is done by GP-09; act (f), OA-12,
+  is done (hooks wired 021c7b7, AUTO-26 proof). After the first push: OA-3 (immutable releases, only if the API
   answers 404) and OA-13 (the release phrase). (l) paste one real GGG
   passive tree link of a character with an ascendancy (row
   TC-TREE-URL-ASC-CHECK; checks the ruled ascendancy byte of
