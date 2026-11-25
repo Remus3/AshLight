@@ -87,10 +87,29 @@ ids GGG shows; uniques by `unique_name`, other items as plain
 `additional_text`). Anything that does not map is dropped and named in a
 note on the dashboard; nothing is guessed.
 
+## 5. In-game result (TC-BUILDFILE-LIVE, recorded 2026-11-24)
+
+- Verdict: refused, 2026-11-22, no note. Read back 2026-11-24 with
+  `python tools/live_verdicts.py` from the runtime verdict file
+  (`verdicts.json`, server/al/verdicts.py; the 'Tried in game' card).
+- Caveat: this click was the first of seven verdict clicks that all
+  landed within 19 s (the five checks of that card, LIVE-SEARCHSTR three
+  times), every one with an empty note. A refusal given that fast and
+  with no note says nothing about what the game did with the file: it
+  does not show that the game rejected the file, nor which part
+  (passives, skills, inventory_slots, ascendancy) failed. No cause is
+  guessed here and the mapping of sections 2 and 4 is not changed.
+- Follow-up: the drafted fix row TC-BUILDFILE-LIVE-FIX is filed as
+  BLOCKED: operator act - one more try (save the .build from the
+  dashboard, open it in the game's planner) with a note saying what the
+  game showed. A worked verdict closes it; a refused one with a note is
+  the input for a real mapping fix (integrator ruling, session 28).
+
 ## UNVERIFIED
 
-- No AshLight-made `.build` has been loaded in game yet (needs the player;
-  TC-BUILDFILE-LIVE check). Whether the game accepts placeholder or class
+- No AshLight-made `.build` is known to load in game: the one recorded
+  try (section 5) is a refusal with no note, so it is still open whether
+  the game accepts the file (TC-BUILDFILE-LIVE-FIX). Whether the game accepts placeholder or class
   start node ids, or meta gems in `skills`, is not documented; AshLight
   passes meta gems through as PoB has them.
 - Off-hand / weapon swap / flask / charm inventory ids are not shown on
@@ -108,3 +127,4 @@ passive id source; the export drops its `id` field.
 - https://github.com/grindinggear/poe2-skilltree-export (accessed 2026-11-17; data.json read back)
 - https://github.com/PathOfBuildingCommunity/PathOfBuilding-PoE2/pull/2432 (accessed 2026-11-17)
 - https://github.com/PathOfBuildingCommunity/PathOfBuilding-PoE2/blob/dev/LICENSE.md (accessed 2026-11-17)
+- Local verdict record: `python tools/live_verdicts.py` (read 2026-11-24; seven rows dated 2026-11-22, 19 s apart end to end, all notes empty)
