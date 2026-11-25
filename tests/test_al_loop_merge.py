@@ -171,8 +171,12 @@ def test_red_gates_after_three_rounds_keep_wip_unmerged(tmp_path):
 
 @pytest.mark.git
 def test_clean_worktree_is_no_change(tmp_path):
+    # LOOP-NOCHANGE-OPEN: true no-change only once the row is closed; the
+    # open-row case is tests/test_loop_nochange_open.py
     root, wt = git_world(tmp_path)
     (wt / "feature.txt").unlink()
+    rm = root / "ROADMAP.md"
+    rm.write_text(al_loop.flip_roadmap(rm.read_text(), "012", "done"), newline="\n")
     d = deps(root, git=real_git)
     al_loop.tick(deps=d, no_push=True)
     assert al_loop.Items(root).get("012")["state"] == "no-change"

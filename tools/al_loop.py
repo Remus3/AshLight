@@ -99,7 +99,7 @@ from loop_base import (  # noqa: E402
     ATTENTION_STATES, BACKOFF_BASE_S, BACKOFF_CAP_S, BACKOFF_REL, CODE, DEEP_EXTRA,
     DONE_STATES, GATE_RETRY, GATE_TIMEOUT_S, HALT_REL, HEADROOM, HOLD_STATES, INFRA_RX,
     KIT_CRASH_RX,
-    IN_FLIGHT, Items, LOCK_REL, MAX_ATTEMPTS, MERGE_LOCK_REL,
+    IN_FLIGHT, Items, LOCK_REL, MAX_ATTEMPTS, MERGE_LOCK_REL, NO_CHANGE_OPEN,
     PROGRESS_TASK, PUSH_LAST_REL, PUSH_WORKER_REL, REVIEW_LOG_KEEP,
     REVIEW_START_S, TICK_TARGET_S, _BREAKAWAY, _DETACHED,
     _NO_WINDOW, _norm_path, ascii_text, atomic_write, epoch_of, is_limit, iso,
@@ -903,6 +903,8 @@ class Tick(InboxMixin, MergeMixin, ReviewMixin, WorkMixin):
                 return f"resolving, run {rec.get('resolve_runs', 1)}/{MAX_ATTEMPTS}"
             if state in HOLD_STATES and rec.get("review_launch"):
                 return "reviewing"
+            if state == "no-change":  # LOOP-NOCHANGE-OPEN: reached only on an open row
+                return NO_CHANGE_OPEN
             return state
 
         def stalled(rec):
@@ -911,11 +913,14 @@ class Tick(InboxMixin, MergeMixin, ReviewMixin, WorkMixin):
                 return f"stalled, {int(rec['stalled_s']) // 60}m silent"
             return None
 
+        def open_no_change(iid, rec):  # LOOP-NOCHANGE-OPEN: listed, never silent
+            return rec.get("state") == "no-change" and iid in self.open_ids
+
         for item in work:
             rec = recs.get(item["id"]) or {}
             state = rec.get("state", "open")
             listed.add(item["id"])
-            if state in DONE_STATES:
+            if state in DONE_STATES and not open_no_change(item["id"], rec):
                 continue
             if state == "blocked":
                 add(item["id"], item["title"], blocked_on(rec), None)
@@ -923,7 +928,7 @@ class Tick(InboxMixin, MergeMixin, ReviewMixin, WorkMixin):
             if stalled(rec):
                 add(item["id"], item["title"], stalled(rec), None)
                 continue
-            e = 0 if state in ATTENTION_STATES else est(rec)
+            e = 0 if state in ATTENTION_STATES + ("no-change",) else est(rec)
             add(item["id"], item["title"], None if state == "open" else shown(rec, state), e)
         for h in skipped:  # plan 019: rows waiting on an open dependency
             if h.get("reason"):
@@ -932,6 +937,9 @@ class Tick(InboxMixin, MergeMixin, ReviewMixin, WorkMixin):
                 add(h["id"], h["text"],
                     blocked_on(rec) if rec.get("state") == "blocked" else h["reason"], None)
         for iid, rec in sorted(recs.items()):
+            if iid not in listed and open_no_change(iid, rec):
+                add(iid, rec.get("title", ""), NO_CHANGE_OPEN, 0)
+                continue
             if iid not in listed and rec.get("state") not in DONE_STATES:
                 if rec.get("state") == "blocked":
                     add(iid, rec.get("title", ""), blocked_on(rec), None)

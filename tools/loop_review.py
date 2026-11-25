@@ -51,6 +51,12 @@ class ReviewMixin:
             if rec.get("rc") == 0 and self.blocked_marker(rec, wt):
                 return
             rec["state"] = "no-change" if rec.get("rc") == 0 else "lost"
+            if rec["state"] == "no-change" and self.row_still_open(rec):
+                # LOOP-NOCHANGE-OPEN (decision 0055 amendment 2026-11-24): an
+                # empty run on a row that is still open is a refusal (a tool
+                # the lane lacks, say), retried up to MAX_ATTEMPTS, then a
+                # listed gave-up; never a silent done state
+                rec.update(state="refused", error="no change, row still open")
             self.items.put(rec)
             self.step(f"{rec['id']}: {rec['state']}")
             return
@@ -195,6 +201,14 @@ class ReviewMixin:
         if rec.get("rounds", 0) >= MAX_ROUNDS:
             entry["final"] = True  # the review-only pass after fix round 3
         rec.setdefault("round_log", []).append(entry)
+
+    def row_still_open(self, rec):
+        """LOOP-NOCHANGE-OPEN: True when rec is a plan item whose ROADMAP row
+        (main tree, through the loader) is still open. A missing, closed or
+        unreadable row keeps the plain no-change."""
+        if rec.get("kind") != "plan":
+            return False
+        return any(r["id"] == rec["id"] and r["open"] for r in self.load_rows())
 
     def blocked_marker(self, rec, wt):
         """Plan 019 4a: True when this run's lane left a fresh `"status":

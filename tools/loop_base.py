@@ -98,6 +98,9 @@ NOTE_MAX = 20000
 # LOOP-FAILED-PARK: superseded = a failed plan record whose ROADMAP row is no
 # longer open (tools/loop_steps/failed_supersede.py); failed is not done.
 DONE_STATES = ("merged", "no-change", "superseded")
+# LOOP-NOCHANGE-OPEN: the checklist state of a no-change record whose row is
+# still open (a record from before the review turned that case into refused).
+NO_CHANGE_OPEN = "no-change, row still open"
 # lane-dirty: the kit refused the claim on a dirty lane worktree; it waits
 # until that worktree is clean and unheld, then retries (recover_lane_dirty);
 # gave-up: MAX_ATTEMPTS refused / lost dispatches, error kept; failed: red

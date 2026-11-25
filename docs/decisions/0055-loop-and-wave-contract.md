@@ -78,3 +78,34 @@ reason echo tells the operator at a glance why a row waits.
 
 A row is worked twice in practice, or the tag traffic on ROADMAP.md causes
 merge conflicts.
+
+## Amendment 2026-11-24 (LOOP-NOCHANGE-OPEN)
+
+Decision: a plan item whose lane exits rc 0 with a clean worktree and no
+blocked marker, while its ROADMAP row (main tree, through the loader) is
+still open, is recorded "refused" with the error "no change, row still
+open", not "no-change": dispatchable() retries it up to MAX_ATTEMPTS and
+reap_lost() then makes it gave-up, which the checklist lists. A closed,
+missing or unreadable row, and any non-plan item, keeps the plain
+"no-change" done state. The checklist also lists any existing "no-change"
+record whose row is still open, with the state "no-change, row still open"
+(loop_base.NO_CHANGE_OPEN), so records written before this amendment are
+seen. The lane allow-list (tools/al_lane.py GATE_TOOLS) gains
+`Bash(python tools/docs_fresh.py:*)`, which makes no request and writes
+nothing (DOCS-FRESH); tools/electron_pin.py stays out, since it fetches and
+writes the sidecar Cache, so an Electron bump stays a session task.
+
+Alternatives: drop "no-change" from DONE_STATES (rejected: closed rows and
+non-plan items would be listed and retried forever); a new state with its
+own retry rule (rejected: refused already carries the MAX_ATTEMPTS bound and
+the gave-up hand-off); grant every tool a row names (rejected: a fetch or a
+write outside the worktree must stay a session act).
+
+Why: rows DOCS-FRESH-20261121 and ELECTRON-45-4-1 were open in ROADMAP.md
+but never dispatched again and never shown, because an empty run (the lane
+was refused a tool) landed in a done state. A refusal must be bounded and
+visible, never silent.
+
+Reverses if: a row that is legitimately left open after a clean run (work
+done elsewhere, row not yet flipped) is retried often enough to waste runs,
+or the kit gains its own empty-run state.

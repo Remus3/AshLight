@@ -175,6 +175,10 @@ def marker(tree, updated, status="blocked", needs=("013",)):
     p.write_text(json.dumps(doc))
 
 
+# LOOP-NOCHANGE-OPEN: a plain empty run on row 012, still open, is refused
+PLAIN = "refused"
+
+
 def finish(root):
     d = deps(root, git=real_git, lane_state=lambda: ALL_RUNNING)
     doc = al_loop.tick(deps=d, no_push=True)
@@ -200,7 +204,7 @@ def test_stale_marker_in_a_reused_worktree_is_plain_no_change(tmp_path):
     root, wt = blocked_world(tmp_path)
     marker(wt, al_loop.iso(T0 - 7200))
     rec, doc = finish(root)
-    assert rec["state"] == "no-change" and "blocked_runs" not in rec
+    assert rec["state"] == PLAIN and "blocked_runs" not in rec
     assert "012: stale blocked marker ignored" in doc["log"]
 
 
@@ -228,12 +232,12 @@ def test_malformed_markers_are_plain_no_change_with_a_step_line(tmp_path):
         root, wt = blocked_world(tmp_path / str(i))
         marker(wt, **kw)
         rec, doc = finish(root)
-        assert rec["state"] == "no-change", kw
+        assert rec["state"] == PLAIN, kw
         assert any(s.startswith("012: malformed blocked marker") for s in doc["log"]), kw
     root, wt = blocked_world(tmp_path / "done")
     marker(wt, al_loop.iso(T0 - 60), status="done")
     rec, doc = finish(root)
-    assert rec["state"] == "no-change" and not any("marker" in s for s in doc["log"])
+    assert rec["state"] == PLAIN and not any("marker" in s for s in doc["log"])
 
 
 # -- 4b blocked dispatch
