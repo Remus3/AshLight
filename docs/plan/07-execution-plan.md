@@ -2387,6 +2387,47 @@ Deferred GATE-HOLD-D after the grouping fix (both edit decision 0060).
 
 - GATE-HOLD-D [session, L 80m, review] Restore the 120 s suite target. Files: tests/test_al_loop_gate_cache.py, tests/al_loopkit.py, docs/decisions/0060-wave-gate-policy.md. Deps: TEST-XDIST-GROUP-RESTORE.
 
+### Wave 58: Play words, compare order, feed verb, serial phase
+
+Session-tagged ROADMAP follow-ups of session 26 (disjoint files).
+
+- Session 15; width 4 worktree + 0 main-checkout, 0 loop rows released.
+- Hotspots: none.
+- Integrator: ROADMAP.md rows of all 4 packages; docs/design/reviews.log:
+  PLAY-FIT-B-WORDS, PLAY-A11Y-COMPARE-ORDER, PLAY-FEED-VERB-CLIP; CLAUDE.md:
+  TEST-SERIAL-PHASE-CUT.
+- Gate: per package: its named tests as a file-named run; main-checkout acts
+  one at a time in merge order; per merge batch of 4 on the integration
+  worktree: merge, then the integrator's edits for the batch as one commit,
+  then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python
+  tools/suite_run.py and npm test --prefix app, green, then main moves; then
+  python tools/plan_check.py check; the wave closes when every session row
+  is flipped and main is clean.
+
+- PLAY-FIT-B-WORDS [session, S 40m, build, DR] Play state b back under 150 words. Files: server/al/hints.py, server/al/playview.py, docs/design/copy/buildlive.md, docs/design/play-fit-figures.md, tests/test_play_fit.py (+3 more). Deps: PLAY-FIT-G5-TOTALS.
+- PLAY-A11Y-COMPARE-ORDER [session, S 30m, build, DR] Item compare row reads its stat label first. Files: web/itemcard.js, web/itemcard.css, app/test/itemcard.test.js. Deps: PLAY-FIT-G5-TOTALS.
+- PLAY-FEED-VERB-CLIP [session, S 35m, build, DR] Trade row keeps buyer and verb whole. Files: web/feed.js, web/feed.css, app/test/feed.test.js. Deps: PLAY-FIT-G5-TOTALS.
+- TEST-SERIAL-PHASE-CUT [session, L 90m, build] Cut the serial timing phase of the gated suite. Files: tests/test_fullstack.py, tests/test_budgets.py, tests/test_tc_press_staged.py, tests/test_marks.py, tools/suite_run.py (+2 more). Deps: TEST-XDIST-GROUP-RESTORE.
+
+### Wave 59: G5 screen-reader count ruling
+
+PLAY-FIT-SR-COUNT behind PLAY-FIT-B-WORDS (both may edit
+tests/test_play_fit.py).
+
+- Session 15; width 1 worktree + 0 main-checkout, 0 loop rows released.
+- Hotspots: docs/design/0001-design-system.md (PLAY-FIT-SR-COUNT).
+- Integrator: ROADMAP.md rows of all 1 packages; docs/design/reviews.log:
+  PLAY-FIT-SR-COUNT.
+- Gate: per package: its named tests as a file-named run; main-checkout acts
+  one at a time in merge order; per merge batch of 4 on the integration
+  worktree: merge, then the integrator's edits for the batch as one commit,
+  then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python
+  tools/suite_run.py and npm test --prefix app, green, then main moves; then
+  python tools/plan_check.py check; the wave closes when every session row
+  is flipped and main is clean.
+
+- PLAY-FIT-SR-COUNT [session, M 45m, review, DR] Ruling: screen-reader-only elements in the G5 count. Files: app/test/cdp/play_fit.mjs, docs/design/0001-design-system.md, tests/test_play_fit.py, docs/design/play-fit-figures.md. Deps: PLAY-FIT-G5-TOTALS, PLAY-FIT-B-WORDS.
+
 <!-- plan_check waves end -->
 
 ## Hotspot schedule
