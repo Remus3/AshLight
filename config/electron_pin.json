@@ -1,25 +1,25 @@
 {
   "_doc": "OVL-ELECTRON-PIN (F-044, research 0046 R4). Hash pin for the Electron runtime of the desktop client, fetched by tools/electron_pin.py (AshLight's own fetch code, AshLight User-Agent) instead of electron's install.js, and unpacked to app/node_modules/electron/dist. version must equal the electron entry of app/package.json. zip_sha256 was read from the release's SHASUMS256.txt and re-computed from the downloaded zip; exe_sha256 and exe_size were computed from electron.exe inside that zip, on the verified date. eol is the release line's tentative end of life from Electron's public release schedule (research 0046 S2). A missing or malformed value makes the tool refuse; never guess one. No absolute paths here.",
   "schema": 1,
-  "version": "45.3.3",
+  "version": "45.4.1",
   "eol": "2027-04-27",
-  "verified": "2026-11-19",
+  "verified": "2026-11-24",
   "arch": {
     "x64": {
-      "zip_name": "electron-v45.3.3-win32-x64.zip",
-      "zip_url": "https://github.com/electron/electron/releases/download/v45.3.3/electron-v45.3.3-win32-x64.zip",
-      "zip_sha256": "49dd2d3875944f08de03d34595cd30093c588b9edcabb41a0ac481028a3a5a8a",
-      "zip_size": 158325836,
-      "exe_sha256": "cf7ff337d82f32a437d315721ef361f53a8473905a655a0c650967a66ccd0724",
-      "exe_size": 250093056
+      "zip_name": "electron-v45.4.1-win32-x64.zip",
+      "zip_url": "https://github.com/electron/electron/releases/download/v45.4.1/electron-v45.4.1-win32-x64.zip",
+      "zip_sha256": "2ba6223afa9121f42831fefe92c434334907540165294fc56697449d12e7cfe9",
+      "zip_size": 158296013,
+      "exe_sha256": "a547b53fbee4dd4adca1a88e215270d06f7cb1e7d333ee402fb3dd677392a87a",
+      "exe_size": 249978368
     },
     "arm64": {
-      "zip_name": "electron-v45.3.3-win32-arm64.zip",
-      "zip_url": "https://github.com/electron/electron/releases/download/v45.3.3/electron-v45.3.3-win32-arm64.zip",
-      "zip_sha256": "86a22b905a56566a221dfc225750317e50be326b33d8bf29292bc883b78661e3",
-      "zip_size": 156101025,
-      "exe_sha256": "16941dd69608e3ebec324f03d9d2fc3de3d1223fa9644eb7d3b0523f53198b7a",
-      "exe_size": 232211968
+      "zip_name": "electron-v45.4.1-win32-arm64.zip",
+      "zip_url": "https://github.com/electron/electron/releases/download/v45.4.1/electron-v45.4.1-win32-arm64.zip",
+      "zip_sha256": "5ad2f09093cba71ad7dc8ddb2ef7261978c9130aa07e492556efe802f6ca74e9",
+      "zip_size": 156110265,
+      "exe_sha256": "4bdff06279b3dc680157344fcae9200ac9956d67b30bd3122f465d25fd57c697",
+      "exe_size": 232261120
     }
   }
 }
