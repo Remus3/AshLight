@@ -246,6 +246,42 @@ function measure(args) {
       play: play ? play.getBoundingClientRect().height : null, cols };
   }
 
+  // PLAY-FEED-VERB-FIT: each feed trade row's buyer, verb (a bare text
+  // node, measured through a Range) and item; a part is clipped when its
+  // text is wider than its box, and the verb when its box runs into the
+  // item or past the row
+  function tradeRows(play) {
+    const out = [];
+    for (const li of play.querySelectorAll("#play-t .feed-trade")) {
+      if (!rendered(li)) { continue; }
+      const part = (cls) => {
+        const n = li.querySelector(cls);
+        if (!n || !rendered(n)) { return null; }
+        const rr = n.getBoundingClientRect();
+        const cs = getComputedStyle(n);
+        return { text: n.textContent, title: n.getAttribute("title"),
+          sw: n.scrollWidth, cw: n.clientWidth, left: rr.left, right: rr.right,
+          fs: parseFloat(cs.fontSize), ellipsis: cs.textOverflow === "ellipsis" };
+      };
+      const item = part(".feed-item");
+      const verbNode = Array.from(li.childNodes)
+        .find((n) => n.nodeType === 3 && n.nodeValue.trim());
+      let verb = null;
+      if (verbNode) {
+        const range = doc.createRange();
+        range.selectNodeContents(verbNode);
+        const vr = range.getBoundingClientRect();
+        verb = { text: verbNode.nodeValue.trim(), left: vr.left, right: vr.right,
+          width: vr.width };
+      }
+      const lr = li.getBoundingClientRect();
+      out.push({ buyer: part(".feed-buyer"), verb, item, price: part(".feed-price"),
+        right: part(".feed-right"), dismiss: part(".feed-dismiss"),
+        row: { left: lr.left, right: lr.right, sw: li.scrollWidth, cw: li.clientWidth } });
+    }
+    return out;
+  }
+
   function playBlock() {
     const play = doc.getElementById("panel-play");
     if (!play) { return null; }
@@ -287,6 +323,7 @@ function measure(args) {
     for (const r of REG) { regions[r] = region(r); }
     return { words: words(play.innerText).length, elements, hidden,
       srClass: [srClass, srClassHidden], controls,
+      trades: tradeRows(play),
       type: typeStyles(play), scroll: scrollIssues(play), regions,
       answers: (args.answers || []).map(answer), frame: frame() };
   }

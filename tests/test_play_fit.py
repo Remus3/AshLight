@@ -873,6 +873,111 @@ def test_red_first_on_todays_layout(sweep):
         assert left, f"deleting {marker} would leave the harness green"
 
 
+# -- PLAY-FEED-VERB-FIT: a feed trade row with a long item name ------------------
+#
+# play_fit.mjs measures every feed trade row (buyer, the verb text node,
+# item, price, right segment, Dismiss). In the cockpit a row is one line:
+# the item gives way first down to its 3em floor (full name in its title),
+# then the right segment, and the buyer takes the ellipsis only after both;
+# the verb is never clipped and the row never runs past its box (web/feed.css).
+
+VERB_STATE = "c"
+VERB_SIZE = "1024x700"  # the narrowest cockpit size: the T region is 542 px wide
+VERB_BUYER, VERB_ITEM, _ = ps.C_TRADES[0]  # Firstbuyer wants Grim Bane Ruby Ring
+EDGE_PX = 1  # scrollWidth and clientWidth are whole pixels
+ITEM_FLOOR_EM = 3  # web/feed.css .feed-item min-width
+
+
+def _clipped(part):
+    return part is not None and part["sw"] > part["cw"] + EDGE_PX
+
+
+def trade_row_failures(rows):
+    """One line per broken feed trade row of one measured page."""
+    out = []
+    for i, r in enumerate(rows):
+        name = f"trade row {i + 1}"
+        row, verb, item, buyer = r["row"], r.get("verb"), r.get("item"), r.get("buyer")
+        if row["sw"] > row["cw"] + EDGE_PX:
+            out.append(f"{name} runs {row['sw'] - row['cw']} px past its box")
+        for key in ("price", "dismiss"):
+            p = r.get(key)
+            if p is not None and (p["right"] > row["right"] + EDGE_PX or _clipped(p)):
+                out.append(f"{name}: the {key} is cut or past the row")
+        if not verb or verb["text"] != "wants" or verb["width"] <= 0:
+            out.append(f"{name}: no whole verb 'wants'")
+        elif ((item is not None and verb["right"] > item["left"] + EDGE_PX)
+              or verb["left"] < row["left"] - EDGE_PX or verb["right"] > row["right"] + EDGE_PX):
+            out.append(f"{name}: the verb is clipped")
+        if item is not None:
+            if _clipped(item) and not item["ellipsis"]:
+                out.append(f"{name}: the item is cut with no ellipsis")
+            if not item["title"]:
+                out.append(f"{name}: the item has no title with its full name")
+        if _clipped(buyer):
+            right = r.get("right")
+            item_wide = item is not None and item["cw"] > ITEM_FLOOR_EM * item["fs"] + EDGE_PX
+            if item_wide or (right is not None and right["cw"] > EDGE_PX):
+                out.append(f"{name}: the buyer is cut before the item and the right "
+                           f"segment gave way")
+    return out
+
+
+def _fake_trade_row(buyer=(90, 90), item=(187, 117), right=(40, 40), verb=(135, 187),
+                    item_left=191, row=(542, 542), title="Grim Bane Ruby Ring"):
+    part = lambda sw, cw, left: {"text": "x", "title": None, "sw": sw, "cw": cw,  # noqa: E731
+                                 "left": left, "right": left + cw, "fs": 20, "ellipsis": True}
+    it = part(item[0], item[1], item_left)
+    it["title"] = title
+    return {"buyer": part(buyer[0], buyer[1], 45), "item": it,
+            "verb": {"text": "wants", "left": verb[0], "right": verb[1], "width": verb[1] - verb[0]},
+            "price": part(90, 90, 320), "right": part(right[0], right[1], 420),
+            "dismiss": part(64, 64, 500), "row": {"left": 29, "right": 575, "sw": row[0], "cw": row[1]}}
+
+
+def test_trade_row_failures_catch_each_cut_part():
+    assert trade_row_failures([_fake_trade_row()]) == []
+    # the buyer as the last guard: cut only once the item is at 3em and right is gone
+    assert trade_row_failures([_fake_trade_row(buyer=(358, 250), item=(394, 60),
+                                               right=(40, 0))]) == []
+    cases = {
+        "past its box": _fake_trade_row(row=(669, 542)),
+        "verb is clipped": _fake_trade_row(verb=(135, 200)),
+        "no title": _fake_trade_row(title=None),
+        "buyer is cut": _fake_trade_row(buyer=(358, 250)),
+    }
+    for want, row in cases.items():
+        fails = trade_row_failures([row])
+        assert len(fails) == 1 and want in fails[0], (want, fails)
+    no_verb = _fake_trade_row()
+    no_verb["verb"] = None
+    assert "no whole verb" in trade_row_failures([no_verb])[0]
+    flat = _fake_trade_row()
+    flat["item"]["ellipsis"] = False
+    assert "no ellipsis" in trade_row_failures([flat])[0]
+
+
+def test_feed_trade_rows_fit_at_every_cockpit_size(sweep):
+    fails = []
+    for state, st in sweep["states"].items():
+        for w, h in COCKPIT:
+            rows = st["sizes"][size_key(w, h)]["play"].get("trades") or []
+            assert len(rows) == st.get("trades", 0), (state, w, h)
+            fails += [f"{state} {w}x{h}: {f}" for f in trade_row_failures(rows)]
+    assert fails == [], fails
+
+
+def test_a_long_item_name_keeps_buyer_and_verb_whole_at_1024(sweep):
+    rows = sweep["states"][VERB_STATE]["sizes"][VERB_SIZE]["play"]["trades"]
+    row = next(r for r in rows if r["buyer"] and r["buyer"]["text"] == VERB_BUYER)
+    assert trade_row_failures([row]) == []
+    assert not _clipped(row["buyer"]), row["buyer"]
+    assert row["verb"]["text"] == "wants" and row["verb"]["right"] <= row["item"]["left"] + EDGE_PX
+    item = row["item"]
+    assert _clipped(item) and item["ellipsis"], item
+    assert item["title"] == VERB_ITEM, item
+
+
 def figures(sweep):
     """The measured figures of today's Play as Markdown lines."""
     out = [f"Sweep: {len(sweep['states'])} states x {len(SIZES)} sizes in "
