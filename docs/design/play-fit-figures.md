@@ -116,10 +116,45 @@ package and is back to 150 since PLAY-FIT-B-WORDS, below).
 | c5 | 5 | 213 | 214 | 155 | 116 | 130 |
 | rows10 | 0 | 118 | 102 | 87 | 69 | 100 |
 
-State b now reads 150; see "State b words" below.
+State b now reads 150; see "State b words" below. The element maximum
+from 2026-11-24 is 94 plus 6 per open trade row, counting visible
+elements only; see "G5 screen-reader count" below.
 
 The feed spends the words its cut tags freed on longer item names (its
 own 50-word ladder), so long and c5 read one word more than before.
+
+## G5 screen-reader count (PLAY-FIT-SR-COUNT, 2026-11-24)
+
+The harness now counts visible elements only: an element that it or an
+ancestor clips to nothing (clip rect(0px, 0px, 0px, 0px) or clip-path
+inset(50%)) is screen-reader text and is reported apart as "hidden"
+(design 0001 section 4, G5 screen-reader count ruling). The element
+maximum is 94 plus 6 per open trade row. Words and G6 controls are
+counted as before. Figures at 1280x760 from `python tests/test_play_fit.py
+--figures` (13 states x 7 sizes); "old count" is visible plus hidden, the
+count the G5 totals table above shows. Every state reads at most
+these figures at the other sizes.
+
+| State | Open trades | Words | Visible | Hidden | Old count | Element max |
+|---|---|---|---|---|---|---|
+| a | 0 | 104 | 65 | 8 | 73 | 94 |
+| a2 | 0 | 95 | 57 | 7 | 64 | 94 |
+| b | 0 | 150 | 73 | 6 | 79 | 94 |
+| c | 2 | 211 | 104 | 6 | 110 | 106 |
+| c2 | 2 | 182 | 86 | 6 | 92 | 106 |
+| d | 2 | 153 | 84 | 6 | 90 | 106 |
+| e | 0 | 129 | 76 | 7 | 83 | 94 |
+| f | 1 | 150 | 92 | 6 | 98 | 100 |
+| g | 1 | 151 | 92 | 6 | 98 | 100 |
+| map | 2 | 131 | 80 | 6 | 86 | 106 |
+| long | 5 | 211 | 110 | 6 | 116 | 124 |
+| c5 | 5 | 211 | 110 | 6 | 116 | 124 |
+| rows10 | 0 | 102 | 63 | 6 | 69 | 94 |
+
+The 6 hidden elements in every state are the 6 screen-reader region
+headings; a, a2 and e (first run, idle strip, error) hold 1 or 2 more
+screen-reader texts. The tightest state
+is c, 104 of 106.
 
 ## State b words (PLAY-FIT-B-WORDS, 2026-11-24)
 

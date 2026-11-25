@@ -249,11 +249,35 @@ function measure(args) {
   function playBlock() {
     const play = doc.getElementById("panel-play");
     if (!play) { return null; }
+    // G5 (design 0001 SR-COUNT ruling 2026-11-24): an element that is
+    // visually hidden for screen readers (it or an ancestor clipped to
+    // nothing: clip rect(0 0 0 0) or clip-path inset(50%), the .sr-only
+    // pattern) is not a visible element; it is counted apart as "hidden"
+    const clipped = new Map();
+    const srOnly = (el) => {
+      if (!el || el === play) { return false; }
+      if (clipped.has(el)) { return clipped.get(el); }
+      const cs = getComputedStyle(el);
+      const own = cs.clipPath === "inset(50%)" || cs.clip === "rect(0px, 0px, 0px, 0px)";
+      const v = own || srOnly(el.parentElement);
+      clipped.set(el, v);
+      return v;
+    };
     let elements = 0;
+    let hidden = 0;
+    let srClass = 0;
+    let srClassHidden = 0;
     const controls = [];
     for (const el of play.querySelectorAll("*")) {
       if (!rendered(el)) { continue; }
-      elements += 1;
+      if (srOnly(el)) { hidden += 1; } else { elements += 1; }
+      // the guard on the clip test: every .sr-only element must read hidden
+      if (el.classList.contains("sr-only")) {
+        srClass += 1;
+        if (srOnly(el)) { srClassHidden += 1; }
+      }
+      // G6 counts every control, a visually hidden one included (it is
+      // still a keyboard stop)
       if (el.matches(CONTROL)) {
         const rr = el.getBoundingClientRect();
         controls.push({ region: regionOf(el), el: label(el), w: rr.width, h: rr.height });
@@ -261,7 +285,8 @@ function measure(args) {
     }
     const regions = {};
     for (const r of REG) { regions[r] = region(r); }
-    return { words: words(play.innerText).length, elements, controls,
+    return { words: words(play.innerText).length, elements, hidden,
+      srClass: [srClass, srClassHidden], controls,
       type: typeStyles(play), scroll: scrollIssues(play), regions,
       answers: (args.answers || []).map(answer), frame: frame() };
   }

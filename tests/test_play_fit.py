@@ -83,7 +83,10 @@ WORDS_MAX = 250
 # cut the campaign-death notice tip by 3 words (design 0001 G5 totals
 # ruling 2026-11-24)
 WORDS_STATE_MAX = {"b": 150, "a": 110}
-ELEMENTS_MAX = 100
+# design 0001 ruling 2026-11-24 (PLAY-FIT-SR-COUNT): elements visually
+# hidden for screen readers are not counted (the harness reports them as
+# "hidden"), so the base drops from 100 to 94, today's effective limit
+ELEMENTS_MAX = 94
 # design 0001 ruling 2026-11-24 (PLAY-FIT-G5-TOTALS): each open trade row
 # adds its own 6 elements (li, buyer, item, price, right, Dismiss), as G6
 # adds its Dismiss per trade
@@ -696,6 +699,34 @@ def test_a_fitting_page_has_no_failure():
     assert fit_failures(_fake_sweep()) == []
 
 
+def test_g5_element_cap_counts_visible_elements_only():
+    """design 0001 PLAY-FIT-SR-COUNT: 94 visible elements plus 6 per open
+    trade row; the screen-reader-only "hidden" count never joins it."""
+    def g5(elements, trades=0, hidden=0):
+        sw = _fake_sweep()
+        sw["states"]["c"]["trades"] = trades
+        sw["states"]["c"]["sizes"]["1280x760"]["play"].update(elements=elements, hidden=hidden)
+        return [f["detail"] for f in fit_failures(sw) if f["check"] == "G5"]
+    assert ELEMENTS_MAX == 94 and ELEMENTS_PER_TRADE == 6
+    assert g5(94, hidden=40) == []
+    assert g5(95) == ["95 visible elements (max 94)"]
+    assert g5(106, trades=2) == [] and len(g5(107, trades=2)) == 1
+
+
+SR_HEADINGS = 6  # the screen-reader region headings of Play (web/index.html)
+
+
+def test_every_sr_only_element_reads_hidden(sweep):
+    """The guard on the G5 clip test (design 0001 PLAY-FIT-SR-COUNT): if a
+    rewrite of the .sr-only clip pattern escapes the test, this fails
+    instead of the visible count quietly growing."""
+    for state, st in sweep["states"].items():
+        for key, m in st["sizes"].items():
+            total, hid = m["play"]["srClass"]
+            assert total > 0 and hid == total, (state, key, total, hid)
+            assert m["play"]["hidden"] >= SR_HEADINGS, (state, key)
+
+
 def test_missing_regions_and_overflow_are_pending_only_while_marked():
     sw = _fake_sweep(regions=False, over=380)
     fails = fit_failures(sw)
@@ -858,6 +889,16 @@ def figures(sweep):
                        f"main padding {fr['mainPad'][0]:g} + {fr['mainPad'][1]:g}, footer "
                        f"{fr['foot']:.0f}; words {p['words']}, elements {p['elements']}, "
                        f"controls {len(p['controls'])}, text styles {styles}; columns: {cols}")
+    out.append("")
+    # G5 totals at the heaviest size; "hidden" is the screen-reader-only
+    # elements the visible count leaves out (design 0001 SR-COUNT ruling)
+    for state, st in sweep["states"].items():
+        p = st["sizes"]["1280x760"]["play"]
+        trades = st.get("trades", 0)
+        out.append(f"- G5 {state} 1280x760: {trades} open trades, words {p['words']}, "
+                   f"elements {p['elements']} (max "
+                   f"{ELEMENTS_MAX + ELEMENTS_PER_TRADE * trades}), hidden "
+                   f"{p.get('hidden', 0)}")
     out.append("")
     for r in sweep["metrics"]:
         out.append(f"- {r['key']}: {r['chars']} chars at {r['px']} px / {r['weight']}: "
