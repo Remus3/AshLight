@@ -52,6 +52,26 @@
     ]
    }
   ],
+  "WorktreeCreate": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python \"$CLAUDE_PROJECT_DIR/tools/wt_sidecar_hook.py\""
+     }
+    ]
+   }
+  ],
+  "WorktreeRemove": [
+   {
+    "hooks": [
+     {
+      "type": "command",
+      "command": "python \"$CLAUDE_PROJECT_DIR/tools/wt_sidecar_hook.py\""
+     }
+    ]
+   }
+  ],
   "SubagentStop": [
    {
     "hooks": [
