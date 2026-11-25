@@ -87,3 +87,26 @@ act, and the `Import` line is a one-time edit by the player.
 - https://raw.githubusercontent.com/NeverSinkDev/NeverSink-Filter-for-PoE2/master/LICENSE (accessed 2026-11-17)
 - https://www.pathofexile.com/forum/view-thread/3693141 (search snippet, accessed 2026-11-17)
 - https://github.com/Lailloken/Exile-UI (accessed 2026-11-17)
+
+## 5. In-game verdicts (RUN-VERDICTS-CLOSE, recorded 2026-11-24)
+
+Source: the player's 'Tried in game' clicks in the Checks tool, stored in
+ops/runtime/verdicts.json (decision 0040 amendment 2026-11-18) and read
+back with `python tools/live_verdicts.py` (accessed 2026-11-24). Times
+are local, 2026-11-22.
+
+- LIVE-FILTER (the downloaded ashlight.filter snippet imported in game,
+  decision 0031): refused 18:25:17, no note.
+- LIVE-FILTER-MERGE (the player's own filter plus AshLight's blocks,
+  decision 0033, loaded in game): refused 18:25:18, no note.
+
+Caveat (integrator ruling, session 28): all seven clicks of that sitting
+landed within 19 s (18:25:09 to 18:25:28) with no note, too fast for a
+filter save, an `Import` edit and a reload in game, so a refusal here does
+not tell what the game did. No cause is guessed: whether the game rejects
+an unknown BaseType or ignores it (research 0025 section 2) and whether
+the merged file loads stay open. The fix rows LIVE-FILTER-FIX and
+LIVE-FILTER-MERGE-FIX are filed BLOCKED: operator act (one more try each
+with a note saying what the game showed); they become build rows only once
+a note names the failure. The floor is unchanged: AshLight never writes a
+game folder (decisions 0031, 0033).

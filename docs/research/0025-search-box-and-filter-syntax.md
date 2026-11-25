@@ -89,3 +89,27 @@ terms (regex characters removed) matches the syntax. In-game check of the
   Hits"; `ground` listed burning / shocking words no mod uses. The table
   now has 11 rules, each matching real mods, each search term unique to
   its own rule's lines in the pool.
+
+## 4. In-game verdicts (RUN-VERDICTS-CLOSE, recorded 2026-11-24)
+
+Source: the player's 'Tried in game' clicks in the Checks tool, stored in
+ops/runtime/verdicts.json (decision 0040 amendment 2026-11-18) and read
+back with `python tools/live_verdicts.py` (accessed 2026-11-24). Times
+are local, 2026-11-22.
+
+- LIVE-SEARCHSTR (a copied search string pasted into a game search box):
+  refused, three clicks at 18:25:11, 18:25:15 and 18:25:16, no note.
+- LIVE-FILTER (the downloaded filter snippet imported in game): refused
+  18:25:17, no note (details in research 0022 section 5).
+- LIVE-FILTER-MERGE (a merged filter loaded in game): refused 18:25:18,
+  no note (research 0022 section 5).
+
+Caveat (integrator ruling, session 28): all seven clicks of that sitting,
+the other checks included, landed within 19 s (18:25:09 to 18:25:28) and
+none carries a note. That is too fast for a paste, a filter import and a
+filter reload each, so a refusal here does not tell what the game showed.
+No cause is guessed: the `!` scope over an OR group (section 1) and the
+250-character limit stay unverified in game, neither confirmed nor
+disproved. The fix row LIVE-SEARCHSTR-FIX is filed BLOCKED: operator act
+(one more try with a note saying what the game showed); it becomes a build
+row only once a note names the failure.
