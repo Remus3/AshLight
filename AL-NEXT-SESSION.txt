@@ -131,7 +131,7 @@ Carried forward (not acted on yet):
 - OPERATOR (optional, default in force): OA-19 / OA-20 tick the
   parse-ledger consent line in Settings (RUN-LEDGER-WIRE landed), then play
   as usual; other OA items: OPERATOR ACTS bullet.
-- OPERATOR before the first push (OA-5; rows GP-03, GP-09; optional): name another holder, owner or repository name; default: the gh account and AshLight.
+- OPERATOR ANSWERS 2026-11-26 (session 29): OA-5 answered, default kept (the gh account as holder, name AshLight; rows GP-03, GP-09 need nothing more). OA-9 answered, decision 0017 kept (trade link only) for now. OA-8 DONE: POST /api/web-data on the running core (hello proof first) set web_data true, the contact to the project's issues page (webfetch.default_contact of config/public_repo.json; no personal value) and web_data_ack 1; read back by GET /api/web-data: web_data true, contact_set true, acked true, ack_needed false, blocked null; config/local.json reads web_data true, web_data_ack 1, contact equal to the issues page. Every other OA / open decision: default in force.
 - OA-2 (message to poe.ninja) is skipped in writing (operator order 2026-11-18); optional later; it unlocks release polling only on a written yes (decision 0072); not a flip gate.
 - OPERATOR ACTS (one batched ask, docs/plan/09-operator-acts.md, OA-1 to
   OA-37; all optional, defaults in force, no wave waits): (a) in-map FPS
@@ -140,9 +140,8 @@ Carried forward (not acted on yet):
   parse-ledger consent once, then play (OA-19, OA-20), one login for
   TEST-LIVE-CLICKS; (c) TC-OAUTH-REG when GGG reopens registration
   (OA-36); (e) logon autostart scripts\autostart.ps1 -Enable (OA-7;
-  decision 0011, OFF by default); (g) UA contact in config/local.json +
-  web_data on (OA-8); (k) review decision 0017 (trade link only), say if
-  it should be reversed (OA-9). Act (d) is done by GP-09; act (f), OA-12,
+  decision 0011, OFF by default). Act (d) is done by GP-09; acts (g) OA-8
+  and (k) OA-9 are answered 2026-11-26 (line OPERATOR ANSWERS); act (f), OA-12,
   is done (hooks wired 021c7b7, AUTO-26 proof). After the first push: OA-3 (immutable releases, only if the API
   answers 404) and OA-13 (the release phrase). (l) paste one real GGG
   passive tree link of a character with an ascendancy (row

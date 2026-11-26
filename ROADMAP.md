@@ -172,6 +172,11 @@ Run after DESIGN-AUDIT, ahead of DESIGN-GATE.
 
 ## Ops
 
+Operator answers 2026-11-26 (session 29): OA-8 done (web_data on, contact = the project's issues
+page, web_data_ack 1; read back by GET /api/web-data: web_data true, contact_set true, acked true,
+blocked null). OA-5 answered: default kept (the gh account as holder, name AshLight). OA-9
+answered: decision 0017 kept (trade link only). Every other operator act keeps its default.
+
 
 ## Audit 2026-11-17 (docs/audit/2026-11-17-audit.md)
 
@@ -451,7 +456,7 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   AUTO-07. BLOCKED: PoE2 1.0 is live and a 1.0 world_areas snapshot is cached on the dev host;
   unblocks when the launch gate GATE-POE2-10 (F-052 / AUTO-07) has flipped: local date 2026-12-11 or
   later and the snapshot metadata shows 1.0; the cache refresh needs web data on and the contact set
-  on the dev host (batched ask act g), or an operator-run build.ps1 -Snapshot (GGG).
+  on the dev host (act g, OA-8 done 2026-11-26), or an operator-run build.ps1 -Snapshot (GGG).
 - [ ] TC-PRESS-FIXTURES (review) Real item-press fixtures for six shapes. ACCEPT: python -m pytest
   -q tests/test_press_fixtures.py tests/test_math_item.py tests/test_leak_sweep.py passes with six
   fixture shapes present. ZERO-CLICK: A one-time check: six presses during normal play, then the
