@@ -1,29 +1,34 @@
 AL NEXT SESSION
 ---------------
-SESSION: 29   (FLEET item 13 counter; /done writes n+1)
+SESSION: 30   (FLEET item 13 counter; /done writes n+1)
 
-WAVE POINTER: wave 61 done (RUN-VERDICTS-CLOSE merged f7fa26a, RUN-BUILDFILE-LIVE-CLOSE merged b1ed431; four fix rows filed BLOCKED: operator act), next wave 62 (nothing dispatchable at session 28 /done)
-NOTE (session 28 /done): hooks wired 021c7b7 / 4f456e6 (OA-12 no longer an ask); wave 60 AUTO-26 merged 9c51889, integrated 8faf6f4; wave 61 RUN-VERDICTS-CLOSE f7fa26a, RUN-BUILDFILE-LIVE-CLOSE b1ed431, integrated e491415, pushed; fold 301f05d filed LIVE-SEARCHSTR-FIX, LIVE-FILTER-FIX, LIVE-FILTER-MERGE-FIX, TC-BUILDFILE-LIVE-FIX (BLOCKED: operator act). ADJUDICATED: the 2026-11-22 refused verdicts (7 clicks in 19 s, no note) are not real tries; reverses if the operator says they were. Wave 62: nothing dispatchable. Full record: archive block "SESSION 28 /done" of AL-2026-11-24.txt. Next free decision number: 0087.
-NOTE (session 27 /done): waves 58-59 closed; full record: archive block "SESSION 28 /done" of AL-2026-11-24.txt. Still open: TC-TREE-URL ascendancy byte unverified (TC-TREE-URL-ASC-CHECK, BLOCKED: operator act).
-NOTE (session 25): isolated worktree agents could not write ops/loop/control/progress/*.json in the main checkout directly; ops/fleet_kit/fleet_headless.write_progress(root, ...) worked. Tell package agents to use it. Session 28 (wave 60 close): the refusal is the harness's own worktree-isolation write boundary on Write / Edit, not a kit or tree hook: fleet_claims.py hook exempts ops/loop/control/progress/* and fleet_subagent_first.py allows any sub-agent (both probed with a synthetic worktree Write / Edit payload: no decision), and claims.jsonl holds no deny for the AUTO-26 agent's progress file. No FIX note to MAIN; no tree fix. Package agents write progress through Bash (python with fleet_headless.write_progress).
-NOTE (session 28 reap): reap --apply read back "reap applied: 0 removed, 9 kept, 0 listed (base main)": the six merged agent worktrees under .claude/worktrees are still kept because owner pid 4912 (the live session) is alive; re-run fleet_done.py reap --apply next session to remove them.
-OPERATOR NOTES (session 24; the operator may overrule): (1) the test_budgets loop-body CPU check effectively passes up to ~0.81 percent (two Windows clock steps) while the budget stays 0.5 percent, accepted as clock noise (TEST-BUDGET-LOOPBODY-NOISE, w51). (2) The CP-2 builder ran a forbidden `git reset -q` (unstaged only its own files; history verified clean).
+WAVE POINTER: wave 61 done (RUN-VERDICTS-CLOSE merged f7fa26a, RUN-BUILDFILE-LIVE-CLOSE merged b1ed431; four fix rows filed BLOCKED: operator act), next wave 62 (nothing dispatchable at session 29 /done: every open session row waits on an operator act, a gate or a watch)
+NOTE (session 29 /done): operator answers 2026-11-26 committed 19c775b, pushed (OA-8 done: web_data on, contact = the project's issues page, read back web_data true, contact_set true, acked true; OA-5 default kept; OA-9 decision 0017 kept for now; every other OA / open decision keeps its default). OA-8 unblocked no row; DATA-GUIDE-ACTS-5-6 still waits on GATE-POE2-10 (2026-12-11 or later). Inbox: only the 2026-11-16 MAIN TERMINAL note (classify: skip). Loop armed, not halted; loop-owned row DOCS-FRESH-20261121 is in the adjudicate state (loop's own; do not touch). Board skipped (opt-out, not asked).
+NOTE (session 29 reap): earlier this session 6 agent worktrees were removed (3 lane worktrees kept, git worktree list 4 entries); /done reap --apply read back "reap applied: 0 removed, 3 kept, 0 listed (base main)"; git worktree list 4 entries.
+NOTE (sessions 25-28, moved session 29): full session 28 / 27 NOTEs, the session 25 progress-file NOTE (package agents write progress through Bash with fleet_headless.write_progress, the refusal is the harness worktree boundary) the session 28 Do NOT redo, the session 24 OPERATOR NOTES (loop-body clock noise, CP-2 git reset) and the open SESSION-7 FINDINGS (lane npm gate, unverified overlay /events headers, plan-08 archive blind spot) and the wave-18 PROCESS NOTE (per-package scratch subfolders): archive block "SESSION 29 /done" of AL-2026-11-26.txt. Next free decision number: 0087.
 NOTE (session 23, still open): open design findings DN-2..DN-4, UH-1, UH-2 (S4 OPEN, reviews.log). Plug routes may answer PUT after the guard (UI-CARD-COLLAPSE; route table GET 19, POST 21, PUT 2).
 SESSION-23 FINDING still open: builders edited tests/test_security_surface.py route counts and Checks-row-order tests outside their files, and git merges identical count edits silently wrong: re-read the counts after every merge (plan fix: derive the counts, or one owner per wave).
 OPEN FINDINGS (full text: archive block "SESSION 21 /done" of AL-2026-11-22.txt): nits CP-3 (index.html '2+' comment), PN6-1 (tell() comment), TD23-E (plan's 4/12/8/8 px source); GATE-HOLD load-flake list (no budget moves): tests/test_al_loop_gate_cache.py two tests at 3.07 / 3.38 s against 3.00 s under load (w31); tests/test_keepalive.py::test_end_to_end_real_core_restart_and_user_stop (heartbeat file present after stop; once in the w37 batch, 30/30 x3 isolated, green on rerun).
 SESSION-21 LESSONS (orchestrators and package agents): start whole suites from Bash, never pwsh 7 (install tests need a Windows PowerShell 5.1 child where Get-FileHash resolves); at most 2 package agents at once (the harness memory-reaped one suite); any packages.json change needs python tools/plan_check.py waves --write; an orchestrator keeps its own live poller or it stalls; read the live core's game_idle before a heavy suite (hold, poll every 5 min while game_idle is false and the newest line is under 5 min old).
-PROCESS NOTE: Builders must use per-package scratch subfolders (two builders overwrote a shared gated.sh/gated.out in wave 18).
 WAVE-17 FOLLOW-UPS (session 15, design findings OPEN, session items): SC-1 social card tagline small in half-size thumbnails (scale to about 1.0, regenerate), SC-3 margin nit; OVL-1 overlay reload full-opacity flash (clears with OVL-TD05-PLATE), OVL-2 design 0001 scale floor 0.86 not pinned to LIMITS.scale by a test; BG-9 wiki link dropped from gear / gem rows, BG-10 always-open details #filter-more (convert to a div); the server-side .build left-out note text in server/al/theorycraft/buildfile.py is still long (suggest "No passives yet. Turn on web data.").
 WAVE-16 FOLLOW-UPS: design findings OPEN (reviews.log): RUN-LEDGER-WIRE LW-1..LW-3, OVL-KEYS-WEB KW-7, TC-CALC-OPTIN-BUTTON CB-4..CB-6. Research 0039 CHARJSON-SHAPES item can be marked done by TC-CHARJSON-SHAPES (not in its files). TC-CHARJSON-SHAPES class_names map has no caller yet (paste.py, TC-IMPORT). docs/design/0001 still says five tabs / Items and prices tab (TEST-DOCS-FACTS-UI does not check it). LIVE-1-* and LIVE-WAYSTONE rows are BLOCKED on the first live ledger hit.
 WAVE-15 FOLLOW-UPS: tools/docs_fresh.py EXPECTED_STALE (36 entries) can be emptied. OPEN design findings: PLAY-TD-22B TF-1 (news inside the 10 s grace not retried), RUN-METRICS-SITES RL-1..RL-3 (log record consent copy vague, no polite announcement, Client.txt stop also stops it unstated), TEST-STATE-TEXT-4 TST4-1 (design 0001 names state.py as text home). Decisions 0050/0069 want a note that the watcher's GitHub-metadata read of GGG's tree-export repo passes watch_gate though webfetch refuses GGG repos for dives. LOOP-WATCH-SETTLED's hand-off edit (drop the REG_OPEN start check) waits until SHAPE_ALL_PAGES is on, HALT is absent and a dry-run tick files TC-OAUTH-REG-OPEN. TC-WORN-KEY wear key is bound in app/main.js, not the hotkeys registry, with no snapshot / Settings UI.
-Closed records: docs/handoff-archive/AL-2026-11-19.txt to AL-2026-11-24.txt, one block per session headed "SESSION <n> /done", each listing what it moved: 11-17 indexed in "SESSION 18 /done" (AL-2026-11-21.txt); 19-21 in AL-2026-11-22.txt (19: session 18-19 lines, PUB-HOOK-RELEASE-CHECK ruling, WATCH gate-hold history, BUDGETLOG; 20: waves 26-28; 21: waves 31-33, GATE-HOLD-C, plan-07 drift); 22-23 in AL-2026-11-23.txt (22: waves 34-37 plan; 23: waves 38-45 merges, plan, operator requests, session 22 status); 24-28 in AL-2026-11-24.txt (24-25: sessions 23-24 NOTE, reap, findings, Do NOT redo, SESSION-21 ROWS; 26: session 25 lines, the session 26 full NOTE, the session 23 NOTE with w42-int; 27: session 26 records; 28: session 27 full NOTE, reap, Do NOT redo, status, the session 28 full NOTE).
+Closed records: docs/handoff-archive/AL-2026-11-19.txt to AL-2026-11-24.txt, one block per session headed "SESSION <n> /done", each listing what it moved: 11-17 indexed in "SESSION 18 /done" (AL-2026-11-21.txt); 19-21 in AL-2026-11-22.txt (19: session 18-19 lines, PUB-HOOK-RELEASE-CHECK ruling, WATCH gate-hold history, BUDGETLOG; 20: waves 26-28; 21: waves 31-33, GATE-HOLD-C, plan-07 drift); 22-23 in AL-2026-11-23.txt (22: waves 34-37 plan; 23: waves 38-45 merges, plan, operator requests, session 22 status); 24-28 in AL-2026-11-24.txt; 29 in AL-2026-11-26.txt (29: sessions 25-28 NOTEs, session 28 Do NOT redo); 24-28 detail (24-25: sessions 23-24 NOTE, reap, findings, Do NOT redo, SESSION-21 ROWS; 26: session 25 lines, the session 26 full NOTE, the session 23 NOTE with w42-int; 27: session 26 records; 28: session 27 full NOTE, reap, Do NOT redo, status, the session 28 full NOTE).
 
-Next action: put the batched operator ask (one message, all optional): (m)
-redo the four in-game checks that came back refused 2026-11-22, each with a
-short note saying what the game showed (rows LIVE-SEARCHSTR-FIX,
-LIVE-FILTER-FIX, LIVE-FILTER-MERGE-FIX, TC-BUILDFILE-LIVE-FIX), and the GP-12
-public-flip word; then plan wave 62 in docs/plan/packages.json from whatever
-unblocks (PLAN / W<n> / CLOSE as sessions 25-28: one package agent per
+Next action: FIRST fix the pre-existing gate red (not caused by session 29):
+tests/test_live_verdicts.py::test_script_drafts_the_matching_roadmap_flip
+fails "AssertionError: RUN-VERDICTS-CLOSE" because the session 28 fold
+(301f05d) pruned the done rows RUN-VERDICTS-CLOSE / RUN-BUILDFILE-LIVE-CLOSE
+into docs/roadmap/archive/2026-11.md and _row_known() reads only ROADMAP.md
+open rows and docs/roadmap/done/; make it also accept a "- [x] <id> (" line
+in docs/roadmap/archive/*.md (test-only change), then one whole gated suite
+green. Then check whether the operator has given the retry notes (m: redo
+the four in-game checks refused 2026-11-22, each with a short note saying
+what the game showed; rows LIVE-SEARCHSTR-FIX, LIVE-FILTER-FIX,
+LIVE-FILTER-MERGE-FIX, TC-BUILDFILE-LIVE-FIX) or the GP-12 public-flip
+word; if not, file the Electron 45.5.0 row if the watcher has not (eligible
+under decision 0070 from 2026-11-27), then loop work only, no wave. If
+something unblocks, plan wave 62 in docs/plan/packages.json from it (PLAN / W<n> / CLOSE as sessions 25-28: one package agent per
 package, at most 2 at once, design-reviewer for web/ or text/ changes, one
 integrator per merge batch; `python tools/plan_check.py waves --write` and
 `check`; commit; run; push main before spawning isolated agents). If nothing
@@ -156,6 +161,7 @@ Carried forward (not acted on yet):
   (a): OVL-FPS has a worked verdict but no ovl_check report in the
   sidecar Logs, so its row still needs one map with tools/ovl_check.py
   armed.
+- OPERATOR DECISIONS still open (docs/plan/09-operator-acts.md; defaults in force, carried session 29): A-01 (OA-18, GGG developer-docs pages; default: no new work reads the four other pages, SHAPE_ALL_PAGES off), A-03 (OA-29, Steam library scan for Client.txt; default: no finding widens discovery), Q-02 (OA-25, a build file the player picks; default: no file pick, the hotkey load ships alone), Q-09 (OA-26, two one-minute key checks; default: the item key stays, the second key unset).
 - OPERATOR DECISION: phone view needs LAN access; CLAUDE.md keeps LAN off
   (OA-27, ruling Q-11; default P0, no network path; units CARRY-19,
   OPEN-18, F-205; no package until the operator names a design).
@@ -215,25 +221,19 @@ Carried forward (not acted on yet):
   counts as a Setup step; tests/test_ux_review.py imports
   test_design_contrast, a test-to-test import tests/test_test_layout.py
   misses.
-- SESSION-7 FINDINGS: loop_preflight's npm gate fails in any lane worktree
-  without app/node_modules (AUTO-21 risk); the overlay's real
-  Sec-Fetch-Site / Origin on /events are UNVERIFIED (verify in a live
-  client run); docs/plan/08 section 1's open-row check ignores
-  docs/roadmap/archive/, so a re-checked archived wave lists its rows as
-  open (wave 4: PUB-GO-DECISION, GP-02).
+
 
 Context: CLAUDE.md (Settled list), docs/plan/07-execution-plan.md, 08-orchestration.md, 09-operator-acts.md, docs/plan/packages.json (plan of record; tools/plan_check.py check / wave <n> / rows), ROADMAP.md (open rows; done rows pruned into docs/roadmap/archive/2026-11.md; docs/roadmap/new|done row files folded by /done), docs/decisions/README.md, docs/design/reviews.log, ops/loop/control/HALT, ops/runtime/ggg_docs/.
 Operator orders (sessions 5 and 6), live state notes: archive block "SESSION 20 /done" of AL-2026-11-22.txt (probe /api/health before touching the app; a wave agent never starts or stops the app, core, overlay or loop).
 
 Acceptance: the operator ask is out (or answered); any unblocked row is planned as wave 62 in packages.json (plan_check check green, waves --write applied) and closed as 08 section 7 says (open-row command prints "none open" or only DEFERRED / BLOCKED ids, status empty on main, leak sweep clean, last batch suite and npm test green, WAVE POINTER moved), every package merged or re-deferred with a reason.
 
-Do NOT redo (session 28, pushed): hooks wiring 021c7b7 and settings line drop 4f456e6 (OA-12 done); wave 60 merge 9c51889 / integrate 8faf6f4; wave 61 plan d608925, merges f7fa26a and b1ed431, integrate e491415; the four *-FIX rows are filed (fold 301f05d); the progress-file refusal is the harness worktree boundary (5c497de), no FIX note to MAIN.
+Do NOT redo (session 29, pushed): operator answers OA-5 / OA-8 / OA-9 recorded (19c775b; ROADMAP "## Ops" dated note, DATA-GUIDE-ACTS-5-6 wording); OA-8 web_data and contact already set on the dev host; worktree reap done.
 
+Do NOT redo (sessions 6 to 28): docs/handoff-archive/ (closed blocks per session).
 
-Do NOT redo (sessions 6 to 27): docs/handoff-archive/ (closed blocks per session).
+In flight: none (no orchestrator, agent or progress row of this tree running; fleet_checklist stale: none). Loop live, do not touch; HALT absent; REG_OPEN absent (read back session 29 /done).
 
-In flight: none (no orchestrator, agent or progress row of this tree running; fleet_checklist stale: none). Loop live, do not touch; HALT absent; REG_OPEN absent (read back session 28 /done).
-
-Status (session 28 /done, 2026-11-24, fresh): gate suite from Bash: parallel 5946 passed / 8 skipped (86.41 s), timing-calc 9 passed (34.36 s), timing-rest 12 passed (24.53 s), rc 0; npm 882/882; leak sweep armed (44 needles), no HALT; main e491415 = origin/main before the fold 301f05d and this hand-off. Inbox: 1 MAIN TERMINAL note, skipped. Board skipped (opt-out).
+Status (session 29 /done, 2026-11-26, fresh): gate suite from Bash: parallel 1 failed / 5945 passed / 8 skipped (89.70 s; the failure is the pre-existing test_live_verdicts red in Next action), timing-calc 9 passed (33.95 s), timing-rest 12 passed (22.27 s), rc 1; npm 882/882; leak sweep armed (44 needles), no HALT; main 19c775b = origin/main before this hand-off. Also seen (warning only): tests/test_updates.py two tests log an al-ninja thread asking poe.ninja leagues inside a fake fetch that expects only api.github.com (stub ninja there). Inbox: 1 MAIN TERMINAL note, skipped. Board skipped (opt-out).
 
 Start with: read this file, then CLAUDE.md, ROADMAP.md, git log -10.
