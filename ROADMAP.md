@@ -54,6 +54,8 @@ operator phrase.`
 
 - [ ] TEST-SPLIT-B1-WATCH (review) B1 test_real_loop_body red once at 0.920 percent (3 clock steps, 46.9 ms) in the wave 59 batch 3 whole suite while the concurrent timing-calc stream of TEST-SERIAL-PHASE-CUT ran; 3 isolated gated reruns passed (0.616, 0.000, 0.000) and the next whole suite was green. If it reds again under the split phase 2, apply decision 0060's split reverses-if (SPLIT_TIMING False, or run B1 after both streams), never move the budget. ACCEPT: 5 later gated whole suites green on B1, or the split change landed with a soak. ZERO-CLICK: test-side only. DEPENDS: TEST-SERIAL-PHASE-CUT. BLOCKED: session (watch).
 - [ ] TEST-DEMO-PORT-FLAKE (review) The session 30 first gated whole suite red on 3 tests in tests/test_port_lease.py and tests/test_play_states.py (29/29 pass alone, next whole suite green); suspected contention for the demo port block 8970-8975 in the parallel phase 1. Find the shared port or lease, then pin those tests to one xdist group or give them distinct ports; never widen a timeout. ACCEPT: the cause is named and 5 later gated whole suites are green on both files. ZERO-CLICK: test-side only. BLOCKED: session (watch).
+- [ ] TEST-A11Y-NEWEST-DEVTOOLS (review) ci job test-newest (Python 3.14, Node 24, continue-on-error) red on run 46079475413 attempt 1: 6 errors in tests/test_a11y_render.py, "a11y.mjs: no DevTools endpoint"; attempt 2 green. Find why the headless browser gave no DevTools endpoint (cold start, port file wait), fix in app/test/cdp/a11y.mjs at the cause under decision 0080 (3x CI wait only, no rerun plugin). ACCEPT: the cause is named and 3 later ci runs have test-newest green on that file. ZERO-CLICK: test-side only. BLOCKED: session (watch).
+- [ ] TEST-PLAYFIT-LOAD-FLAKE (review) Session 32: 2 of 3 gated whole suites red in tests/test_play_fit.py only (state a2 at 1280x760 measured as 1920x950; state f 320x640 sr-only count 0 of 6; a budgets miss), all 29 pass alone and the next whole suite went green; no web/ change in those runs. Find why the srcdoc iframe size is not applied under the parallel phase load and fix the cause; never widen a cap or a timeout. ACCEPT: the cause is named and 5 later gated whole suites are green on that file. ZERO-CLICK: test-side only. BLOCKED: session (watch).
 
 
 ## Theorycraft and item optimization (decision 0004, research 0010)
@@ -500,19 +502,6 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   machine; unblocks when The operator says in their own words that the game is closed and allows one
   run with speech output and a visible browser; the agent then runs python tools/sr_pass.py with the
   operator flag once, game_idle true, and commits the transcript (operator).
-- [ ] GP-12 (review) Flip the repository to public. ACCEPT: `gh repo view "$R" --json visibility
-  --jq .visibility` prints PUBLIC and an anonymous `git ls-remote --heads --tags
-  "https://github.com/$R"` lists refs/heads/main and otherwise only refs/heads/dependabot/*.
-  ZERO-CLICK: The flip is an agent step that runs once the gates read green and the operator's own
-  words for the flip are in the hand-off (ruling Q-23, step 4; recorded 2026-11-18). OA-2 is skipped
-  in writing (the hand-off line 'OA-2 SKIPPED IN WRITING'), so no operator act is left. DEPENDS:
-  GP-06, PUB-README-PLAYERS, GP-09, GP-10, GP-11, GP-01, SEC-NO-DISCOVERY, SEC-STATIC-MAP,
-  SEC-XML-NUL, DATA-PRICE-CADENCE. BLOCKED: every P0 unit of the plan on origin/main, and flip gates
-  0 to 6 green; unblocks when `grep -c "^OPERATOR GO Q-23 step 4" AL-NEXT-SESSION.txt` prints 1 and
-  the line quotes the operator's own words with their date, `grep -c "^OA-2 SKIPPED IN WRITING"
-  AL-NEXT-SESSION.txt` prints 1, and `python -m pytest -q tests/test_http_security.py
-  tests/test_tc_code.py tests/test_no_discovery.py` is green on the commit at origin/main
-  (packages).
 - [ ] RUN-LIVE-CLICKS-CLOSE (review) Close TEST-LIVE-CLICKS from the passive read-back. ACCEPT:
   python tools/live1_report.py prints all five read-back fields as seen and python -m pytest -q
   tests/test_ascii_lf.py tests/test_research_numbers.py tests/test_leak_sweep.py passes. ZERO-CLICK:
@@ -520,15 +509,6 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   RUN-LEDGER-WIRE, RUN-LEDGER-REPORT. BLOCKED: one normal login to town or hideout while the core
   runs; unblocks when python tools/live1_report.py prints the five TEST-LIVE-CLICKS fields as seen
   (operator).
-- [ ] GP-13 (review) Apply protection and security settings, read back. ACCEPT: `gh api
-  "repos/$R/rules/branches/main" --jq '[.[].type] | sort | join(",")'` prints
-  deletion,non_fast_forward,required_status_checks and, after one ordinary push of a fresh commit
-  through fleet_gitlock, `git rev-parse main` equals `git rev-parse origin/main`, and `git ls-remote
-  --heads --tags origin` lists only refs/heads/main, refs/heads/dependabot/* and refs/tags/v* refs.
-  ZERO-CLICK: Agent step with gh; later pushes need nothing. DEPENDS: GP-12, PUB-SETTINGS-FILES,
-  GP-05. BLOCKED: the public flip (rulesets and free secret scanning need a public repository on a
-  personal account); unblocks when `gh repo view "$R" --json visibility --jq .visibility` prints
-  PUBLIC (package GP-12).
 - [ ] RUN-OVL-BUDGET-CLOSE (review) Close OVL-BUDGET from the budget log. ACCEPT: python -m
   server.al.budgetlog check exits 0 and prints at least 10 rows tagged in map with the overlay
   shown, and python -m pytest -q tests/test_ascii_lf.py tests/test_research_numbers.py

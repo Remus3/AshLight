@@ -3,6 +3,7 @@ AL NEXT SESSION
 SESSION: 32   (FLEET item 13 counter; /done writes n+1)
 
 WAVE POINTER: wave 61 done (RUN-VERDICTS-CLOSE merged f7fa26a, RUN-BUILDFILE-LIVE-CLOSE merged b1ed431; four fix rows filed BLOCKED: operator act), next wave 62 (nothing dispatchable at sessions 29 and 30 /done: every open session row waits on an operator act, a gate or a watch)
+NOTE (session 32, operator order "public flip" 2026-11-27): ci fixed 307d5da (root causes in its message). Gate 12: ci 46079475413 attempts 1 and 2 green, identity guard 46079475566 green. Gate 6 amended (adjudicator): README may show docs/shots/* demo renders. Flipped PUBLIC; GP-13 settings read back; record docs/ops/public-flip-2026-11-27.md. Unblocked: GP-14, GP-15, GP-16 and rows BLOCKED on the flip. Filed TEST-A11Y-NEWEST-DEVTOOLS, TEST-PLAYFIT-LOAD-FLAKE.
 NOTE (session 31 /done, operator away): no retry notes (tools/live_verdicts.py: the 4 checks still refused 2026-11-22, no note), no GP-12 word, REG_OPEN absent, inbox only the old MAIN TERMINAL note (skip, already in the seen ledger). Electron 45.5.0 row NOT filed by hand: decision 0070 weekly cadence (tools/watch_sources/electron.py BUMP_GAP_S 7 days after last_bump 45.4.1 at 2026-11-23 22:03) makes it eligible only from 2026-11-30 22:03, though the 3-day age is met 2026-11-27 22:18. The loop dispatched TEST-UPDATES-NINJA-STUB to lane build (loop-owned, do not touch); loop also flags DD-20261124 parked 76 h, needs adjudicate (loop-owned). No commit beyond this hand-off; wave 62 not planned (nothing unblocked). Reap: 0 removed, 3 kept (lane-0..2). Board skipped (opt-out).
 NOTE (session 30 /done, moved session 31): FIX-VERDICTS-ARCHIVE 8c442b2; rows TEST-DEMO-PORT-FLAKE and TEST-UPDATES-NINJA-STUB filed c0f06fb, folded 018c3a0; full text: archive block "SESSION 31 /done" of AL-2026-11-27.txt.
 NOTE (session 29, still open): DATA-GUIDE-ACTS-5-6 waits on GATE-POE2-10 (2026-12-11 or later); loop-owned row DOCS-FRESH-20261121 is in the adjudicate state (loop's own; do not touch). Operator answers 2026-11-26 recorded 19c775b (line OPERATOR ANSWERS).
@@ -10,7 +11,7 @@ NOTE (sessions 25-28, moved session 29): full session 28 / 27 NOTEs, the session
 NOTE (session 23, still open): open design findings DN-2..DN-4, UH-1, UH-2 (S4 OPEN, reviews.log). Plug routes may answer PUT after the guard (UI-CARD-COLLAPSE; route table GET 19, POST 21, PUT 2).
 SESSION-23 FINDING still open: builders edited tests/test_security_surface.py route counts and Checks-row-order tests outside their files, and git merges identical count edits silently wrong: re-read the counts after every merge (plan fix: derive the counts, or one owner per wave).
 OPEN FINDINGS (full text: archive block "SESSION 21 /done" of AL-2026-11-22.txt): nits CP-3 (index.html '2+' comment), PN6-1 (tell() comment), TD23-E (plan's 4/12/8/8 px source); GATE-HOLD load-flake list (no budget moves): tests/test_al_loop_gate_cache.py two tests at 3.07 / 3.38 s against 3.00 s under load (w31); tests/test_keepalive.py::test_end_to_end_real_core_restart_and_user_stop (heartbeat file present after stop; once in the w37 batch, 30/30 x3 isolated, green on rerun).
-SESSION-21 LESSONS (orchestrators and package agents): start whole suites from Bash, never pwsh 7 (install tests need a Windows PowerShell 5.1 child where Get-FileHash resolves); at most 2 package agents at once (the harness memory-reaped one suite); any packages.json change needs python tools/plan_check.py waves --write; an orchestrator keeps its own live poller or it stalls; read the live core's game_idle before a heavy suite (hold, poll every 5 min while game_idle is false and the newest line is under 5 min old).
+SESSION-21 LESSONS (orchestrators and package agents): start whole suites from Bash (install.ps1 / run.ps1 hash with .NET since 307d5da, so a pwsh 7 parent no longer breaks them); at most 2 package agents at once (the harness memory-reaped one suite); any packages.json change needs python tools/plan_check.py waves --write; an orchestrator keeps its own live poller or it stalls; read the live core's game_idle before a heavy suite (hold, poll every 5 min while game_idle is false and the newest line is under 5 min old).
 WAVE-17 FOLLOW-UPS (session 15, design findings OPEN, session items): SC-1 social card tagline small in half-size thumbnails (scale to about 1.0, regenerate), SC-3 margin nit; OVL-1 overlay reload full-opacity flash (clears with OVL-TD05-PLATE), OVL-2 design 0001 scale floor 0.86 not pinned to LIMITS.scale by a test; BG-9 wiki link dropped from gear / gem rows, BG-10 always-open details #filter-more (convert to a div); the server-side .build left-out note text in server/al/theorycraft/buildfile.py is still long (suggest "No passives yet. Turn on web data.").
 WAVE-16 FOLLOW-UPS: design findings OPEN (reviews.log): RUN-LEDGER-WIRE LW-1..LW-3, OVL-KEYS-WEB KW-7, TC-CALC-OPTIN-BUTTON CB-4..CB-6. Research 0039 CHARJSON-SHAPES item can be marked done by TC-CHARJSON-SHAPES (not in its files). TC-CHARJSON-SHAPES class_names map has no caller yet (paste.py, TC-IMPORT). docs/design/0001 still says five tabs / Items and prices tab (TEST-DOCS-FACTS-UI does not check it). LIVE-1-* and LIVE-WAYSTONE rows are BLOCKED on the first live ledger hit.
 WAVE-15 FOLLOW-UPS: tools/docs_fresh.py EXPECTED_STALE (36 entries) can be emptied. OPEN design findings: PLAY-TD-22B TF-1 (news inside the 10 s grace not retried), RUN-METRICS-SITES RL-1..RL-3 (log record consent copy vague, no polite announcement, Client.txt stop also stops it unstated), TEST-STATE-TEXT-4 TST4-1 (design 0001 names state.py as text home). Decisions 0050/0069 want a note that the watcher's GitHub-metadata read of GGG's tree-export repo passes watch_gate though webfetch refuses GGG repos for dives. LOOP-WATCH-SETTLED's hand-off edit (drop the REG_OPEN start check) waits until SHAPE_ALL_PAGES is on, HALT is absent and a dry-run tick files TC-OAUTH-REG-OPEN. TC-WORN-KEY wear key is bound in app/main.js, not the hotkeys registry, with no snapshot / Settings UI.
@@ -19,8 +20,8 @@ Closed records: docs/handoff-archive/AL-2026-11-19.txt to AL-2026-11-24.txt, one
 Next action: check whether the operator has given the retry notes (m: redo
 the four in-game checks refused 2026-11-22, each with a short note saying
 what the game showed; rows LIVE-SEARCHSTR-FIX, LIVE-FILTER-FIX,
-LIVE-FILTER-MERGE-FIX, TC-BUILDFILE-LIVE-FIX, all BLOCKED: operator act) or
-the GP-12 public-flip word (BLOCKED: operator word). Check the Electron
+LIVE-FILTER-MERGE-FIX, TC-BUILDFILE-LIVE-FIX, all BLOCKED: operator act) (the public flip is done, session 32: plan wave 62 from the rows it
+unblocked, GP-14 / GP-15 / GP-16 first). Check the Electron
 45.5.0 bump row: the loop files it from 2026-11-30 22:03 (decision 0070:
 7-day gap after the 45.4.1 bump); if ROADMAP.md has no 45.5.0 row after
 that, file it with tools/roadmap.py new.
@@ -105,11 +106,8 @@ Carried forward (not acted on yet):
   AL sidecar Logs folder, acl-before-20261119-185409 (icacls save). The
   dashboard "Private files" Checks row clears on the next core start; read it
   back then.
-- GO-PUBLIC STATUS (session 19): GP-09, SEC-STATIC-MAP and
-  PUB-HOOK-RELEASE-CHECK done; GP-12 waits on gates 3 and 6 (local part
-  69/69 green). Flip only on the operator's word: `gh repo edit <public
-  repo> --visibility public --accept-visibility-change-consequences`
-  (<public repo> = config/public_repo.json).
+- GO-PUBLIC STATUS (session 32): repository PUBLIC 2026-11-27, GP-12 and
+  GP-13 done; record docs/ops/public-flip-2026-11-27.md.
 - OWED LIVE CHECKS (sessions 11, 12): tray tooltip / About / footer version line
   (RUN-BUILD-STAMP-UI); real `npm ci --ignore-scripts` (OVL-NPM-LOCK); real
   setup.ps1 / run.ps1 with the Electron fetch and client start
