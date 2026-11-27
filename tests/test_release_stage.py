@@ -82,6 +82,10 @@ def repo(tmp_path):
     path = tmp_path / "repo"
     path.mkdir()
     _git(path, "init", "-q")
+    # the synthetic N-1 commit reads the repo's git identity; set it here so
+    # the test does not depend on a global one (none on a CI runner)
+    _git(path, "config", "user.name", "t")
+    _git(path, "config", "user.email", "t@example.com")
     for rel in REAL:
         dst = path / rel
         dst.parent.mkdir(parents=True, exist_ok=True)

@@ -585,7 +585,15 @@ updates:
      for poe.ninja's answer.
   6. No game screenshot, GGG art or funding file in the tree: `git
      ls-files` has no FUNDING file; README images are only
-     `assets/brand/*`.
+     `assets/brand/*` and `docs/shots/*` (renders of AshLight's own UI
+     from the demo core and fixture, made by `tools/shots.py`, showing no
+     game screenshot, GGG art or logo). Amended 2026-11-27 (public flip,
+     adjudicator ruling): the CLAUDE.md rule bars game screenshots, GGG
+     art and logos, which own-UI demo renders are not; alternatives were
+     dropping the shots from README or a manual image check. Reverses if:
+     a shot shows game imagery, GGG art or a logo, or the operator or GGG
+     rules UI renders with game zone names count as GGG IP (then drop the
+     docs/shots references and restore the wording).
 - Then: `gh repo edit "$R" --visibility public
   --accept-visibility-change-consequences`.
 - Acceptance tests: `gh repo view "$R" --json visibility --jq

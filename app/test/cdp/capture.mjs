@@ -67,6 +67,9 @@ const GROUND = Object.freeze({ dark: { r: 30, g: 32, b: 36, a: 1 },
   light: { r: 226, g: 228, b: 232, a: 1 } });
 const MAX_ANSWER = 4 * 1024 * 1024;
 const CI = process.env.AL_CI === "1";
+// one loopback GET (core or DevTools); decision 0080 widens it 3x in CI,
+// where a cold headless browser can take over 5 s to list its targets
+const GET_MS = CI ? 15000 : 5000;
 
 // The browser command: headless only, no window, no GPU, no extension, no
 // first-run UI, an OS-chosen DevTools port. Frozen: no option changes it.
@@ -197,7 +200,7 @@ export function gamePathPart(text) {
 /** GET 127.0.0.1:port path -> {status, body}. Node's http client: no proxy. */
 function get(port, p, headers = {}) {
   return new Promise((resolve, reject) => {
-    const req = http.get({ host: LOOPBACK, port, path: p, headers, timeout: 5000,
+    const req = http.get({ host: LOOPBACK, port, path: p, headers, timeout: GET_MS,
       agent: false }, (res) => {
       const chunks = [];
       let n = 0;

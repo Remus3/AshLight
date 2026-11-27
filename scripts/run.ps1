@@ -448,7 +448,14 @@ function Test-AlInstalledElectronExe([string]$Exe, [string]$PinFile, [string]$Ch
     }
     $got = ''
     try {
-        $got = ([string](Get-FileHash -LiteralPath $Exe -Algorithm SHA256).Hash).ToLowerInvariant()
+        # .NET, not Get-FileHash: a powershell.exe started from PowerShell 7
+        # inherits a PSModulePath whose Utility module 5.1 cannot load
+        $fs = [IO.File]::OpenRead($Exe)
+        try {
+            $sha = [Security.Cryptography.SHA256]::Create()
+            try { $bytes = $sha.ComputeHash($fs) } finally { $sha.Dispose() }
+        } finally { $fs.Dispose() }
+        $got = ([BitConverter]::ToString($bytes) -replace '-', '').ToLowerInvariant()
     } catch {
         $got = ''
     }

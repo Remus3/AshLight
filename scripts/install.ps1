@@ -147,7 +147,14 @@ function Get-AlDownload([string]$Url, [string]$OutFile, [string]$UserAgent, [lon
 }
 
 function Get-AlSha256([string]$Path) {
-    return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
+    # .NET, not Get-FileHash: a powershell.exe started from PowerShell 7
+    # inherits a PSModulePath whose Utility module 5.1 cannot load
+    $fs = [IO.File]::OpenRead($Path)
+    try {
+        $sha = [Security.Cryptography.SHA256]::Create()
+        try { $bytes = $sha.ComputeHash($fs) } finally { $sha.Dispose() }
+    } finally { $fs.Dispose() }
+    return ([BitConverter]::ToString($bytes) -replace '-', '').ToLowerInvariant()
 }
 
 function Read-AlCapped([string]$Path, [long]$MaxBytes, [string]$Label) {

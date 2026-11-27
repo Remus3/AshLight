@@ -46,6 +46,10 @@ def decode(text):
     if not isinstance(text, str) or not text.strip():
         raise TreeUrlError("no tree link")
     tail = text.strip().rsplit("/", 1)[-1]
+    # padding only at the end: Python 3.11's decoder stops at the first '='
+    # and drops what follows, so bytes after it would pass unseen
+    if "=" in tail.rstrip("="):
+        raise TreeUrlError("not base64url")
     try:
         raw = base64.urlsafe_b64decode(tail + "=" * (-len(tail) % 4))
     except (binascii.Error, ValueError) as e:

@@ -662,13 +662,15 @@ def test_supervisor_does_not_import_urllib_at_start(tmp_path):
     # HTTP client only inside the health probe, so its start and a poll that
     # needs no probe load neither urllib nor http.client
     code = (
-        "import sys\n"
+        "import sys, pathlib\n"
+        # the interpreter's own loads stay out (3.11 pathlib loads urllib.parse)
+        "base = set(sys.modules)\n"
         "from server.al import keepalive as ka\n"
         "ka.build_parser().parse_args([])\n"
         "sup = ka.Keepalive(sys.argv[1], int(sys.argv[2]), launch=lambda: 1,\n"
         "                   pid_alive=lambda p: False, health=lambda: False)\n"
         "sup.step()\n"
-        "bad = sorted(m for m in sys.modules\n"
+        "bad = sorted(m for m in set(sys.modules) - base\n"
         "             if m.split('.')[0] in ('urllib', 'http') or m.endswith('.hello'))\n"
         "print(','.join(bad))\n")
     env = dict(os.environ, AL_RUNTIME_DIR=str(tmp_path))
