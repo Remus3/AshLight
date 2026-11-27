@@ -1,8 +1,9 @@
 AL NEXT SESSION
 ---------------
-SESSION: 31   (FLEET item 13 counter; /done writes n+1)
+SESSION: 32   (FLEET item 13 counter; /done writes n+1)
 
 WAVE POINTER: wave 61 done (RUN-VERDICTS-CLOSE merged f7fa26a, RUN-BUILDFILE-LIVE-CLOSE merged b1ed431; four fix rows filed BLOCKED: operator act), next wave 62 (nothing dispatchable at sessions 29 and 30 /done: every open session row waits on an operator act, a gate or a watch)
+NOTE (session 31 /done, operator away): no retry notes (tools/live_verdicts.py: the 4 checks still refused 2026-11-22, no note), no GP-12 word, REG_OPEN absent, inbox only the old MAIN TERMINAL note (skip, already in the seen ledger). Electron 45.5.0 row NOT filed by hand: decision 0070 weekly cadence (tools/watch_sources/electron.py BUMP_GAP_S 7 days after last_bump 45.4.1 at 2026-11-23 22:03) makes it eligible only from 2026-11-30 22:03, though the 3-day age is met 2026-11-27 22:18. The loop dispatched TEST-UPDATES-NINJA-STUB to lane build (loop-owned, do not touch); loop also flags DD-20261124 parked 76 h, needs adjudicate (loop-owned). No commit beyond this hand-off; wave 62 not planned (nothing unblocked). Reap: 0 removed, 3 kept (lane-0..2). Board skipped (opt-out).
 NOTE (session 30 /done): FIX-VERDICTS-ARCHIVE committed 8c442b2 (tests/test_live_verdicts.py also matches done rows in docs/roadmap/archive/*.md), pushed, origin/main read back 8c442b26da35. The session's first gated suite was red on 3 tests in tests/test_port_lease.py / tests/test_play_states.py (29/29 alone, green on rerun; suspected demo-port contention in phase 1): row TEST-DEMO-PORT-FLAKE (review, BLOCKED: session (watch)). tests/test_updates.py al-ninja thread warning: row TEST-UPDATES-NINJA-STUB (build, loop may take it). Both filed c0f06fb, folded 018c3a0. Inbox: 1 MAIN TERMINAL note, mechanically acked. Reap: 0 removed, 3 kept (lane-0..2). Board skipped (opt-out).
 NOTE (session 29, still open): DATA-GUIDE-ACTS-5-6 waits on GATE-POE2-10 (2026-12-11 or later); loop-owned row DOCS-FRESH-20261121 is in the adjudicate state (loop's own; do not touch). Operator answers 2026-11-26 recorded 19c775b (line OPERATOR ANSWERS).
 NOTE (sessions 25-28, moved session 29): full session 28 / 27 NOTEs, the session 25 progress-file NOTE (package agents write progress through Bash with fleet_headless.write_progress, the refusal is the harness worktree boundary) the session 28 Do NOT redo, the session 24 OPERATOR NOTES (loop-body clock noise, CP-2 git reset) and the open SESSION-7 FINDINGS (lane npm gate, unverified overlay /events headers, plan-08 archive blind spot) and the wave-18 PROCESS NOTE (per-package scratch subfolders): archive block "SESSION 29 /done" of AL-2026-11-26.txt. Next free decision number: 0087.
@@ -20,8 +21,9 @@ the four in-game checks refused 2026-11-22, each with a short note saying
 what the game showed; rows LIVE-SEARCHSTR-FIX, LIVE-FILTER-FIX,
 LIVE-FILTER-MERGE-FIX, TC-BUILDFILE-LIVE-FIX, all BLOCKED: operator act) or
 the GP-12 public-flip word (BLOCKED: operator word). Check the Electron
-45.5.0 bump row: the loop files it after 2026-11-27 22:18 (decision 0070);
-if ROADMAP.md still has no 45.5.0 row, file it with tools/roadmap.py new.
+45.5.0 bump row: the loop files it from 2026-11-30 22:03 (decision 0070:
+7-day gap after the 45.4.1 bump); if ROADMAP.md has no 45.5.0 row after
+that, file it with tools/roadmap.py new.
 If something unblocks, plan wave 62 in docs/plan/packages.json from it
 (PLAN / W<n> / CLOSE as sessions 25-28: one package agent per package, at
 most 2 at once, design-reviewer for web/ or text/ changes, one integrator
@@ -57,7 +59,7 @@ stay local, nothing is pushed.
 
 Carried forward (not acted on yet):
 - TEST-SPLIT-B1-WATCH (row filed, BLOCKED: session): B1 test_real_loop_body red once at 0.920 percent (3 clock steps, 46.9 ms) in the wave 59 batch 3 whole suite under the split phase 2; 3 isolated gated reruns passed (0.616/0.000/0.000), every whole suite since green (session 28: three, incl. /done). If it reds again, apply decision 0060's split reverses-if (SPLIT_TIMING False, or B1 after both streams), never move the budget.
-- ELECTRON (session 27): app/node_modules still holds Electron 45.3.3 (npm ci not run, the client was running); the next setup with the client closed moves it to 45.4.1. Electron 45.5.0 released 2026-11-24, eligible under decision 0070 from 2026-11-27 22:18 (the loop files the row; not filed at session 30 /done; file it by hand next session if still missing).
+- ELECTRON (session 27): app/node_modules still holds Electron 45.3.3 (npm ci not run, the client was running); the next setup with the client closed moves it to 45.4.1. Electron 45.5.0 released 2026-11-24, eligible under decision 0070 from 2026-11-30 22:03 (3-day age met 2026-11-27 22:18, 7-day gap after the 45.4.1 bump at 2026-11-23 22:03; the loop files the row; not filed at session 31 /done; file it by hand at the first session after 2026-11-30 22:03 if still missing).
 - PLAY-FEED-VERB-FIT low design notes (reviews.log, low priority): flow and text-spacing sizes unmeasured for trade rows; the price / Dismiss edge check uses the row outer edge.
 - Design findings open without a row: TD23-1 (folds into PLAY-F-189A, wave 35); nits CP-3, PN6-1, TD23-E (OPEN FINDINGS line).
 - SESSION-22 DESIGN FINDINGS OPEN (docs/design/reviews.log, waves 34 to 37; session items, none blocking): UN-1..UN-4 (REL-UPDATE-NOTICE-UI; UN-2 needs the 'update' tab-mark word in design 0001 section 4), FT-1 (move the link_restarted word into status_words.json) and FT-2 (RUN-FEED-TRUTH), F189-1..F189-3 (PLAY-F-189A), AS-1..AS-4 (REL-AUTOSTART-SETTINGS), PL-1 (PLAY-F-189B), WD-1..WD-5 (TC-WEIGHTS-DELTA-UI). UN-1, AS-1 and WD-3 were row SAVE-FAIL-SAY (merged wave 47). OVL-1 (full-opacity flash on overlay reload) is re-pointed to OVL-TD05-PLATE.
@@ -223,13 +225,14 @@ Operator orders (sessions 5 and 6), live state notes: archive block "SESSION 20 
 
 Acceptance: the operator ask is out (or answered); any unblocked row is planned as wave 62 in packages.json (plan_check check green, waves --write applied) and closed as 08 section 7 says (open-row command prints "none open" or only DEFERRED / BLOCKED ids, status empty on main, leak sweep clean, last batch suite and npm test green, WAVE POINTER moved), every package merged or re-deferred with a reason.
 
+Do NOT redo (session 31): Electron 45.5.0 row hand-file (not due before 2026-11-30 22:03); inbox triage (only the old TERMINAL note).
 Do NOT redo (session 30, pushed): FIX-VERDICTS-ARCHIVE (8c442b2, test_live_verdicts archive lookup); rows TEST-DEMO-PORT-FLAKE and TEST-UPDATES-NINJA-STUB filed and folded (018c3a0).
 Do NOT redo (session 29, pushed): operator answers OA-5 / OA-8 / OA-9 recorded (19c775b); OA-8 web_data and contact already set on the dev host.
 
 Do NOT redo (sessions 6 to 28): docs/handoff-archive/ (closed blocks per session).
 
-In flight: none (no orchestrator, agent or progress row of this tree running; fleet_checklist stale: none). Loop live, do not touch; HALT absent; REG_OPEN absent (read back session 30 /done).
+In flight: loop lane build on TEST-UPDATES-NINJA-STUB (dispatched 2026-11-27 16:18, ops/loop/control/loop_items/TEST-UPDATES-NINJA-STUB.json, loop-owned; do not touch). No session agent running. Loop live, do not touch; HALT absent; REG_OPEN absent (read back session 31 /done).
 
-Status (session 30 /done, 2026-11-27, fresh): gated suite from Bash: phase 1 5946 passed / 8 skipped (88.15 s), timing-calc 9 passed (35.24 s), timing-rest 12 passed (22.51 s), rc 0; npm 882/882; leak sweep armed (44 needles), no HALT; warnings only: tests/test_updates.py al-ninja thread (row TEST-UPDATES-NINJA-STUB). Main pushed through the git lock after this hand-off. Board skipped (opt-out).
+Status (session 31 /done, 2026-11-27, fresh): gated suite from Bash: phase 1 5946 passed / 8 skipped (92.57 s), timing-calc 9 passed (36.50 s), timing-rest 12 passed (24.51 s), rc 0; npm 882/882; leak sweep armed (44 needles), no HALT; warnings only: tests/test_updates.py al-ninja thread (row TEST-UPDATES-NINJA-STUB). Main pushed through the git lock after this hand-off. Board skipped (opt-out).
 
 Start with: read this file, then CLAUDE.md, ROADMAP.md, git log -10.
