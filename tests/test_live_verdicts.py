@@ -105,10 +105,19 @@ def test_posted_verdict_appears_in_the_readback(srv):
 
 
 def _row_known(row_id):
-    """A ROADMAP row id that is open, or already closed by a done file."""
+    """A ROADMAP row id that is open, closed by a done file, or archived.
+
+    The /done fold prunes done rows into docs/roadmap/archive/*.md as
+    "- [x] <id> (" lines, so an archived row is still a real row.
+    """
     text = (ROOT / "ROADMAP.md").read_text(encoding="utf-8")
-    return (f"- [ ] {row_id} (" in text
-            or (ROOT / live_verdicts.DONE_DIR / f"{row_id}.md").is_file())
+    if (f"- [ ] {row_id} (" in text
+            or (ROOT / live_verdicts.DONE_DIR / f"{row_id}.md").is_file()):
+        return True
+    needle = f"- [x] {row_id} ("
+    return any(needle in p.read_text(encoding="utf-8")
+               for p in sorted((ROOT / "docs" / "roadmap" / "archive")
+                               .glob("*.md")))
 
 
 def test_script_drafts_the_matching_roadmap_flip(tmp_path):
