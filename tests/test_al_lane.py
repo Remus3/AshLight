@@ -26,7 +26,13 @@ def test_kit_worktree_layout_is_per_lane_index(tmp_path):
     assert fl.LANE_CAP_MAX == 3
     paths = {fl.worktree_path(ROOT, "AL", i) for i in range(3)}
     assert len(paths) == 3
-    assert all(p.parent.name == "al-worktrees" for p in paths)
+    # kit v33 E-ROOT-KIT K1: a tree at a drive root never gets a new
+    # <drive>/al-worktrees; its lanes go to <sidecar>/AL/Worktree/lane-<i>
+    # (an existing old lane folder stays in use).
+    assert all(p.parent.name == "al-worktrees"
+               or (p.parent.name == "Worktree" and p.parent.parent.name == "AL")
+               for p in paths)
+    assert {p.name for p in paths} == {"lane-0", "lane-1", "lane-2"}
 
 
 def test_seed_config_copies_missing_only(tmp_path):

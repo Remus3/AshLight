@@ -12,8 +12,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 KIT_DIR = ROOT / "ops" / "fleet_kit"
 KIT = KIT_DIR / "fleet_headless.py"
-KIT_VERSION = 32
-MANIFEST_SHA256 = "cede0b7c8a80ca6ece410c07b572e4ac9dabe0bf7769d9c82d692bb1858c757d"
+KIT_VERSION = 33
+MANIFEST_SHA256 = "c096f7b0c015792cd32a9ec7acb815b84293bdeef152d0c3b0fb45304c9d5129"
 SF_CMD = 'bash "$CLAUDE_PROJECT_DIR/ops/fleet_kit/fleet_hook.sh" fleet_subagent_first.py'
 CLAIMS_CMD = 'bash "$CLAUDE_PROJECT_DIR/ops/fleet_kit/fleet_hook.sh" fleet_claims.py hook'
 RELEASE_CMD = 'python "$CLAUDE_PROJECT_DIR/ops/fleet_kit/fleet_claims.py" release-hook'

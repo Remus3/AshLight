@@ -18,7 +18,7 @@ making that text from log events (section 9; ruling Q-15, 2026-11-18).
   produces (the card and event text package `server/al/text/`, e.g.
   `events.py` `summarize`; status words in `server/al/data/status_words.json`).
 - Colours, themes and the state vocabulary come from the fleet kit:
-  `ops/fleet_kit/tokens.json` / `tokens.css` (kit v32). The kit is never
+  `ops/fleet_kit/tokens.json` / `tokens.css` (kit v33). The kit is never
   edited here. AshLight adds only `--al-*` tokens for needs the kit does not
   cover (the overlay plate, control boundaries) and documents them below.
 - Kit UI/UX standard rules this builds on: colour never carries a state
@@ -324,7 +324,7 @@ Reverses-if (the allowance is recomputed).
 
 ### 5.1 Palette
 
-Kit tokens (from `ops/fleet_kit/tokens.json`, kit v32):
+Kit tokens (from `ops/fleet_kit/tokens.json`, kit v33):
 
 | Token | Light | Dark |
 |---|---|---|
