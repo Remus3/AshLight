@@ -147,7 +147,8 @@
   var WEB_DATA_OPT_IN = "Off unless you turn it on. When on, AshLight asks for three " +
     "things only. It fetches currency and item prices from poe.ninja about once an " +
     "hour. It opens a build link you paste, once. It checks GitHub once a day for a " +
-    "new AshLight; a new version downloads by itself and installs at a later start. " +
+    "new AshLight. A new version downloads by itself while the game is closed and " +
+    "installs the next time you open AshLight. " +
     "It never asks the trade site anything; the trade link after an item check opens " +
     "only when you click it. It sends no account, password or cookie, and never " +
     "touches the game.";

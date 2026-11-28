@@ -47,7 +47,7 @@ function fakeDoc(ids) {
 const BOX_IDS = ["update-box", "update-version", "update-data", "update-line", "update-ack-row",
   "update-ack", "update-link", "update-link-row", "update-said", "update-notes-box", "update-notes",
   "update-staged", "update-now-row", "update-now", "update-now-said", "update-click-row",
-  "update-click-only", "update-click-said"];
+  "update-click-only", "update-click-said", "update-now-note"];
 
 function fakeTabs() {
   const marks = [];
@@ -80,12 +80,19 @@ test("no update: the version, the up to date line, no mark, no ack", () => {
 test("a newer version: one line and the Settings tab mark, never a window", () => {
   const m = U.model(block({ latest: "0.5.0", newer: true }), true, HOSTS);
   assert.equal(m.state, "newer");
-  assert.equal(m.line, "AshLight 0.5.0 is out. It installs by itself at a later start.");
+  assert.equal(m.line, "AshLight 0.5.0 is out. It downloads while the game is closed, then installs.");
   assert.equal(m.mark, "update");
+  // UX-UPDATE-WORDS (review 2026-11-28 P2-7): "later start" made concrete
   assert.equal(U.model(block({ latest: "0.5.0", newer: true, staged: "0.5.0" }), true, HOSTS).line,
-    "AshLight 0.5.0 is downloaded. It installs at a later start.");
+    "AshLight 0.5.0 is downloaded. It installs when you next open AshLight, a day after release.");
+  // P2-5: a checkout has no Update now, so its click-only line keeps GitHub
   assert.equal(U.model(block({ latest: "0.5.0", newer: true, click_only: true }), true, HOSTS).line,
     "AshLight 0.5.0 is out. See what changed on GitHub.");
+  // an installed copy points at the one button that installs it
+  assert.equal(U.model(block({ latest: "0.5.0", newer: true, click_only: true }), true, HOSTS, true)
+    .line, "AshLight 0.5.0 is out. Click Update now to install it.");
+  assert.equal(U.model(block({ latest: "0.5.0", newer: true, click_only: true, staged: "0.5.0" }),
+    true, HOSTS, true).line, "AshLight 0.5.0 is downloaded. Click Update now to install it.");
   // paint: the mark goes to the Settings tab; nothing opens
   const doc = fakeDoc(BOX_IDS);
   const tabs = fakeTabs();
@@ -94,7 +101,7 @@ test("a newer version: one line and the Settings tab mark, never a window", () =
   assert.deepEqual(tabs.marks, [["settings", "update"]]);
   assert.equal(doc.getElementById("update-box").hidden, false);
   assert.equal(doc.getElementById("update-line").textContent,
-    "AshLight 0.5.0 is out. It installs by itself at a later start.");
+    "AshLight 0.5.0 is out. It downloads while the game is closed, then installs.");
   // a failing check keeps web/checks.js's "fix": no mark from here
   const t2 = fakeTabs();
   U.paint(fakeDoc(BOX_IDS), snapOf(block({ latest: "0.5.0", newer: true }), [], 1), { hosts: HOSTS, tabs: t2 });
@@ -221,7 +228,9 @@ test("ticking the web-data box sends the wording version", async () => {
 test("the opt-in sentence names the daily update check and the automatic apply", () => {
   const s = TC.WEB_DATA_OPT_IN;
   assert.match(s, /checks GitHub once a day for a new AshLight/);
-  assert.match(s, /downloads by itself and installs at a later start/);
+  assert.match(s,
+    /downloads by itself while the game is closed and installs the next time you open AshLight/);
+  assert.doesNotMatch(s, /later start/);
   assert.match(s, /three things only/);
 });
 
@@ -246,14 +255,55 @@ test("game data from <date>, the newest 3 versions, and no string over the desig
   for (const t of Object.values(U.TEXT)) { assert.ok(t.length <= U.LINE_MAX, t); }
   for (const extra of [{ latest: "10.20.30-rc.1", newer: true },
     { latest: "10.20.30-rc.1", newer: true, staged: "10.20.30-rc.1" },
-    { latest: "10.20.30-rc.1", newer: true, click_only: true }, { error: "http" }]) {
-    const v = U.model(block(extra), true, HOSTS);
+    { latest: "10.20.30-rc.1", newer: true, click_only: true },
+    { latest: "10.20.30-rc.1", newer: true, click_only: true, staged: "10.20.30-rc.1" },
+    { error: "http" }]) {
+    const v = U.model(block(extra), true, HOSTS, true);
     assert.ok(v.line.length <= U.LINE_MAX, v.line);
     assert.ok(!/!|Oops|ERROR|HTTP/.test(v.line), v.line);
   }
   assert.ok(U.ACK_LABEL.length <= 24 && U.LINK_TEXT.length <= 47);
   // a malformed version is never shown
   assert.equal(U.model(block({ installed: "<b>1</b>" }), true, HOSTS).show, false);
+});
+
+/* UX-UPDATE-WORDS (docs/reviews/ux/2026-11-28.md P2-6, P2-7): the off lines
+   name where web data is, and no update line says "a later start". */
+test("the off lines name Settings, Reading and web data; no line says a later start", () => {
+  assert.equal(U.TEXT.off,
+    "Update checks are off while web data is off. Turn it on in Settings, Reading and web data.");
+  assert.equal(U.NOW_SAID.off, "Turn on web data in Settings, Reading and web data first.");
+  assert.equal(U.TEXT.ack,
+    "Web data now also checks daily for a new AshLight and installs it when you next open " +
+    "AshLight.");
+  for (const t of Object.values(U.TEXT).concat(Object.values(U.NOW_SAID))) {
+    assert.doesNotMatch(t, /later start/, t);
+  }
+  assert.doesNotMatch(HTML, /later start/);
+});
+
+/* P3-7: Update now skips the idle gate, so a muted note says AshLight closes
+   for a moment, only while the snapshot's game_idle is not true. */
+test("a muted note beside Update now while the game is not idle", () => {
+  const busy = "AshLight closes for about a minute to update. Best while the game is closed.";
+  assert.equal(U.TEXT.nowBusy, busy);
+  const newer = block({ latest: "0.5.0", newer: true });
+  assert.equal(U.model(newer, true, HOSTS, true, false).nowNote, busy);
+  assert.equal(U.model(newer, true, HOSTS, true).nowNote, busy);
+  assert.equal(U.model(newer, true, HOSTS, true, true).nowNote, "");
+  // no button, no note
+  assert.equal(U.model(block(), true, HOSTS, true, false).nowNote, "");
+  assert.equal(U.model(newer, true, HOSTS, false, false).nowNote, "");
+  const doc = fakeDoc(BOX_IDS);
+  const snap = snapOf(newer, [INSTALL]);
+  U.paint(doc, snap, { hosts: HOSTS, tabs: fakeTabs() });
+  assert.equal(doc.getElementById("update-now-note").textContent, busy);
+  assert.equal(doc.getElementById("update-now-note").hidden, false);
+  snap.game_idle = true;
+  U.paint(doc, snap, { hosts: HOSTS, tabs: fakeTabs() });
+  assert.equal(doc.getElementById("update-now-note").textContent, "");
+  assert.equal(doc.getElementById("update-now-note").hidden, true);
+  assert.match(HTML, /<span id="update-now-note" class="muted"[^>]*hidden><\/span>/);
 });
 
 test("the page holds one update container in About and data, and loads updates.js", () => {

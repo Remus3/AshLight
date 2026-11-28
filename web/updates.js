@@ -74,16 +74,19 @@
   var T = {
     current: "AshLight is up to date. It checks once a day.",
     first: "AshLight checks once a day for a new version.",
-    off: "Update checks are off while web data is off.",
+    off: "Update checks are off while web data is off. Turn it on in Settings, Reading and " +
+      "web data.",
     none: "This copy doesn't check for updates.",
-    ack: "Web data now also checks once a day for a new AshLight and installs it " +
-      "at a later start.",
+    ack: "Web data now also checks daily for a new AshLight and installs it when you next " +
+      "open AshLight.",
     error: "The last update check got no answer. AshLight tries again tomorrow.",
     acked: "Saved. AshLight checks for updates from now on.",
     notSaved: "Not saved. Try again.",
     clickOn: "AshLight updates only when you click Update now.",
     clickOff: "AshLight updates by itself while the game is closed.",
-    nowFailed: "The update didn't start. Try again later."
+    nowFailed: "The update didn't start. Try again later.",
+    /* UX-UPDATE-WORDS (review P3-7): Update now skips the idle gate */
+    nowBusy: "AshLight closes for about a minute to update. Best while the game is closed."
   };
   var NOW_LABEL = "Update now";
   var CLICK_LABEL = "Update only when I click Update now";
@@ -96,7 +99,7 @@
     staged: "Installing the downloaded version. AshLight restarts in a moment.",
     running: "An update is already running.",
     current: "AshLight is up to date.",
-    off: "Turn on web data to update.",
+    off: "Turn on web data in Settings, Reading and web data first.",
     checkout: "This copy doesn't update itself."
   };
 
@@ -141,19 +144,29 @@
   /* The view of the update block. update: the snapshot's `update` (or
      null); webData: true / false for the web-data switch, null when not
      known yet; hosts: the link host list (web/tc.js LINK_HOSTS);
-     inCopy: true in an installed copy (installedCopy()).
+     inCopy: true in an installed copy (installedCopy());
+     idle: the snapshot's game_idle (decision 0029); while it is not true
+     a muted note beside Update now says AshLight closes for a moment
+     (UX-UPDATE-WORDS: Update now skips the idle gate). An unknown state
+     (no game_idle yet) shows the note: the safe side.
      -> {show, version, state, line, ack, link, mark, notes, staged, now,
-         click, clickOnly} */
-  function model(update, webData, hosts, inCopy) {
+         nowNote, click, clickOnly} */
+  function model(update, webData, hosts, inCopy, idle) {
     var u = update && typeof update === "object" ? update : null;
     var empty = { show: false, version: "", state: "none", line: "", ack: false,
-      link: null, mark: "", notes: [], staged: "", now: false, click: false,
+      link: null, mark: "", notes: [], staged: "", now: false, nowNote: "", click: false,
       clickOnly: false };
     if (!u || !version(u.installed)) { return empty; }
     var installed = version(u.installed);
     var link = releasesLink(u.releases_url, hosts);
     var latest = version(u.latest);
     var staged = version(u.staged);
+    var inst = inCopy === true;
+    /* UX-UPDATE-WORDS (review 2026-11-28 P2-5, P2-7): an installed copy in
+       click-only mode points at Update now; otherwise the line says when it
+       downloads (game closed) and installs (the next open, after the 24 h
+       hold from the release of decision 0065). A checkout has no button. */
+    var clickNow = inst && u.click_only === true;
     var state;
     var line;
     if (!link && !u.releases_url) {
@@ -165,13 +178,19 @@
     } else if (u.newer === true && latest) {
       if (staged && staged === latest) {
         state = "staged";
-        line = "AshLight " + latest + " is downloaded. It installs at a later start.";
+        line = "AshLight " + latest + " is downloaded. " + (clickNow
+          ? "Click Update now to install it."
+          : "It installs when you next open AshLight, a day after release.");
+      } else if (clickNow) {
+        state = "newer";
+        line = "AshLight " + latest + " is out. Click Update now to install it.";
       } else if (u.click_only === true) {
         state = "newer";
         line = "AshLight " + latest + " is out. See what changed on GitHub.";
       } else {
         state = "newer";
-        line = "AshLight " + latest + " is out. It installs by itself at a later start.";
+        line = "AshLight " + latest +
+          " is out. It downloads while the game is closed, then installs.";
       }
     } else if (u.error) {
       state = "error"; line = T.error;
@@ -180,8 +199,8 @@
     } else {
       state = "first"; line = T.first;
     }
-    var inst = inCopy === true;
     var live = state !== "none" && state !== "off" && state !== "ack";
+    var now = inst && live && (state === "newer" || state === "staged" || !!staged);
     return {
       show: true,
       version: "AshLight " + installed,
@@ -193,7 +212,8 @@
       notes: notes(u.notes),
       staged: inst && staged && state !== "staged"
         ? cut("AshLight " + staged + " is downloaded. Update now installs it.", LINE_MAX) : "",
-      now: inst && live && (state === "newer" || state === "staged" || !!staged),
+      now: now,
+      nowNote: now && idle !== true ? T.nowBusy : "",
       click: inst && state !== "none",
       clickOnly: u.click_only === true
     };
@@ -277,7 +297,8 @@
      check needs a fix, so "fix" always wins. */
   function paint(doc, snap, opts) {
     var box = doc.getElementById("update-box");
-    var m = model(snap && snap.update, webDataOn(snap), hostList(opts), installedCopy(snap));
+    var m = model(snap && snap.update, webDataOn(snap), hostList(opts), installedCopy(snap),
+      !!snap && snap.game_idle === true);
     var data = dataLine(snap);
     var t = tabs(opts);
     if (t && typeof t.mark === "function" && !failed(snap)) { t.mark(doc, TAB, m.mark); }
@@ -323,6 +344,11 @@
     }
     var nowRow = doc.getElementById("update-now-row");
     if (nowRow) { nowRow.hidden = !m.now; }
+    var note = doc.getElementById("update-now-note");
+    if (note) {
+      note.textContent = m.nowNote;
+      note.hidden = !m.nowNote;
+    }
     var row = doc.getElementById("update-click-row");
     var box = doc.getElementById("update-click-only");
     if (row) { row.hidden = !m.click; }
