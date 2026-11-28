@@ -155,6 +155,7 @@ def test_recipe_builds_pinned_and_yields_its_fields(name, tmp_path):
     assert any(e[0] == "open" and str(root) in str(e[1]) for e in events)
 
 
+@pytest.mark.slow  # two real core starts; 3.53 s under parallel load (stage 0.2.0-rc.1)
 def test_states_swap_under_one_port(tmp_path):
     with ps.open_state("a", tmp_path / "one") as st:
         port, url = st.port, st.url
