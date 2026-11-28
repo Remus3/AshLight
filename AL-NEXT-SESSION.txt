@@ -1,8 +1,10 @@
 AL NEXT SESSION
 ---------------
-SESSION: 45   (FLEET item 13 counter; /done writes n+1)
+SESSION: 46   (FLEET item 13 counter; /done writes n+1)
 
 WAVE POINTER: wave 62 done (W62-PLAN 206094b; GP-15, GP-16 b027ee6, AUTO-20 93e40b5, TEST-A11Y-NEWEST-DEVTOOLS dcd49d1, TEST-PLAYFIT-LOAD-FLAKE 6ea915c; W62-CLOSE 3960390 pushed), next wave 63 (nothing dispatchable at session 33 /done: every open session row waits on an operator act, a gate or a watch; session 39: still nothing dispatchable)
+NOTE (session 45, 2026-11-28, interactive, all pushed to origin main): 43276198 PG-18 merge (web/panels/progression.js: #pg-asc-none hidden through show(ascNone, false), design review PASS S1-S4=0); fbdc2edb BSC-6 merge (web/app.css `.region:has(> .region-h:focus)` draws the 3px accent ring inside region B while the sr-only heading #play-b-h holds focus after a build switch; test tests/test_a11y.py; review PASS WITH FINDINGS S4=2: BSC-6a doc line applied to design 0001 Focus ring bullet, BSC-6b no outline:none existed); c99fa7d4 integrator paperwork (reviews.log lines, design 0001 line). LEDGER-WRITER: EXPECTED, not a defect (findings <AL sidecar>\Scratch\ledger-writer-findings.md): consent on in ops/runtime/consent.json; Client.txt last modified 2026-11-22 22:05, the same minute as logshapes.json, so no play since and the writer (dirty only on fed lines / presses) had nothing to write. Next free decision number: 0098.
+NOTE (session 45 /done): inbox: no new notes (the three MAIN notes already recorded). roadmap_fold: no row files, no done rows. reap --apply: 0 removed, 3 kept (lane-0, lane-1, lane-2, fleet_lanes lane worktrees). LIVE-VERDICTS-CHECK: no new verdicts; the four *-FIX rows stay BLOCKED on act (m).
 NOTE (session 44, 2026-11-28, interactive, all pushed to origin main): f09d8070 BUILD-SWITCH-COPY (a refused build switch says why: reason bad / no_character / no_result; focus kept); 01e15fc4 PROGRESSION-ASC-EMPTY + PROGRESSION-NEXTUP-ORDER, decision 0097 (one-tree builds show "Your build has one tree, with no order by level."; adjudicator rejected the distance-from-start and title-band options); cdddde71 README-STAMP-HIDDEN (hand-merged from a replay onto main after two adjudicate gate runs were red only on load noise test_dash_perf; keep ref deleted, loop record merged); 47f1a34b README-SOURCE-FIRST (Quick start first until a release; six-lens review PASS, findings fixed); 2b5fdf2a RESEARCH-0064-TIDY; f04db57b integrator paperwork (CLAUDE.md Settled 0097, reviews.log lines, rows folded); b316d227 test_github_review also looks in the roadmap archive. Next free decision number: 0098.
 NOTE (session 44 process ruling): concurrent session agents deadlock on fleet_suite_gate (it refuses while another live agent holds uncommitted edits in the tree). Ruling used: package agents commit after their ungated file-named test list; the gated list is deferred to the one batch suite. Candidate KIT DEFECT line for MAIN if it recurs.
 NOTE (session 44 /done): inbox: no new notes since session 42 (the three MAIN notes already recorded). roadmap_fold: no row files, no done rows. reap --apply: 0 removed, 3 kept (lane-0, lane-1, lane-2, fleet_lanes lane worktrees). LIVE-VERDICTS-CHECK: no new verdicts; the four *-FIX rows stay BLOCKED on act (m).
@@ -20,10 +22,9 @@ WAVE-16 FOLLOW-UPS: design findings OPEN (reviews.log): RUN-LEDGER-WIRE LW-1..LW
 WAVE-15 FOLLOW-UPS: tools/docs_fresh.py EXPECTED_STALE (36 entries) can be emptied. OPEN design findings: PLAY-TD-22B TF-1 (news inside the 10 s grace not retried), RUN-METRICS-SITES RL-1..RL-3 (log record consent copy vague, no polite announcement, Client.txt stop also stops it unstated), TEST-STATE-TEXT-4 TST4-1 (design 0001 names state.py as text home). Decisions 0050/0069 want a note that the watcher's GitHub-metadata read of GGG's tree-export repo passes watch_gate though webfetch refuses GGG repos for dives. LOOP-WATCH-SETTLED's hand-off edit (drop the REG_OPEN start check) waits until SHAPE_ALL_PAGES is on, HALT is absent and a dry-run tick files TC-OAUTH-REG-OPEN. TC-WORN-KEY wear key is bound in app/main.js, not the hotkeys registry, with no snapshot / Settings UI.
 Closed records: docs/handoff-archive/AL-2026-11-19.txt to AL-2026-11-24.txt, one block per session headed "SESSION <n> /done", each listing what it moved: 11-17 indexed in "SESSION 18 /done" (AL-2026-11-21.txt); 19-21 in AL-2026-11-22.txt (19: session 18-19 lines, PUB-HOOK-RELEASE-CHECK ruling, WATCH gate-hold history, BUDGETLOG; 20: waves 26-28; 21: waves 31-33, GATE-HOLD-C, plan-07 drift); 22-23 in AL-2026-11-23.txt (22: waves 34-37 plan; 23: waves 38-45 merges, plan, operator requests, session 22 status); 24-28 in AL-2026-11-24.txt; 29 in AL-2026-11-26.txt (29: sessions 25-28 NOTEs, session 28 Do NOT redo); 24-28 detail (24-25: sessions 23-24 NOTE, reap, findings, Do NOT redo, SESSION-21 ROWS; 26: session 25 lines, the session 26 full NOTE, the session 23 NOTE with w42-int; 27: session 26 records; 28: session 27 full NOTE, reap, Do NOT redo, status, the session 28 full NOTE).
 
-Next action: on or after 2026-11-29 the RES-MAP-CONTENT-LINES ledger
-investigation (bullet below: re-check the ledger span; the ledger
-ops/runtime/logshapes.json has not been written since 2026-11-22, check the
-ledger consent and the writer). Then DUE 2026-11-30 22:03 local
+Next action: on or after 2026-11-29 the RES-MAP-CONTENT-LINES ledger span
+re-check (bullet below; the consent / writer question was answered session
+45: expected, no play since 2026-11-22). Then DUE 2026-11-30 22:03 local
 (CI-WATCH-ELECTRON-45-5-0 ruling, decision 0070): on or after that time a
 session checks the Electron 45.5.0 release age with gh api, bumps
 app/package.json and the lockfile (--save-exact), updates
@@ -33,7 +34,7 @@ missing; no watch_ci baseline move, there is none for electron). Also check
 the operator retry notes for act (m) in Checks > Tried in game via
 tools/live_verdicts.py (rows LIVE-SEARCHSTR-FIX, LIVE-FILTER-FIX,
 LIVE-FILTER-MERGE-FIX, TC-BUILDFILE-LIVE-FIX; LIVE-VERDICTS-CHECK, carried
-from session 44: none new then). Otherwise leave the loop to work the open
+from session 45: none new then). Otherwise leave the loop to work the open
 rows.
 If a session row unblocks, plan wave 63 in
 docs/plan/packages.json from it (PLAN / W<n> / CLOSE as sessions 25-28: one
@@ -70,14 +71,13 @@ and 5 (step 4, OA-2). If a line is lost or edited, the Q-23 default holds:
 stay local, nothing is pushed.
 
 Carried forward (not acted on yet):
-- LIVE-VERDICTS-CHECK (session 44): each session reads Checks > Tried in game via tools/live_verdicts.py; session 44 found no new verdicts; the four *-FIX rows stay BLOCKED on operator act (m).
-- BUILD-SWITCH-COPY design leftover (session 44, informational): the sr-only region B heading that takes focus after a switch shows no visible focus ring.
-- PROGRESSION design leftover (session 44, S4 optional): change how the new empty ascendancy line is hidden (reviews.log).
+- LIVE-VERDICTS-CHECK (session 45): each session reads Checks > Tried in game via tools/live_verdicts.py; session 45 found no new verdicts; the four *-FIX rows stay BLOCKED on operator act (m).
 - GEM POPOVER GAPS (session 43): quality lines, attack speed multipliers, level and attribute requirements, granted skills, icons (no permitted source yet; decision 0083).
 - KINDLER GEM LEVEL (session 43, ruled): Kindler gem buttons send no level by adjudicator ruling (the templates author no gem levels); revisit only if templates gain gem levels.
 - CI-WATCH-ELECTRON-45-5-0 (session 41 ruling, row open and BLOCKED: session): due 2026-11-30 22:03 local, steps in Next action. Reverses if the operator or 0070 waives the wait or the release date shows the wait already elapsed.
 - OPERATOR ACTS (session 40, batched into the one ask): OA-4: upload assets/brand/social-preview.png in GitHub Settings > Social preview (checked 1280x640, 62 KB); send docs/ops/price-alt-ask-draft.md to poe2scout (DATA-PRICE-ALT-ASK); paste a real uncut gem item text so the synthetic fixtures of decision 0094 can be checked.
-- RES-MAP-CONTENT-LINES (session 40): re-check the ledger span on or after 2026-11-29. The ledger (ops/runtime/logshapes.json) has not been written since 2026-11-22: investigate whether the ledger consent and the writer are live.
+- RES-MAP-CONTENT-LINES (session 40): re-check the ledger span on or after 2026-11-29. Session 45 (LEDGER-WRITER): the ledger stopped 2026-11-22 22:05 only because the game was not played since (consent on, writer idle by design); after the next play, logshapes.json mtime should track Client.txt within about a minute.
+- LEDGER-WRITER leftover (session 45, small, optional): the ledger plug being attached in the running core was not confirmed (core alive only); confirm via /api/debug or the Checks "Game log" notes after the next play.
 - CI BADGE (session 40, optional): the CI badge was left out because test_readme only allows assets/brand and docs/shots images; optionally rule on allowing the GitHub-served ci badge.
 - DEMO SHOTS (session 40, optional): the dashboard README shots show the "log quiet" banner (old demo log); optionally give the demo fixture fresh-timed lines.
 - TC-AUGMENT-WHATIF Settled line (session 40): its wording now says 5 s (amended); keep it.
@@ -198,14 +198,15 @@ Operator orders (sessions 5 and 6), live state notes: archive block "SESSION 20 
 
 Acceptance: the operator ask is out (or answered); any unblocked row is planned as wave 63 in packages.json (plan_check check green, waves --write applied) and closed as 08 section 7 says (open-row command prints "none open" or only DEFERRED / BLOCKED ids, status empty on main, leak sweep clean, last batch suite and npm test green, WAVE POINTER moved), every package merged or re-deferred with a reason.
 
+Do NOT redo (session 45, pushed): PG-18 merge 43276198; BSC-6 merge fbdc2edb; integrator paperwork c99fa7d4; LEDGER-WRITER answered (expected).
 Do NOT redo (session 44, pushed): BUILD-SWITCH-COPY f09d8070; PROGRESSION-ASC-EMPTY and PROGRESSION-NEXTUP-ORDER decision 0097 01e15fc4; README-STAMP-HIDDEN cdddde71 (keep ref deleted, record merged); README-SOURCE-FIRST 47f1a34b; RESEARCH-0064-TIDY 2b5fdf2a; integrator paperwork f04db57b; test_github_review archive lookup b316d227.
 Do NOT redo (session 43, pushed): PROGRESSION-OFFER 1e083311; PC-only README / FAQ 0804ff4a; ACTIVE-BUILD-PICK decision 0096 44548b55; ITEM-INFO-GEM-DETAIL and the gems snapshot URL fix 0a6c0002; GEM-LEVEL-WIRE 9258a6b0; LOOP-ADJUDICATE-MERGE row folded and archived bdadc9e1.
 
 
 Do NOT redo (sessions 6 to 34): docs/handoff-archive/ (closed blocks per session; 29 to 34 in block "SESSION 37 /done" of AL-2026-11-27.txt).
 
-In flight: lane driver (operator order: keep headless lanes running until stopped), pythonw pid 23540 (alive, read back session 43 /done), script <AL sidecar>\Scratch\lane_driver\lane_driver.py, log <AL sidecar>\Logs\lane_driver.log, progress ops/loop/control/progress/lane-driver.json; ticks every 60 s busy / 15 min idle; stops on ops/runtime/STOP_DRIVER, HALT, a cap hit or a route refusal; pid 23540 alive, read back session 44 /done: runs 21/120, idle (tick 56 at 08:31, 0 dispatched). Lanes 0-2 idle. HALT absent, REG_OPEN absent.
+In flight: lane driver (operator order: keep headless lanes running until stopped), pythonw pid 23540 (alive, read back session 43 /done), script <AL sidecar>\Scratch\lane_driver\lane_driver.py, log <AL sidecar>\Logs\lane_driver.log, progress ops/loop/control/progress/lane-driver.json; ticks every 60 s busy / 15 min idle; stops on ops/runtime/STOP_DRIVER, HALT, a cap hit or a route refusal; pid 23540 alive, read back session 45 /done: runs 21/120, idle (tick 59 at 09:23, 0 dispatched). Lanes 0-2 idle. HALT absent, REG_OPEN absent.
 
-Status (session 44 /done, 2026-11-28, fresh): gated whole suite green (parallel 6249 passed / 8 skipped in 89.99 s, timing-calc 10 passed 48.96 s, timing-rest 12 passed 23.61 s); npm 896/896; leak sweep ARMED needles=44, no HALT. Session commits f09d8070..b316d227 on origin/main; this hand-off commit follows and is pushed. Board skipped (opt-out).
+Status (session 45 /done, 2026-11-28, fresh): gated whole suite green (timing-calc 10 passed, timing-rest 12 passed, all phases exit 0); npm 896/896; leak sweep ARMED needles=44, no HALT. Session commits 43276198..c99fa7d4 on origin/main; this hand-off commit follows and is pushed. Board skipped (opt-out).
 
 Start with: read this file, then CLAUDE.md, ROADMAP.md, git log -10.
