@@ -78,3 +78,34 @@ record.
 
 The operator amends the floor, answers A-01 (then only the constant
 changes), or GGG documents the forum as a permitted source.
+
+## Addendum 2026-11-27 (adjudicator ruling): GitHub wikis and raw docs
+
+Decision: tools/webfetch.py adds two hosts to HOSTS, GITHUB_WEB
+(github.com) and GITHUB_RAW (raw.githubusercontent.com), and allowed()
+narrows each to read-only GET pages with no query string:
+- github.com: only `/<owner>/<repo>/wiki` and `/<owner>/<repo>/wiki/<page>`
+  (3 or 4 path segments, the third exactly `wiki`); every other github.com
+  path is refused with "only repository wiki pages are read".
+- raw.githubusercontent.com: `/<owner>/<repo>/<ref>/<path...>`, at least 4
+  segments, the file ending in `.md` or `.txt`.
+- Both refuse GGG_GITHUB_OWNERS and keep the encoded and dot segment
+  checks; poe2db and every wiki host (poe2wiki.net, poewiki.net, fandom)
+  stay refused by name. Tests: tests/test_dive_fetch.py.
+
+Alternatives: keep the API-only rule (rejected: public tool wikis and
+plain READMEs are where community build tools document formats, and the
+API's contents route returns base64 JSON a dive cannot read well); allow
+all of github.com (rejected: issues, code search and release assets are
+not docs, and the trade-site and GGG-owner rules are easier to keep with a
+narrow shape); allow any raw file type (rejected: scripts and images are
+not research text).
+
+Why: the two shapes are read-only text pages of public non-GGG
+repositories, the same sources the API route already reads, so the floor
+(no GGG path outside the two docs pages, no forum, no wiki hosts) is
+unchanged.
+
+Reverses if: GitHub asks tools not to read wiki or raw pages
+automatically, a dive is seen reading a non-docs file through the raw
+host, or the operator limits dives to the API again.
