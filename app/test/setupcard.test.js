@@ -296,7 +296,7 @@ test("idle shows Last session only while game_idle", () => {
   assert.equal(byClass(doc, "su-row").length, 1);
 });
 
-test("error names Open Checks, never a file to edit or a shell command", () => {
+test("error names its in-app control (Open Checks or Type the folder), never a file or shell command", () => {
   const doc = fresh();
   const shown = [];
   const ctx = { tabs: { show: (d, id, focus) => shown.push([id, focus]) } };
@@ -321,7 +321,8 @@ test("error names Open Checks, never a file to edit or a shell command", () => {
     e.rows.forEach((r) => assert.ok(r.length <= 52, r));
     assert.ok(e.title.length <= 38, e.title);
     assert.ok(words(text) + 2 + 2 <= 52, kind + ": 52 words with the button and heading");
-    if (kind !== "lost") { assert.match(e.rows[4], /Open Checks/, kind); }
+    if (kind === "missing") { assert.match(e.rows[4], /Open Checks/, kind); }
+    if (kind === "nopath") { assert.match(e.rows[4], /type the game folder in Settings/i, kind); }
   }
   assert.equal(U.errorKind(null), "lost");
   assert.equal(U.errorKind({ offline: true }), "lost");
@@ -343,6 +344,52 @@ test("lost mode: no dead-end Checks button, says quit from the tray (UX-LOST-MOD
     const w = U.view("error", s);
     assert.equal(w.rows.filter((r) => r.kind === "button").length, 1, w.kind);
   }
+});
+
+test("nopath names the typed game folder field and jumps to it (UX-NOPATH-TYPE-FOLDER)", () => {
+  const snap = { tailer: { consented: true, reading: false, path: "" } };
+  const v = U.view("error", snap);
+  assert.equal(v.kind, "nopath");
+  const texts = v.rows.filter((r) => r.kind === "text").map((r) => r.text);
+  assert.equal(texts[3], "Start the game once so it writes the log.");
+  assert.equal(texts[4], "Or type the game folder in Settings.");
+  assert.ok(!/Checks/.test(texts.join(" ")), "nopath no longer sends the player to Checks");
+  const btns = v.rows.filter((r) => r.kind === "button");
+  assert.equal(btns.length, 1);
+  assert.equal(btns[0].text, "Type the folder");
+  assert.equal(btns[0].action, "logpath");
+  assert.equal(U.FOLDER_BUTTON, "Type the folder");
+  // zero-click: one press opens Settings at the field through the rail
+  const doc = fresh();
+  const jumps = [];
+  const shown = [];
+  const ctx = { rail: { jump: (d, id, els) => { jumps.push([id, els]); return {}; } },
+    tabs: { show: (d, id, focus) => shown.push([id, focus]) } };
+  const m = C.paint(doc, snap, 0, ctx);
+  assert.equal(m.mode, "error");
+  assert.equal(buttons(doc).length, 1);
+  const btn = buttons(doc)[0];
+  assert.equal(btn.textContent, "Type the folder");
+  assert.equal(btn.getAttribute("data-action"), "logpath");
+  assert.equal(primaries(doc).length, 0);
+  btn.click();
+  assert.deepEqual(jumps, [["logpath-in", "reading-title"]]);
+  assert.deepEqual(shown, [], "the rail opens Settings itself");
+  assert.equal(doc.getElementById("checks").open, false, "Checks stays shut");
+  // no rail (a page without it): Settings still opens, on Checks
+  U.reset();
+  const doc2 = fresh();
+  const shown2 = [];
+  C.paint(doc2, snap, 0, { tabs: { show: (d, id, focus) => shown2.push([id, focus]) } });
+  buttons(doc2)[0].click();
+  assert.deepEqual(shown2, [["settings", false]]);
+  // the missing kind keeps Open Checks
+  const w = U.view("error", errorSnap());
+  assert.equal(w.kind, "missing");
+  assert.equal(w.rows.filter((r) => r.kind === "button")[0].text, "Open Checks");
+  // the field and its fallback heading exist on the page
+  assert.match(HTML, /id="logpath-in"/);
+  assert.match(HTML, /id="reading-title"/);
 });
 
 test("region C fits its track in setup, error and idle modes (full and compact)", () => {
