@@ -6,7 +6,7 @@ the same object. summarize() stays the only place event wording is
 made. Pure functions and constants; stdlib only.
 """
 
-from .common import _amount, _dict, _text
+from .common import _amount, _dict, _num_text, _text
 
 
 FALLBACK_TEXT = "Something happened in the log"
@@ -131,3 +131,24 @@ def summarize(ev):
     if t == "tailer_restarted":
         return "AshLight restarted its log reader"
     return FALLBACK_TEXT
+
+
+def sales_line(count, sums=(), unsummed=0):
+    """UTIL-SALES-TALLY (research 0064 G8): the session summary card's sales
+    sentence, or None with no sale. count: trades accepted that closed an
+    open trade card (decision 0019 pairing); sums: (currency, amount) pairs
+    in first-seen order; unsummed: sales with no usable listed price. The
+    pairing guesses the oldest card, so a sum is labelled an estimate."""
+    if not isinstance(count, int) or isinstance(count, bool) or count <= 0:
+        return None
+    parts = [f"{_num_text(a)} {c}" for c, a in sums]
+    head = f"Sales: {count}"
+    if not parts:
+        return head + (" (no listed price to add up)." if count == 1
+                       else " (no listed prices to add up).")
+    listed = parts[0] if len(parts) == 1 else (
+        ", ".join(parts[:-1]) + " and " + parts[-1])
+    note = "an estimate"
+    if unsummed > 0:
+        note += f"; {unsummed} not in the sum"
+    return f"{head}, about {listed} ({note})."

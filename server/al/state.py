@@ -564,8 +564,14 @@ class SessionState(CardsMixin, TradesMixin, CharsMixin, IdleMixin, ViewsMixin):
             changed = True
         elif t in ("trade_accepted", "trade_cancelled"):
             self._expire_trades(now)
-            if self._close_trade(ev.get("name")):
+            closed = self._close_trade(ev.get("name"))
+            if closed is not None:
                 changed = True
+                # UTIL-SALES-TALLY (decision 0088): an accepted trade that
+                # closed a card is a sale at that card's listed price
+                if t == "trade_accepted":
+                    self.stretch.sale(closed.get("price_amount"),
+                                      closed.get("price_currency"))
         elif t == "afk_changed":
             self.afk = bool(ev.get("on"))
             changed = True

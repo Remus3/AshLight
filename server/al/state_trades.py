@@ -71,14 +71,15 @@ class TradesMixin:
         """OVL-TRADE-CANCEL (decision 0019): a finished trade ("Trade
         accepted." / "Trade cancelled.") closes one open card: the one from
         `name` when a line names the counterparty, else the oldest. Caller
-        holds the lock. Returns True when a card went."""
+        holds the lock. Returns the card that went (UTIL-SALES-TALLY reads
+        its listed price), or None."""
         if not self.trade_requests:
-            return False
+            return None
         rows = list(self.trade_requests)
         drop = next((r for r in rows if name and r.get("from") == name), rows[0])
         self.trade_requests.clear()
         self.trade_requests.extend(r for r in rows if r is not drop)
-        return True
+        return drop
 
     def _trade_row(self, ev, now):
         self._trade_ids += 1
