@@ -23,7 +23,10 @@
    - error: reading is not possible. What is wrong (2 rows), what
      AshLight does and what the player can do (3 rows), and one in-app
      control, "Open Checks" (Settings > Checks). Never a file to edit or
-     a shell command.
+     a shell command. The lost kind has no button: Checks comes from the
+     AshLight that is not answering, so its last row says to quit from
+     the tray and reopen it, and the page reconnects by itself
+     (UX-LOST-MODE-NO-DEADEND, 136 px).
    - idle: game_idle (decision 0029). "Last session" from the core's
      block (6 label: value rows and an "Ended ..." facts row); shown only
      while the snapshot says game_idle, because contextMode picks idle
@@ -98,7 +101,10 @@
              "The numbers on screen are from before.",
              "AshLight restarts itself if it stopped.",
              "This page connects again by itself.",
-             "Open Checks if it stays like this."]
+             "If it stays, quit from the tray and reopen it."],
+      // Checks is filled by the same AshLight that is not answering, so a
+      // button there would open a stale list (UX-LOST-MODE-NO-DEADEND)
+      noButton: true
     }
   };
 
@@ -169,7 +175,7 @@
     var kind = errorKind(snap);
     var e = ERRORS[kind];
     var rows = e.rows.map(function (t) { return row("text", t); });
-    rows.push(row("button", CHECKS_BUTTON, { action: "checks" }));
+    if (!e.noButton) { rows.push(row("button", CHECKS_BUTTON, { action: "checks" })); }
     return { mode: "error", kind: kind, title: e.title, full: e.title, rows: rows,
              facts: "", factsDrop: false };
   }

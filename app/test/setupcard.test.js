@@ -321,10 +321,28 @@ test("error names Open Checks, never a file to edit or a shell command", () => {
     e.rows.forEach((r) => assert.ok(r.length <= 52, r));
     assert.ok(e.title.length <= 38, e.title);
     assert.ok(words(text) + 2 + 2 <= 52, kind + ": 52 words with the button and heading");
+    if (kind !== "lost") { assert.match(e.rows[4], /Open Checks/, kind); }
   }
   assert.equal(U.errorKind(null), "lost");
   assert.equal(U.errorKind({ offline: true }), "lost");
   assert.equal(U.errorKind({ tailer: { consented: true, reading: false, path: "" } }), "nopath");
+});
+
+test("lost mode: no dead-end Checks button, says quit from the tray (UX-LOST-MODE-NO-DEADEND)", () => {
+  const snap = Object.assign(errorSnap(), { offline: true });
+  const v = U.view("error", snap);
+  assert.equal(v.kind, "lost");
+  const texts = v.rows.filter((r) => r.kind === "text").map((r) => r.text);
+  assert.equal(texts.length, 5);
+  assert.equal(texts[4], "If it stays, quit from the tray and reopen it.");
+  assert.ok(texts.includes("This page connects again by itself."), "zero-click: it still reconnects");
+  assert.equal(v.rows.filter((r) => r.kind === "button").length, 0, "Checks is stale while lost");
+  assert.ok(!/Checks/.test(texts.join(" ")), "no row sends the player to Checks");
+  // the other error kinds keep their Open Checks button
+  for (const s of [errorSnap(), { tailer: { consented: true, reading: false, path: "" } }]) {
+    const w = U.view("error", s);
+    assert.equal(w.rows.filter((r) => r.kind === "button").length, 1, w.kind);
+  }
 });
 
 test("region C fits its track in setup, error and idle modes (full and compact)", () => {
