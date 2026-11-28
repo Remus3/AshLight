@@ -210,6 +210,9 @@ under 12px **after** zoom, so the smallest overlay size times the minimum
   focusable kind, drawn inside the element (outline-offset -3px), so a
   parent that clips its overflow never cuts it; only the one filled
   accent button and a ticked checkbox take it outside (2px).
+  A visually hidden region heading takes focus only by script; the
+  region it names draws the same 3px ring inside its edge while the
+  heading holds focus (web/app.css `.region:has(> .region-h:focus)`).
 - Auto-switch grace (TD-22, PLAY-TD-22B-TAB-FOCUS): a click, key press or
   scroll inside the shown tab or the tab row holds that tab for 10 s; a
   new item card, trade or build alert in that time marks Play "new" and the header line says once "New on Play: <what>.". Once the
