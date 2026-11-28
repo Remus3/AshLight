@@ -3,11 +3,19 @@
 One file per decision: `NNNN-<topic>.md` (decision, alternatives, why,
 reverses if). Numbers 0047 to 0076 are reserved for the packages of
 docs/plan/packages.json (docs/plan/07, Reserved decision numbers); a
-package uses the number in its new_files entry. 0077 to 0092
+package uses the number in its new_files entry. 0077 to 0095
 are taken. Numbers are reserved in the plan before a wave starts.
 Numbers are reserved per package in docs/plan/packages.json before a
 wave starts; the wave integrator adds the index line. 0035 stays unused.
 
+- 0095: TC-GEM-UNLOCK: gem unlock card and next-up steps for a pasted
+  build.
+- 0094: TC-UNCUT-GEM: uncut gem advice on the item-check press.
+- 0093: Augment what-if on the item-check press: a last staged PoB stage
+  ranks the pinned ModRunes.lua augments for a possible free socket by the
+  0024 blend, at most delta.MAX_PROBES calls and 5 s (12 s cut to keep a
+  warm press under R7), cancelled between calls; no quality probe (PoB
+  normalises quality).
 - 0092: PROGRESSION-VIEW: one Progression view (own-drawn passive and
   ascendancy trees from the cached GGG export, gems with supports, Spirit,
   point books counted, next-up strip) from the PoB build or a Kindler plan;

@@ -1884,3 +1884,45 @@ of the HALT check.
   the region I swap misfires or hides the item card in play, the decision
   0002 budgets are breached, TC-SPEC-FOLLOW changes pick()'s shape, or
   design 0001 allows motion.
+- TC-AUGMENT-WHATIF (decision 0093): the item-check press gains a last
+  stage "augment" (evaluate.STAGE_AUGMENT, same LastEval worker, mods card
+  marked pending) only with the calc on, decision 0091 rows loaded (core
+  reads pobtext.Augments only while tc_calc is on), a PoB delta for the
+  headline slot, a class in augment.CLASS_KEYS (PoB
+  GetSocketedAugmentTypes: base key weapon / armour / caster plus PoB's
+  base type) and a possible free socket (more sockets than rune lines;
+  worded "for a free socket"); corrupted, mirrored or unmodifiable items
+  get none; an augment's base-type and specific-type lines (Bonded left
+  out, one top-rank tier per family) are appended to the pressed item and
+  ranked by the 0024 blend against the build with that item in the slot; at
+  most delta.MAX_PROBES calls and 5 s (augment.TIME_S; 12 s measured a
+  13.1 s warm press, over the R7 12 s warm ceiling; amendment 2026-11-28),
+  the hand weights only order what is measured, cancelled by a newer press
+  before the next call; dashboard
+  notes only (text/augment.py, copy sheet augment.md, the 0091 credit
+  line), never a price (0017); calc off gives one sentence; no quality
+  probe because bridge set_item's Item:NormaliseQuality already scores at
+  PoB's default quality (live 2026-11-28). Reverses if: PoB changes its
+  augment types or ModRunes slot keys, the bridge stops normalising
+  quality, the free-socket rule misleads in play, the stage breaches R7 on
+  the real bridge, or decision 0091 reverses.
+- TC-UNCUT-GEM: an uncut Skill, Support or Spirit Gem press of level N
+  names, in dashboard notes only, the build's gems of that kind (pasted PoB
+  build, else the shown Kindler stage) that a level N cut can make and the
+  build does not show as socketed at that level, from the cached gems
+  snapshot through theorycraft/gemadvice.py; a gem with no snapshot tier is
+  named as unchecked, never claimed makeable; no build or no snapshot shows
+  nothing; fixtures synthetic from snapshot base names and lines (decision
+  0094). Reverses if: a live copy shape differs from both fixture shapes,
+  repoe-fork names the tier or kind under another field, GGG changes
+  cutting, or players need the advice on the overlay card.
+- TC-GEM-UNLOCK: on the player's level-up, pasted-build gems whose snapshot
+  level is now met get one overlay card per level-up (card time,
+  parts.moment, a press or new run drops it) and a Recent row as its twin,
+  and the Progression strip gets one step per gem usable at exactly this
+  level (add_next_source order 15, at most 2 steps of 52 characters, pasted
+  build only, never claiming the gem is owned), through
+  theorycraft/gemadvice.py (decision 0095). Reverses if: the 2-step cap
+  hides needed steps, gem level requirements change so the snapshot
+  misleads, the level-up line changes, or players want the steps for a
+  Kindler plan.
