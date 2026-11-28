@@ -22,7 +22,9 @@
      0013); the prices row only says so.
    - error: reading is not possible. What is wrong (2 rows), what
      AshLight does and what the player can do (3 rows), and one in-app
-     control, "Open Checks" (Settings > Checks). Never a file to edit or
+     control, "Open Checks" (Settings > Checks); the nopath kind names the
+     typed game folder field and its button "Type the folder" jumps there
+     (#logpath-in through ALRail.jump, UX-NOPATH-TYPE-FOLDER). Never a file to edit or
      a shell command. The lost kind has no button: Checks comes from the
      AshLight that is not answering, so its last row says to quit from
      the tray and reopen it, and the page reconnects by itself
@@ -71,6 +73,11 @@
   var SETUP_PROMISE = "Read only. Play in Windowed Fullscreen.";
   var NOT_SAVED = "Not saved. Try again.";
   var CHECKS_BUTTON = "Open Checks";
+  /* nopath: the typed game folder field (#logpath-in, Settings > Reading
+     and web data) is the fix for a moved install (UX-NOPATH-TYPE-FOLDER) */
+  var FOLDER_BUTTON = "Type the folder";
+  var FOLDER_FIELD = "logpath-in";
+  var FOLDER_ELSE = "reading-title";
   var IDLE_TITLE = "Last session";
   var IDLE_EMPTY = "The game may be closed. Nothing to sum up yet.";
   var PATH_CAP = 52;
@@ -93,7 +100,8 @@
              "Zone, level and deaths wait until it is found.",
              "AshLight keeps checking for it by itself.",
              "Start the game once so it writes the log.",
-             "Open Checks to see where AshLight looks."]
+             "Or type the game folder in Settings."],
+      button: { text: FOLDER_BUTTON, action: "logpath" }
     },
     lost: {
       title: "AshLight is not answering",
@@ -175,7 +183,10 @@
     var kind = errorKind(snap);
     var e = ERRORS[kind];
     var rows = e.rows.map(function (t) { return row("text", t); });
-    if (!e.noButton) { rows.push(row("button", CHECKS_BUTTON, { action: "checks" })); }
+    if (!e.noButton) {
+      var b = e.button || { text: CHECKS_BUTTON, action: "checks" };
+      rows.push(row("button", b.text, { action: b.action }));
+    }
     return { mode: "error", kind: kind, title: e.title, full: e.title, rows: rows,
              facts: "", factsDrop: false };
   }
@@ -272,6 +283,16 @@
     return true;
   }
 
+  /* Type the folder: the rail's jump opens Settings > Reading and web data
+     at the field (its heading while the field is hidden); a page with no
+     rail opens Settings on Checks, as before. */
+  function openFolder(doc, ctx) {
+    var c = ctx || env.ctx || {};
+    var rail = c.rail || (ROOT && ROOT.ALRail) || null;
+    if (rail && isFn(rail.jump)) { return !!rail.jump(doc, FOLDER_FIELD, FOLDER_ELSE); }
+    return openChecks(doc, c);
+  }
+
   /* A button row: the consent button keeps a row (.su-act) for its said
      word beside it; any other button is the row itself (PLAY-FIT-G5-TOTALS:
      no wrapper around a lone button). */
@@ -281,7 +302,9 @@
     btn.setAttribute("data-action", r.action);
     btn.textContent = r.text;
     if (r.action !== "consent") {
-      btn.addEventListener("click", function () { openChecks(doc, ctx); });
+      btn.addEventListener("click", function () {
+        if (r.action === "logpath") { openFolder(doc, ctx); } else { openChecks(doc, ctx); }
+      });
       return btn;
     }
     var wrap = el(doc, "div", "su-act");
@@ -368,8 +391,9 @@
   return {
     NAME: NAME, REGION: REGION, RETIRES: RETIRES, MODES: MODES,
     CONSENT_BUTTON: CONSENT_BUTTON, CHECKS_BUTTON: CHECKS_BUTTON, NOT_SAVED: NOT_SAVED,
+    FOLDER_BUTTON: FOLDER_BUTTON,
     ERRORS: ERRORS, IDLE_TITLE: IDLE_TITLE,
     view: view, errorKind: errorKind, render: render, install: install,
-    consent: consent, openChecks: openChecks, wire: wire, reset: reset, spec: spec
+    consent: consent, openChecks: openChecks, openFolder: openFolder, wire: wire, reset: reset, spec: spec
   };
 }));
