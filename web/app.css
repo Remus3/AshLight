@@ -798,6 +798,12 @@ button.btn-32 { min-height: 2rem; padding: 0 var(--al-space-3); line-height: var
   margin: 0; min-width: 0; }
 .card-foot { min-height: 1.75rem; }
 .card-act > .one-line { flex: 1 1 0; }
+/* a status sentence beside a button wraps, never truncates (design 0001
+   section 9 rule 6, UX-SETTINGS-STATUS-WRAP): it takes the rest of the row
+   and drops to its own line when that is under 10em */
+.card-act > :is([id$="-said"], [id$="-status"]),
+.set-row > [id$="-status"] { flex: 1 1 10em; min-width: 0; overflow-wrap: anywhere; }
+.card-act > :is([id$="-said"], [id$="-status"]):empty { display: none; }
 .card-h3 { margin: var(--al-space-1) 0 0; font-size: var(--al-fs-body); line-height: var(--al-lh-body); font-weight: 600; }
 .card-h3 .muted { font-weight: 400; }
 .card-kv { margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 var(--al-space-3); }

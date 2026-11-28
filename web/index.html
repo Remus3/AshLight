@@ -200,7 +200,7 @@
           <button id="build-copy" type="button" class="secondary btn-28">Copy code</button>
           <!-- ACTIVE-BUILD-PICK (decision 0096): web/kindler.js wires it -->
           <button id="build-use" type="button" class="chip" aria-pressed="true" data-label="Use pasted build for Play" hidden>Use pasted build for Play</button>
-          <span id="build-copy-status" class="row-meta one-line muted"></span>
+          <span id="build-copy-status" class="row-meta muted"></span>
         </p>
       </div>
       <div class="card-foot" data-card-foot>
@@ -220,7 +220,7 @@
           aria-describedby="build-status"
           placeholder="Path of Building code"></textarea>
       </div>
-      <p id="build-status" class="row-meta one-line muted"></p>
+      <p id="build-status" class="row-meta muted"></p>
       <!-- TC-LINK-RECOVER (decision 0013): a link refused while web data is off.
            The first click only shows the opt-in sentence; web data turns on only
            on the confirm click, which then loads the same link once. -->
@@ -254,7 +254,7 @@
         folders.</p>
       <p class="card-act">
         <button id="buildfile-save" type="button" class="secondary btn-28">Save .build file</button>
-        <span id="buildfile-said" class="row-meta one-line muted"></span>
+        <span id="buildfile-said" class="row-meta muted"></span>
       </p>
       <p id="buildfile-summary" class="row-meta one-line muted"></p>
       <ul id="buildfile-notes" class="card-notes row-meta muted" hidden></ul>
@@ -336,8 +336,8 @@
       <label for="filter-merge-file" class="row-meta">Filter file</label>
       <input id="filter-merge-file" type="file" accept=".filter,text/plain">
     </div>
-    <p class="card-act"><span id="filter-merge-said" class="row-meta one-line muted"></span><span
-      id="filter-said" class="row-meta one-line muted"></span></p>
+    <p class="card-act"><span id="filter-merge-said" class="row-meta muted"></span><span
+      id="filter-said" class="row-meta muted"></span></p>
     <p class="muted small">Or <button id="filter-download" type="button" class="link">Download ashlight.filter</button>
       and add <code class="filter-line">Import "ashlight.filter" Optional</code> to your
       filter.</p>
@@ -421,7 +421,7 @@
     <div class="card-page" data-page="watch" data-label="Your checked items" hidden>
       <p id="watch-text" class="row-meta"></p>
       <p class="card-act"><button id="watch-clear" type="button" class="secondary btn-28" hidden>Clear checked items</button><span
-        id="watch-said" class="row-meta one-line muted"></span></p>
+        id="watch-said" class="row-meta muted"></span></p>
       <p class="row-meta muted">Uses the poe.ninja prices AshLight already has. It asks the web
         nothing new.</p>
     </div>
@@ -482,7 +482,7 @@
       <p class="card-act"><button id="weights-reset" type="button" class="secondary btn-28"
         aria-describedby="weights-reset-q">Reset to defaults</button></p>
     </div>
-    <p id="weights-status" class="row-meta one-line muted" role="status" aria-live="polite"></p>
+    <p id="weights-status" class="row-meta muted" role="status" aria-live="polite"></p>
   </section>
   </div>
   </div>
@@ -792,7 +792,7 @@
       <form id="webdata-form" class="webdata-form set-row">
         <label class="check" for="webdata-on"><input id="webdata-on" type="checkbox">
           Use web data</label>
-        <span id="webdata-status" class="row-meta one-line muted"></span>
+        <span id="webdata-status" class="row-meta muted"></span>
         <!-- DATA-CONTACT-UI (F-018): the write-only contact for poe.ninja,
              never prefilled, cleared after a save (web/prices.js
              contactView); Save submits the form. DATA-CONTACT-CLEAR: the
