@@ -62,9 +62,14 @@ function clientWindow(ctx, win, ses) {
   lock(ctx, ses || (win && win.webContents && win.webContents.session));
 }
 
+/* Is the filter on ses (REL-SELFTEST-CLIENT reads it after ready)? */
+function isLocked(ses) {
+  return !!ses && typeof ses === "object" && locked.has(ses);
+}
+
 /* Tests only: forget which sessions are locked. */
 function reset() {
   locked = new WeakSet();
 }
 
-module.exports = { ready, overlayWindow, clientWindow, lock, reset, APP_ROOT };
+module.exports = { ready, overlayWindow, clientWindow, lock, isLocked, reset, APP_ROOT };

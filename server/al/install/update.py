@@ -339,10 +339,11 @@ def _already_staged(home, version, hashes):
 
 
 def _default_selftest(idle, clicked, spawn, poll_s, max_wait_s, sleep, clock):
-    def run(home, version):
+    def run(home, version, electron=None):
         return selftestmod.run(home, version, idle=idle, clicked=clicked,
                                spawn=spawn, poll_s=poll_s, max_wait_s=max_wait_s,
-                               sleep=sleep, clock=clock)
+                               sleep=sleep, clock=clock, electron=electron)
+    run.takes_electron = True  # REL-SELFTEST-CLIENT: the new Electron is checked too
     return run
 
 
@@ -467,7 +468,8 @@ def _stage_verified(home, version, data, sums_b, release_b, pins, marker,
     steps["extract"] = install.lay_out(home, version, data)
     say(f"update: extract {steps['extract']}")
 
-    res = selftest(home, version)
+    electron = homemod.layout(home)["runtime"] / folders["electron"] / paths.ELECTRON_EXE
+    res = selftestmod.call(selftest, home, version, electron)
     folded = install._fold_selftest(res)
     report["selftest"] = folded
     steps["selftest"] = folded["status"]
