@@ -1665,7 +1665,7 @@ def kindler_page(sizes=KINDLER_SIZES):
     body = htmlscan.cut(body, comments=False, repl="", eat_space=True)
     tid, tlabel = kindler_template()
     plan_answer, here = kindler_plan(tid)
-    build_text = f"Version {VERSION}, build {PIN_COMMIT}, dev"  # web/panels/version.js
+    build_text = f"Version {VERSION} ({PIN_COMMIT[:7]}), dev"  # web/panels/version.js footerText
     js = (_KINDLER_JS.replace("__OUT__", json.dumps(KINDLER_OUT))
           .replace("__BUILD__", json.dumps(build_text))
           .replace("__TABS__", str(KINDLER_TABS)).replace("__LABEL__", json.dumps(KINDLER_LABEL))

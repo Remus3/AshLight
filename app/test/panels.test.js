@@ -923,7 +923,7 @@ test("the consent, restart and version panels hand app.js their hooks on their w
   await tickOver();
   assert.deepEqual(plain(p.calls.api.map((c) => c.slice(0, 2))), [["GET", "/api/version"]]);
   // WEB-PLAY-FOOT-ONE-ROW: the footer cuts the build to 7 hex, Settings keeps 12
-  assert.equal(p.$("build-line").textContent, "Version 0.4.2, build 0123456");
+  assert.equal(p.$("build-line").textContent, "Version 0.4.2 (0123456)");
   assert.equal(p.$("build-line").hidden, false);
   assert.equal(p.$("about-version").textContent, "Version 0.4.2, build 0123456789ab");
   // the next push clears nothing while no restart was asked

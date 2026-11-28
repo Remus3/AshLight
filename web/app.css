@@ -401,7 +401,7 @@ input[type="checkbox"] { width: 24px; height: 24px; vertical-align: middle; }
    the version line to a second row. WEB-PLAY-FOOT-ONE-ROW: the footer
    shows the build cut to 7 hex (web/panels/version.js footerText; the
    12-hex line stays in Settings > About and data), so the longest line
-   ("Version x.y.z, build <7 hex>, dev") keeps one 32 px row at 1024 px
+   ("Version x.y.z-rc.n (<7 hex>), dev") keeps one 32 px row at 1024 px
    whatever the 7 hex letters are (tests/test_play_fit.py FOOT_PX).
    Compact and full hold the footer at 2rem as a minimum, not a fixed
    height, so a 1.4.12 text spacing override or a narrow flow window

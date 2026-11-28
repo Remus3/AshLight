@@ -61,6 +61,13 @@ def _scratch(tmp_path, extra=None):
     return repo
 
 
+def _next_version(old):
+    """A version above the checkout's own, so the scratch bumps keep
+    passing after a real bump (0.2.0-rc.1 -> 0.2.1-rc.0)."""
+    major, minor, patch, _rc = rv.parse(old)
+    return "%d.%d.%d-rc.0" % (major, minor, patch + 1)
+
+
 def _run(*args):
     return subprocess.run([sys.executable, str(RELEASE), *args], cwd=str(ROOT),
                           capture_output=True, text=True, check=False)
@@ -165,7 +172,7 @@ def test_bump_rewrites_the_line_below_the_marker(tmp_path):
     readme = ("<!-- %s -->\n```powershell\nirm 'X/%s' | iex\n```\nkeep %s\n"
               % (marker, old, old))
     repo = _scratch(tmp_path, {"README.md": readme})
-    new = "0.2.0-rc.0"
+    new = _next_version(old)
     proc = _run("bump", new, "--root", str(repo))
     assert proc.returncode == 0, proc.stderr
     assert (repo / "README.md").read_text(encoding="utf-8") == (
@@ -207,7 +214,7 @@ def test_bump_on_scratch_changes_exactly_the_version_paths(tmp_path):
         "notes.txt": "unrelated %s\n" % old,
     })
     lock_before = json.loads((repo / rv.LOCK_REL).read_text(encoding="utf-8"))
-    new = "0.2.0-rc.0"
+    new = _next_version(old)
     proc = _run("bump", new, "--root", str(repo))
     assert proc.returncode == 0, proc.stderr
     assert _status(repo) == sorted([
@@ -226,8 +233,9 @@ def test_bump_on_scratch_changes_exactly_the_version_paths(tmp_path):
         assert b"\r\n" not in (repo / rel).read_bytes() or \
             b"\r\n" in (ROOT / rel).read_bytes()
     # the next bump goes on from the new version; rc -> release is upward
-    assert _run("bump", "0.2.0", "--root", str(repo)).returncode == 0
-    assert rv.source_version(repo) == "0.2.0"
+    release = new.split("-")[0]
+    assert _run("bump", release, "--root", str(repo)).returncode == 0
+    assert rv.source_version(repo) == release
 
 
 def test_bump_refusals_write_nothing(tmp_path):

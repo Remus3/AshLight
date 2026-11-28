@@ -58,7 +58,8 @@
      RUN-BUILD-STAMP-UI (F-027, decision 0082 part 2): the version line
      from the core's build string '<x.y.z>[+<12 hex>][.dev]':
      "Version 0.1.0, build 0123456789ab", ", dev" while hot reload is on;
-     "" for anything else. */
+     "" for anything else. The footer shows footerText's short form,
+     "Version 0.1.0 (0123456)", the first 7 of the same 12 hex. */
   function versionText(doc) {
     var raw = doc && (typeof doc.build === "string" ? doc.build : doc.version);
     if (typeof raw !== "string" || raw.length > 100) { return ""; }
@@ -80,11 +81,15 @@
      the footer stays one row at 1024 px: the build cut to its first 7 hex
      (always 7 characters, so the row width no longer moves with the
      commit by more than a letter's width); the full 12-hex line stays in
-     Settings > About and data. "" when versionText says nothing. */
+     Settings > About and data. "" when versionText says nothing.
+     REL-PREP 0.2.0-rc.1: a pre-release version is 5 characters longer
+     and wrapped the 1024 px footer to two rows, so the short form puts
+     the build in brackets instead of ", build ": "Version 0.2.0-rc.1
+     (0123456)", no wider than the old "Version 0.1.0, build 0123456". */
   function footerText(doc) {
     var text = versionText(doc);
-    var m = /^(Version [^,]+, build )([0-9a-f]{12})(.*)$/.exec(text);
-    return m ? m[1] + m[2].slice(0, 7) + m[3] : text;
+    var m = /^Version ([^,]+), build ([0-9a-f]{12})(.*)$/.exec(text);
+    return m ? "Version " + m[1] + " (" + m[2].slice(0, 7) + ")" + m[3] : text;
   }
   /* BUILD-STAMP:end */
 

@@ -174,13 +174,17 @@ function webVersionText(name) {
 }
 
 /* WEB-PLAY-FOOT-ONE-ROW: the footer's short form, the same line with the
-   build cut to 7 hex so the footer keeps one row at 1024 px. */
+   build cut to 7 hex in brackets so the footer keeps one row at 1024 px,
+   a pre-release version included. */
 test("dashboard footerText: the version line with the build cut to 7 hex", () => {
   const short = webVersionText("footerText");
   for (const [doc, want] of LINES) {
-    assert.equal(short(doc), want.replace(SHA, SHA.slice(0, 7)), JSON.stringify(doc));
+    assert.equal(short(doc), want.replace(", build " + SHA, " (" + SHA.slice(0, 7) + ")"),
+                 JSON.stringify(doc));
   }
-  assert.equal(short({ build: "0.1.0+" + SHA + ".dev" }), "Version 0.1.0, build 0123456, dev");
+  assert.equal(short({ build: "0.1.0+" + SHA + ".dev" }), "Version 0.1.0 (0123456), dev");
+  assert.equal(short({ build: "0.2.0-rc.1+" + SHA }), "Version 0.2.0-rc.1 (0123456)");
+  assert.equal(short({ build: "0.2.0-rc.1+" + SHA + ".dev" }), "Version 0.2.0-rc.1 (0123456), dev");
 });
 
 test("dashboard versionText says exactly what the About text says", () => {

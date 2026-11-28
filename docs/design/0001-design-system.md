@@ -204,8 +204,8 @@ under 12px **after** zoom, so the smallest overlay size times the minimum
   stays on each card that shows the credited data (Run > Acts, Build and
   items > Prices, the price row of the item check). The footer keeps the
   GGG disclaimer and trademark lines. The footer's version line shows the
-  build cut to 7 hex (footerText); Settings > About and data shows the
-  full 12.
+  build cut to its first 7 hex in brackets ("Version 0.2.0-rc.1 (0123456)",
+  footerText); Settings > About and data shows "build" and the full 12.
 - Focus ring (TD-22, PLAY-TD-22A-A11Y-CSS): one 3px accent ring for every
   focusable kind, drawn inside the element (outline-offset -3px), so a
   parent that clips its overflow never cuts it; only the one filled
