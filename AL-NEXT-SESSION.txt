@@ -3,11 +3,9 @@ AL NEXT SESSION
 SESSION: 44   (FLEET item 13 counter; /done writes n+1)
 
 WAVE POINTER: wave 62 done (W62-PLAN 206094b; GP-15, GP-16 b027ee6, AUTO-20 93e40b5, TEST-A11Y-NEWEST-DEVTOOLS dcd49d1, TEST-PLAYFIT-LOAD-FLAKE 6ea915c; W62-CLOSE 3960390 pushed), next wave 63 (nothing dispatchable at session 33 /done: every open session row waits on an operator act, a gate or a watch; session 39: still nothing dispatchable)
-NOTE (session 41 lines, moved session 42): the session 41 NOTE (CI-RED-HANDOFF, five superseded loop records, LOOP-REDISPATCH and CI-WATCH-ELECTRON-45-5-0 rulings, lane driver start), the session 41 /done NOTE and the session 41 Do NOT redo: archive block "SESSION 42 /done" of AL-2026-11-28.txt.
-NOTE (session 42, 2026-11-28): loop record Hc25fb4 merged as-is 018f1832 (adjudicator ruling: the gate red test_dash_perf::test_dashboard_elements_task_time_and_heap was foreign load noise, passes on main alone, diff test-only, the calc-gated test asserts the 0093 budgets 12 s warm / 30 s first; alternatives: rework, park; reverses if it reds on a quiet machine with only that diff). REVIEW-GH-20261128 reworked and merged 98daa85c (README download-place line restored verbatim, the other review fixes stand; reverses if the F-126 one-place rule is dropped); row closed and archived. Both loop records read back merged (ops/loop/control/loop_items). Row LOOP-ADJUDICATE-MERGE filed (no merge / salvage command for adjudicate-parked records; sessions merge keep refs by hand and set records merged via Items.put). Progress file watch-hc25fb4.json marked done (superseded, record merged). Next free decision number: 0096.
 NOTE (session 43, 2026-11-28, interactive, all pushed to origin main): 1e083311 PROGRESSION-OFFER (Play item-check region gets a Next up button that opens the tree view; the Item check button always shows; root cause: the tree view was reachable only after a live level-up or via the far-right Progression sub-tab); 0804ff4a README and docs/guide/faq.md say Windows PC only (phone and Steam Deck mentions removed, one README line: Steam Deck and Linux not supported); 44548b55 ACTIVE-BUILD-PICK, decision 0096 (active build source per character: pasted build or Kindler plan, 'Use Kindler plan' / 'Use pasted build' on Play and the Build card, choice persists); 0a6c0002 ITEM-INFO-GEM-DETAIL (gem details in the item popover from repoe-fork poe2 skill_gems.json / skills.json / gem_tags.json with a gem_details/ split; gems snapshot 404 fixed (old gems.json URL); decision 0083 amendment 2026-11-28); 9258a6b0 GEM-LEVEL-WIRE (Progression gem buttons pass the pasted build's socket level; CLAUDE.md DATA-GEMS-SNAP and ITEM-INFO entries updated). Next free decision number: 0097.
+NOTE (session 42 lines, moved session 43): the session 42 NOTE (Hc25fb4 merge ruling, REVIEW-GH-20261128 rework, LOOP-ADJUDICATE-MERGE filed), the session 42 /done NOTE, the session 41 pointer line and the session 42 Do NOT redo: archive block "SESSION 43 /done" of AL-2026-11-28.txt.
 NOTE (session 43 /done): inbox: no new notes since session 42 (the three MAIN notes already recorded). roadmap_fold: LOOP-ADJUDICATE-MERGE flipped (loop merge 00008abf) and pruned to docs/roadmap/archive/2026-11.md, bdadc9e1. reap --apply: 0 removed, 3 kept (lane-0, lane-1, lane-2, fleet_lanes lane worktrees). Loop record README-STAMP-HIDDEN parked in adjudicate (gates_ok false; foreign red tests/test_loop_handoff.py::test_live_handoff_loop_bullets_are_counted_and_well_formed, keep ref refs/al/keep/README-STAMP-HIDDEN, commit de74dbe8).
-NOTE (session 42 /done): inbox scan: MAIN 2026-11-16-2109 and 2026-11-27-2239 INFORMATION TERMINAL (skip, no reply); MAIN 2026-11-27-1618 ORDER kit v33 already acted (154595f7). roadmap_fold: 4 row files applied (LOOP-ADJUDICATE-MERGE, README-SOURCE-FIRST, README-STAMP-HIDDEN added; REVIEW-GH-20261128 flipped and pruned to docs/roadmap/archive/2026-11.md) 853a3a7d. reap --apply: 0 removed, 3 kept (lane-0, lane-1, lane-2, fleet_lanes lane worktrees).
 NOTE (sessions 25-39 pointer lines and the session 38 WATCH suite-wall note, moved session 41): archive block "SESSION 41 /done" of AL-2026-11-28.txt (each line names its own archive block; the WATCH note: a 3-run gated soak median over 125 s applies decision 0060's split reverses-if via a filed row, never a budget move).
 NOTE (session 29, still open): DATA-GUIDE-ACTS-5-6 waits on GATE-POE2-10 (2026-12-11 or later). Operator answers 2026-11-26 recorded 19c775b (line OPERATOR ANSWERS).
 NOTE (session 23, still open): open design findings DN-2..DN-4, UH-1, UH-2 (S4 OPEN, reviews.log). Plug routes may answer PUT after the guard (UI-CARD-COLLAPSE; route table GET 19, POST 21, PUT 2).
@@ -97,30 +95,7 @@ Carried forward (not acted on yet):
   8961, and reads back both /api/health. Rollback is in the script header.
   Agents never start or stop the app (adjudicator 2026-11-21). Follow-up for
   an agent-run cutover: install.ps1 needs a no-shell switch (new package).
-- WAVE-24 FOLLOW-UPS (session 19): DATA-CONTACT-UI D-1 focus drops to body
-  after Save hides the contact row (S3), D-2/D-3 nits;
-  TC-WEIGHTS-DELTA-EXPORT D-1 "Downloaded" sentence says settings only (S3);
-  RUN-HISTORY-UNDO no Escape for Undo; PLAY-PAGER-SCALE-24: btn-24 and other
-  1.5rem sizes still under 24 px below scale 1; OVL-APP-SCHEME-STRICT:
-  app/test/cdp/capture.mjs still loads the overlay as file:// (demo capture
-  overlay shows waiting); RUN-BUDGET-TESTS-LIVE keeps the live B10 check at
-  215 MB until RUN-BUDGET-CALIBRATE-B11; TEST-SLOW-BUDGET follow-up row
-  TEST-SUITE-T0 filed; DATA-PRICE-TYPES-FILE: a missing price_types.json
-  falls back to the built-in lists.
-- WAVE-23 FOLLOW-UPS (session 19): PLAY-TD-21A left old wording pointing at
-  the moved controls (diag.py FIX_SNAPSHOT_OFF "under Prices and web data",
-  FIX_HOTKEY and FIX_TOGGLE_KEY "in AshLight's Tools", text/price.py lines,
-  settingsio.js message, hotkeys.js comment on #layout-status); REL-UPDATE-CHECKS
-  copy nits (FIX_ROLLBACK opens with a negative, "Its version file can't be
-  read.", a comma splice) and report "mode" is implied only;
-  TEST-SHOTS-RENDER README nits (blank line before the 360/overlay pictures,
-  "plain ground" -> "plain background") and demo shots show a ~119 h session
-  clock; OVL-KEY-HINT D-1 N5 exemption not in design 0001 s10; OVL-APP-SCHEME
-  live render on the scheme not yet seen (opt-in overlay smoke, AUTO-22 runs
-  it daily when idle); RUN-LIVE1-FIXTURES kept verified lines in
-  tests/test_parser.py LIVE1_VERIFIED instead of the fixture file; AUTO-13
-  left the al_loop.py idle line "backed off to weekly (3 dives, 0 plans)"
-  stale; parsed Dependabot multi-bump group titles stay needs-review.
+- WAVE-23 AND WAVE-24 FOLLOW-UPS (session 19, moved session 43, still open): full text in archive block "SESSION 43 /done" of AL-2026-11-28.txt (W24 DATA-CONTACT-UI D-1..D-3, TC-WEIGHTS-DELTA-EXPORT D-1, RUN-HISTORY-UNDO Escape, PLAY-PAGER-SCALE-24 sizes, OVL-APP-SCHEME-STRICT capture.mjs file://, RUN-BUDGET-TESTS-LIVE B10, TEST-SUITE-T0, DATA-PRICE-TYPES-FILE fallback; W23 PLAY-TD-21A old wording, REL-UPDATE-CHECKS copy nits, TEST-SHOTS-RENDER README nits and session clock, OVL-KEY-HINT D-1, OVL-APP-SCHEME live render, RUN-LIVE1-FIXTURES LIVE1_VERIFIED, AUTO-13 idle line, Dependabot group titles).
 - DEV-PORT (ruled 2026-11-21): deferred to the install cutover; checkout
   on 8960 ("port": null) until then, at cutover "port": 8961 in
   config/local.json and read back the bound port. Reverses if: an installed copy or installer self-test starts
@@ -216,23 +191,7 @@ Carried forward (not acted on yet):
   itself; nothing to remember. If HALT is still present on 2026-12-11, the
   session of that day flips GATE-POE2-10 by hand from the pending finding.
   Runbook docs/ops/1.0-launch-runbook.md.
-- WAVE 4-5 NOTES (next owner of each file): design 0001 section 9 needs
-  the price-age templates (DPC-2) and the Keep / Vendor item-check
-  templates (TCK-1, TCK-2, wording in decision 0057; line 3 "Levelling
-  rule, no build" when a package widens cardparts WORD_KEYS);
-  tests/test_audit_pass5_low.py::test_p5_5_terminated_section_still_re_merges_once
-  uses today's date (midnight flake); PGR-1..3 (still open after wave 17):
-  .al-pager-btn[aria-disabled="true"] needs a non-colour cue (text 4.5:1,
-  boundary 3:1, target >= 24 px), add .al-pager-btn[hidden] { display:
-  none }, web/pager.js set() moves focus to the toggle when it hides a
-  focused Prev / Next; TD9B-1, TD9B-3: nothing sets
-  data-text-spacing="user" (its setter adds a tests/test_a11y.py pin),
-  legacy tile h2s in region G become h3 or labels, footer 57 px runs the
-  page 25 px over at 1280x760, 1264x821, 1024x700; notice kinds 2 and 7
-  are never queued (no snapshot source) and web data off by choice still
-  counts as a Setup step; tests/test_ux_review.py imports
-  test_design_contrast, a test-to-test import tests/test_test_layout.py
-  misses.
+- WAVE 4-5 NOTES (moved session 43, still open): full text in archive block "SESSION 43 /done" of AL-2026-11-28.txt (DPC-2, TCK-1, TCK-2 templates in design 0001 section 9; test_p5_5 midnight flake; PGR-1..3 pager button cues; TD9B-1, TD9B-3 text-spacing setter, region G h2s, footer overflow; notice kinds 2 and 7; test_ux_review test-to-test import).
 
 Context: CLAUDE.md (Settled list), docs/plan/07-execution-plan.md, 08-orchestration.md, 09-operator-acts.md, docs/plan/packages.json (plan of record; tools/plan_check.py check / wave <n> / rows), ROADMAP.md (open rows; done rows pruned into docs/roadmap/archive/2026-11.md; docs/roadmap/new|done row files folded by /done), docs/decisions/README.md, docs/design/reviews.log, ops/loop/control/HALT, ops/runtime/ggg_docs/.
 Operator orders (sessions 5 and 6), live state notes: archive block "SESSION 20 /done" of AL-2026-11-22.txt (probe /api/health before touching the app; a wave agent never starts or stops the app, core, overlay or loop).
@@ -241,7 +200,6 @@ Acceptance: the operator ask is out (or answered); any unblocked row is planned 
 
 Do NOT redo (session 43, pushed): PROGRESSION-OFFER 1e083311; PC-only README / FAQ 0804ff4a; ACTIVE-BUILD-PICK decision 0096 44548b55; ITEM-INFO-GEM-DETAIL and the gems snapshot URL fix 0a6c0002; GEM-LEVEL-WIRE 9258a6b0; LOOP-ADJUDICATE-MERGE row folded and archived bdadc9e1.
 
-Do NOT redo (session 42, pushed): loop record Hc25fb4 (merged 018f1832, augment-stage timing test; its LOOP: bullet is dropped); REVIEW-GH-20261128 (merged 98daa85c, row closed and archived 853a3a7d); row LOOP-ADJUDICATE-MERGE is filed (853a3a7d), not to be filed again.
 
 Do NOT redo (sessions 6 to 34): docs/handoff-archive/ (closed blocks per session; 29 to 34 in block "SESSION 37 /done" of AL-2026-11-27.txt).
 
