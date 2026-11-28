@@ -10,9 +10,19 @@ only; stdlib only.
 
 # the route (POST /api/build-source): a refusal is a 400 with one of these
 SAVE_FAILED = "AshLight couldn't save your build choice."
-BAD = "That build choice isn't one AshLight understands."
-NO_CHARACTER = "Play a character first, so AshLight knows whose build this is."
-NO_RESULT = "Generate this Kindler plan first, then use it for Play."
+# (design review BSC-2: after the page's lead "The build didn't switch. "
+# each line stays at 12 words or fewer)
+BAD = "That choice isn't available. Pick it again."
+NO_CHARACTER = "Play a character first."
+NO_RESULT = "Generate this Kindler plan first."
+# BUILD-SWITCH-COPY: each refusal also carries one fixed reason word, so a
+# page can tell why without reading free text; the word maps to the
+# sentence above and nothing else (never a path, a name or free text)
+REASONS = {
+    "bad": BAD,
+    "no_character": NO_CHARACTER,
+    "no_result": NO_RESULT,
+}
 
 # the Play build line (region B)
 KINDLER_NAME = "Kindler: "  # row 1: "Kindler: <tab label>, level N"

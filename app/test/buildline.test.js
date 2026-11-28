@@ -250,3 +250,74 @@ test("a failed switch is said on the polite line, never thrown", async () => {
   assert.equal(BL.model(snapWith({ state: "fits", switch: { label: "", use: "pasted" } })).switchTo,
     null, "no words, no switch");
 });
+
+/* BUILD-SWITCH-COPY: a refusal says why from the answer's fixed reason
+   word; anything else keeps the general line. */
+test("a refused switch says why from the reason word", async () => {
+  BL.reset();
+  const doc = makeDoc();
+  const said = [];
+  const tabs = { say: (d, t) => said.push(t) };
+  function refuse(body) {
+    const e = new Error("HTTP 400");
+    e.status = 400;
+    e.body = body;
+    return () => Promise.reject(e);
+  }
+  const why = "Play a character first.";
+  BL.wire(doc, { tabs, api: refuse({ error: why, reason: "no_character" }) });
+  await BL.useSource({ use: "pasted" });
+  BL.wire(doc, { tabs, api: refuse({ error: "cache\\some\\file.json", reason: "elsewhere" }) });
+  await BL.useSource({ use: "pasted" });
+  BL.wire(doc, { tabs, api: refuse({ reason: "no_result" }) });
+  await BL.useSource({ use: "pasted" });
+  BL.wire(doc, { tabs, api: refuse({ error: "x".repeat(121), reason: "bad" }) });
+  await BL.useSource({ use: "pasted" });
+  assert.deepEqual(said, [
+    "The build didn't switch. " + why,
+    "The build didn't switch. Try again.",
+    "The build didn't switch. Try again.",
+    "The build didn't switch. Try again."]);
+  assert.deepEqual(BL.REASONS, ["bad", "no_character", "no_result"]);
+});
+
+/* BUILD-SWITCH-COPY: the switch hiding while focused hands focus on, to
+   the paste button that takes its place, else the region heading. */
+test("a switch that hides with focus hands focus on", () => {
+  BL.reset();
+  const doc = makeDoc();
+  Object.defineProperty(doc, "activeElement", { get() { return doc.active; } });
+  const heading = doc.createElement("h2");
+  heading.id = "play-b-h";
+  doc.region.appendChild(heading);
+  BL.wire(doc, { tabs: null, api: () => Promise.resolve({}) });
+  const sw = Object.assign({}, FITS, { switch: { label: "Use pasted build", use: "pasted" } });
+  BL.paint(doc, snapWith(sw));
+  const swap = doc.getElementById("bl-swap");
+  swap.focus();
+  BL.paint(doc, snapWith(FITS));
+  assert.equal(swap.hidden, true);
+  assert.equal(doc.active, heading, "no paste button: the region heading");
+  assert.equal(heading.getAttribute("tabindex"), "-1");
+  // no build left: the paste button takes the switch's place
+  BL.paint(doc, snapWith(sw));
+  swap.focus();
+  BL.paint(doc, snapWith(NONE));
+  assert.equal(doc.active, doc.getElementById("bl-paste"));
+  // the label only changes: focus stays on the switch
+  BL.paint(doc, snapWith(sw));
+  swap.focus();
+  BL.paint(doc, snapWith(Object.assign({}, FITS,
+    { switch: { label: "Use Kindler plan", use: "kindler", id: "k1" } })));
+  assert.equal(doc.active, swap);
+  // focus elsewhere: left alone
+  const other = doc.createElement("button");
+  other.focus();
+  BL.paint(doc, snapWith(FITS));
+  assert.equal(doc.active, other);
+  // the snapshot loses play.build: the heading, never the hidden paste button
+  BL.paint(doc, snapWith(sw));
+  swap.focus();
+  BL.paint(doc, {});
+  assert.equal(doc.active, heading);
+});

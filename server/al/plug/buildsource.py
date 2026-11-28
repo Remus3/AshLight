@@ -26,7 +26,9 @@ GET /api/build-source answers the view. POST /api/build-source takes
 {"use": "pasted"} or {"use": "kindler", "id": <tab id>} for the character
 being played and answers the view plus "saved" (false while the change
 waits for its retry; it is kept in memory). A refused change is a 400
-with the player's sentence. Both run behind the handler's Host / Origin /
+{"error": <the player's sentence>, "reason": <one fixed word of
+text/buildsource.py REASONS>} (BUILD-SWITCH-COPY), never a path or free
+text. Both run behind the handler's Host / Origin /
 Sec-Fetch-Site / token guard; the body is capped at the handler's
 MAX_BODY (4096). Nothing is sent to the game or anywhere else, and the
 character name stays on this computer.
@@ -58,6 +60,20 @@ NO_CHARACTER = words.NO_CHARACTER
 NO_RESULT = words.NO_RESULT
 
 log = logging.getLogger("al.buildsource")
+
+
+class Refused(ValueError):
+    """A refused click: reason is one word of words.REASONS and str() its
+    player's sentence."""
+
+    def __init__(self, reason):
+        super().__init__(words.REASONS[reason])
+        self.reason = reason
+
+
+def refusal(reason):
+    """The 400 body of a refused click (BUILD-SWITCH-COPY)."""
+    return {"error": words.REASONS[reason], "reason": reason}
 
 
 class Picker:
@@ -254,11 +270,11 @@ class Picker:
 
     # -- the route
     def choose(self, use, tab_id=None):
-        """Apply one click. Returns saved (bool). Raises ValueError with
-        the player's sentence when refused."""
+        """Apply one click. Returns saved (bool). Raises Refused (its
+        reason word and the player's sentence) when refused."""
         name = self.character()
         if name is None:
-            raise ValueError(NO_CHARACTER)
+            raise Refused("no_character")
         saved = True
         try:
             if use == "pasted":
@@ -268,8 +284,11 @@ class Picker:
                 tab = next((t for t in (view or {}).get("tabs") or ()
                             if t["id"] == tab_id), None)
                 if tab is None or not tab.get("result"):
-                    raise ValueError(NO_RESULT)
-                self.store.set(name, tab_id, self.wall())
+                    raise Refused("no_result")
+                try:
+                    self.store.set(name, tab_id, self.wall())
+                except ValueError:  # a name or tab id the file may not hold
+                    raise Refused("bad") from None
         except OSError as exc:
             log.warning("build choice not saved yet: %s", type(exc).__name__)
             self.core.savers[SAVER].mark()
@@ -326,19 +345,19 @@ def post_build_source(req, query, extra):
         return None
     use = body.get("use")
     if use not in USES or set(body) - {"use", "id"}:
-        return req._json(400, {"error": BAD}, extra)
+        return req._json(400, refusal("bad"), extra)
     tab_id = body.get("id")
     if use == "kindler" and not (isinstance(tab_id, str) and buildsource.clean_tab(tab_id)):
-        return req._json(400, {"error": BAD}, extra)
+        return req._json(400, refusal("bad"), extra)
     if use == "pasted" and tab_id is not None:
-        return req._json(400, {"error": BAD}, extra)
+        return req._json(400, refusal("bad"), extra)
     picker = _picker(req)
     try:
         saved = picker.choose(use, tab_id)
-    except ValueError as exc:
-        return req._json(400, {"error": str(exc)}, extra)
-    except genstore.GenError as exc:
-        return req._json(400, {"error": str(exc)}, extra)
+    except Refused as exc:
+        return req._json(400, refusal(exc.reason), extra)
+    except (genstore.GenError, ValueError):  # never the store's own text
+        return req._json(400, refusal("bad"), extra)
     return req._json(200, dict(picker.view(), saved=saved), extra)
 
 

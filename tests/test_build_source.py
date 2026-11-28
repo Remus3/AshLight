@@ -251,16 +251,59 @@ def test_a_closed_tab_reads_as_the_pasted_build(tmp_path):
                                   {"use": "pasted", "extra": 1}])
 def test_the_route_refuses_bad_bodies(tmp_path, body):
     core, _tab = _core(tmp_path, generate=False)
-    assert _post(core, body) == (400, {"error": plug.BAD})
+    assert _post(core, body) == (400, {"error": plug.BAD, "reason": "bad"})
 
 
 def test_the_route_needs_a_result_and_a_character(tmp_path):
     core, tab = _core(tmp_path, generate=False)
-    assert _post(core, {"use": "kindler", "id": tab}) == (400, {"error": plug.NO_RESULT})
-    assert _post(core, {"use": "kindler", "id": "k99"}) == (400, {"error": plug.NO_RESULT})
+    no_result = {"error": plug.NO_RESULT, "reason": "no_result"}
+    assert _post(core, {"use": "kindler", "id": tab}) == (400, no_result)
+    assert _post(core, {"use": "kindler", "id": "k99"}) == (400, no_result)
     core.state.character = None
     core.builds.character = None
-    assert _post(core, {"use": "pasted"}) == (400, {"error": plug.NO_CHARACTER})
+    assert _post(core, {"use": "pasted"}) == (400, {"error": plug.NO_CHARACTER,
+                                                    "reason": "no_character"})
+
+
+def test_a_refusal_carries_one_fixed_reason_word():
+    """BUILD-SWITCH-COPY: every refusal names a fixed word of REASONS and
+    its own sentence; never a path, a name or the store's own text."""
+    import srcpaths
+    from server.al.text import buildsource as words
+    assert set(words.REASONS) == {"bad", "no_character", "no_result"}
+    for reason, text in words.REASONS.items():
+        assert plug.refusal(reason) == {"error": text, "reason": reason}
+        assert reason.isascii() and reason.replace("_", "").isalpha()
+        assert "\\" not in text and "/" not in text and len(text) <= 120
+        # with the page's lead, at most 12 words (design 0001 N6)
+        assert len(("The build didn't switch. " + text).split()) <= 12
+        err = plug.Refused(reason)
+        assert isinstance(err, ValueError) and str(err) == text and err.reason == reason
+    sheet = srcpaths.ROOT.joinpath("docs", "design", "copy", "buildsource.md").read_text(
+        encoding="ascii")
+    js = srcpaths.read("buildline.js")
+    assert 'var SWITCH_REFUSED = "The build didn' + "'" + 't switch. ";' in js
+    assert 'var SWITCH_FAILED = SWITCH_REFUSED + "Try again.";' in js
+    assert "`The build didn't switch. Try again.`" in sheet
+    assert "`The build didn't switch. `" in sheet
+    for text in words.REASONS.values():
+        assert f"`{text}`" in sheet
+    with pytest.raises(KeyError):
+        plug.Refused("free text")
+    import re
+
+    page = re.search(r'var REASONS = \[([^\]]*)\];', srcpaths.read("buildline.js"))
+    assert page, "web/buildline.js REASONS"
+    assert sorted(re.findall(r'"([a-z_]+)"', page.group(1))) == sorted(words.REASONS)
+
+
+def test_a_name_the_file_may_not_hold_is_a_bad_refusal(tmp_path):
+    core, tab = _core(tmp_path)
+    long_name = "x" * (buildsource.MAX_NAME + 1)
+    core.state.character = long_name
+    core.builds.character = long_name
+    assert _post(core, {"use": "kindler", "id": tab}) == (400, {"error": plug.BAD,
+                                                                "reason": "bad"})
 
 
 def test_the_routes_are_get_and_post():
@@ -352,3 +395,62 @@ def test_source_of_reads_the_snapshot_view():
     assert got[0] == {"use": "kindler", "tab": "k1", "offer": None}
     assert got[1] == {"use": "pasted", "tab": "", "offer": {"id": "k2"}}
     assert got[2] is None and got[3] == "Use this plan for Play"
+
+
+def test_a_chip_that_hides_with_focus_hands_focus_on():
+    """BUILD-SWITCH-COPY: a Use ... for Play chip hiding while focused moves
+    focus to the next shown control of its card, else the card heading."""
+    import shutil
+    import subprocess
+
+    import srcpaths
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node is not installed")
+    script = r"""
+const K = require('./web/kindler.js');
+function mk(id, hidden, parentHidden) {
+  return { id, hidden: !!hidden, attrs: {}, getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; },
+    setAttribute(k, v) { this.attrs[k] = String(v); }, focus() { doc.activeElement = this; },
+    closest(sel) { return sel === '[hidden]' && (this.hidden || parentHidden) ? {} : null; } };
+}
+const doc = { activeElement: null };
+const ids = {};
+function s() { return { doc, $: (id) => ids[id] || null }; }
+const out = [];
+// the Pasted build chip: focus goes to Copy code
+ids['build-use'] = mk('build-use'); ids['build-copy'] = mk('build-copy');
+ids['build-title'] = mk('build-title');
+doc.activeElement = ids['build-use'];
+K.hideKeepingPlace(s(), ids['build-use'], true, K.USE_NEXT.pasted);
+out.push(doc.activeElement.id, ids['build-use'].hidden);
+// Copy code hidden: the heading, made focusable by script
+ids['build-use'].hidden = false; ids['build-copy'].hidden = true;
+ids['build-title'] = mk('build-title');
+doc.activeElement = ids['build-use'];
+K.hideKeepingPlace(s(), ids['build-use'], true, K.USE_NEXT.pasted);
+out.push(doc.activeElement.id, ids['build-title'].attrs.tabindex);
+// Copy code inside the hidden build view (a plan in use, no paste): the heading
+ids['build-use'].hidden = false; ids['build-copy'] = mk('build-copy', false, true);
+ids['build-title'] = mk('build-title');
+doc.activeElement = ids['build-use'];
+K.hideKeepingPlace(s(), ids['build-use'], true, K.USE_NEXT.pasted);
+out.push(doc.activeElement.id);
+// the plan chip: focus goes to the follow chip
+ids['kindler-use'] = mk('kindler-use'); ids['kindler-follow'] = mk('kindler-follow');
+doc.activeElement = ids['kindler-use'];
+K.hideKeepingPlace(s(), ids['kindler-use'], true, K.USE_NEXT.plan);
+out.push(doc.activeElement.id);
+// focus elsewhere, or the chip stays: focus is left alone
+ids['kindler-use'].hidden = false; doc.activeElement = ids['build-copy'];
+K.hideKeepingPlace(s(), ids['kindler-use'], true, K.USE_NEXT.plan);
+out.push(doc.activeElement.id);
+ids['kindler-use'].hidden = false; doc.activeElement = ids['kindler-use'];
+K.hideKeepingPlace(s(), ids['kindler-use'], false, K.USE_NEXT.plan);
+out.push(doc.activeElement.id);
+process.stdout.write(JSON.stringify(out));
+"""
+    got = json.loads(subprocess.run([node, "-e", script], capture_output=True, text=True,
+                                    check=True, cwd=str(srcpaths.ROOT)).stdout)
+    assert got == ["build-copy", True, "build-title", "-1", "build-title", "kindler-follow",
+                   "build-copy", "kindler-use"]

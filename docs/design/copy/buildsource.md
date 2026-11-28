@@ -30,12 +30,21 @@ here too, so one sheet holds the whole choice.
   `Use pasted build` (USE_PASTED) while a Kindler plan is in use and the
   character has a pasted build. Hidden when there is nothing to switch to.
 - Refusals: `AshLight couldn't save your build choice.` (SAVE_FAILED),
-  `That build choice isn't one AshLight understands.` (BAD),
-  `Play a character first, so AshLight knows whose build this is.`
-  (NO_CHARACTER), `Generate this Kindler plan first, then use it for
-  Play.` (NO_RESULT).
+  `That choice isn't available. Pick it again.` (BAD),
+  `Play a character first.` (NO_CHARACTER),
+  `Generate this Kindler plan first.` (NO_RESULT). With the page's lead
+  each line stays at 12 words or fewer (design 0001 N6).
+- Reason words (BUILD-SWITCH-COPY, REASONS): every refusal of POST
+  /api/build-source is `{"error": <sentence>, "reason": <word>}` with one
+  fixed word: `bad` (BAD), `no_character` (NO_CHARACTER), `no_result`
+  (NO_RESULT). Never a path, a name or free text. The Play switch says
+  `The build didn't switch. ` followed by that sentence, e.g.
+  `The build didn't switch. Play a character first.`; an unknown word, no answer or no reach keeps
+  `The build didn't switch. Try again.`
 - Page words: `Use this plan for Play` (the chip on the Kindler plan
   card), `Use pasted build for Play` (the chip on the Pasted build's Build
   card), `Not saved. Try again.`,
-  `The build didn't switch. Try again.` (the switch failed), and the Build
+  `The build didn't switch. Try again.` (the switch failed for no known
+  reason), `The build didn't switch. ` (web/buildline.js SWITCH_REFUSED,
+  the lead before a reason's sentence), and the Build
   card's source line `Kindler plan (generated)`.

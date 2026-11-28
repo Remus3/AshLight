@@ -164,7 +164,14 @@
       opts.body = JSON.stringify(body);
     }
     return fetch(path, opts).then(function (r) {
-      if (!r.ok) { throw new Error("HTTP " + r.status); }
+      if (!r.ok) {
+        // the message stays "HTTP <status>"; a JSON answer rides on the
+        // error as body (BUILD-SWITCH-COPY: a refusal's reason word)
+        var err = new Error("HTTP " + r.status);
+        err.status = r.status;
+        return r.json().then(function (b) { err.body = b; throw err; },
+          function () { throw err; });
+      }
       return r.json();
     });
   }

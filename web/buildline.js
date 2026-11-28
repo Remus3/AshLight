@@ -18,7 +18,12 @@
    focuses the paste box. ACTIVE-BUILD-PICK (decision 0096): in its place,
    when the core composes one (play.build.switch), one switch button,
    "Use Kindler plan" or "Use pasted build", posts the player's click to
-   POST /api/build-source (ctx.api); the next state push repaints B. The build stays user-pasted text (decision
+   POST /api/build-source (ctx.api); the next state push repaints B. A
+   refusal says why: the answer's fixed reason word picks the core's own
+   sentence (server/al/text/buildsource.py REASONS), else the general
+   line. When the switch hides while it holds focus, focus moves to the
+   paste button that takes its place, else to the region's heading
+   (BUILD-SWITCH-COPY). The build stays user-pasted text (decision
    0004): no clipboard read, no timer, no live region, and no request but
    the switch's one POST through ctx.api.
 
@@ -46,7 +51,13 @@
   var PASTE_LABEL = "Paste a build";
   var FALLBACK_TAB = "build";
   var SOURCE_PATH = "/api/build-source"; // ACTIVE-BUILD-PICK (decision 0096)
-  var SWITCH_FAILED = "The build didn't switch. Try again.";
+  // BUILD-SWITCH-COPY: a refusal with one of these reason words says the
+  // core's sentence after this lead; the words are the core's
+  // (text/buildsource.py REASONS), never free text from elsewhere
+  var SWITCH_REFUSED = "The build didn't switch. ";
+  var SWITCH_FAILED = SWITCH_REFUSED + "Try again.";
+  var REASONS = ["bad", "no_character", "no_result"];
+  var HEADING_ID = "play-b-h";
   // the four states of design 0001 section 6 (the kit word stale is not used for Old build)
   var STATES = {
     fits: { glyph: "[+]", word: "Build fits", tone: "neutral" },
@@ -127,11 +138,39 @@
   function useSource(want) {
     if (!want || typeof wired.api !== "function") { return null; }
     var body = want.use === "kindler" ? { use: "kindler", id: want.id } : { use: "pasted" };
-    return wired.api("POST", SOURCE_PATH, body).then(function (r) { return r; }, function () {
+    return wired.api("POST", SOURCE_PATH, body).then(function (r) { return r; }, function (e) {
       var t = wired.tabs;
-      if (t && typeof t.say === "function") { t.say(nodes.doc, SWITCH_FAILED); }
+      if (t && typeof t.say === "function") { t.say(nodes.doc, refusedLine(e)); }
       return null;
     });
+  }
+
+  /* The line a failed switch says: the core's sentence for a known
+     reason word, else the general line (no reach, no body, an unknown
+     word). */
+  function refusedLine(e) {
+    var b = e && isObj(e.body) ? e.body : null;
+    if (b && REASONS.indexOf(b.reason) >= 0 && str(b.error) && b.error.length <= 120) {
+      return SWITCH_REFUSED + b.error;
+    }
+    return SWITCH_FAILED;
+  }
+
+  /* BUILD-SWITCH-COPY: the switch is about to hide while it holds focus;
+     move focus to the paste button when it shows, else to the region's
+     heading (made focusable by script only, tabindex -1). The caller
+     checks focus before it hides the switch, so a browser's own focus
+     fix-up cannot win the race. */
+  function hasFocus(doc, n) { return !!doc && doc.activeElement === n.swap && !n.swap.hidden; }
+
+  function keepPlace(doc, n, noButton) {
+    var to = !noButton && n.button && !n.button.hidden ? n.button : null;
+    if (!to && typeof doc.getElementById === "function") {
+      to = doc.getElementById(HEADING_ID);
+      if (to && to.getAttribute("tabindex") === null) { to.setAttribute("tabindex", "-1"); }
+    }
+    if (to && typeof to.focus === "function") { to.focus(); }
+    return to;
   }
 
   function build(doc) {
@@ -181,7 +220,10 @@
     var n = build(doc);
     if (!n) { return null; }
     if (!m) {
+      var lost = hasFocus(doc, n);
+      n.swap.hidden = true;
       n.root.hidden = true;
+      if (lost) { keepPlace(doc, n, true); }
       return null;
     }
     setAttr(n.root, "data-state", m.state);
@@ -193,7 +235,10 @@
     n.button.hidden = !m.canPaste;
     wired.want = m.switchTo;
     if (m.switchTo) { setText(n.swap, m.switchTo.label); }
-    n.swap.hidden = !m.switchTo || m.canPaste;
+    var hide = !m.switchTo || m.canPaste;
+    var lost = hide && hasFocus(doc, n);
+    n.swap.hidden = hide;
+    if (lost) { keepPlace(doc, n, false); }
     setText(n.row2, m.row2);
     setAttr(n.row2, "title", m.row2);
     n.row2.hidden = !m.row2;
@@ -227,7 +272,8 @@
   return {
     NAME: NAME, REGION: REGION, RETIRES: RETIRES, STATES: STATES, PASTE_LABEL: PASTE_LABEL,
     model: model, pasteTab: pasteTab, showPaste: showPaste, paint: paint, wire: wire,
-    useSource: useSource, SOURCE_PATH: SOURCE_PATH,
+    useSource: useSource, SOURCE_PATH: SOURCE_PATH, refusedLine: refusedLine,
+    REASONS: REASONS,
     reset: reset, spec: spec
   };
 }));

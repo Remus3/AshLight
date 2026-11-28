@@ -1289,13 +1289,42 @@
     if (plan) {
       var mine = !!(src && tab && src.use === "kindler" && src.tab === tab.id);
       plan.setAttribute("aria-pressed", mine ? "true" : "false");
-      plan.hidden = !src;
+      hideKeepingPlace(s, plan, !src, USE_NEXT.plan);
     }
     var pasted = $("build-use");
     if (pasted) {
       pasted.setAttribute("aria-pressed", src && src.use === "pasted" ? "true" : "false");
-      pasted.hidden = !(src && (src.use === "kindler" || src.offer));
+      hideKeepingPlace(s, pasted, !(src && (src.use === "kindler" || src.offer)), USE_NEXT.pasted);
     }
+  }
+
+  /* BUILD-SWITCH-COPY: a chip that hides while it holds focus hands focus
+     to the next shown control of its card, else the card's heading (made
+     focusable by script only, tabindex -1), so keyboard and screen-reader
+     users keep their place. Focus is read before the chip hides. */
+  var USE_NEXT = {
+    plan: ["kindler-follow", "kindler-plan-title"],
+    pasted: ["build-copy", "build-title"]
+  };
+
+  function hideKeepingPlace(s, chip, hide, next) {
+    var doc = s.doc;
+    var lost = hide && !chip.hidden && !!doc && doc.activeElement === chip;
+    chip.hidden = hide;
+    if (!lost) { return null; }
+    for (var i = 0; i < next.length; i += 1) {
+      var n = s.$(next[i]);
+      // a target inside a hidden card part cannot take focus (BSC-1)
+      if (!n || n.hidden || (typeof n.closest === "function" && n.closest("[hidden]"))) {
+        continue;
+      }
+      if (i === next.length - 1 && n.getAttribute("tabindex") === null) {
+        n.setAttribute("tabindex", "-1");
+      }
+      focus(s, n);
+      return n;
+    }
+    return null;
   }
 
   function useSource(s, snap) {
@@ -1478,6 +1507,7 @@
     useSource: function (snap) { if (S) { useSource(S, snap); } },
     useForPlay: function (which) { return useForPlay(S, which); },
     sourceOf: sourceOf, USE_WORDS: USE_WORDS,
+    hideKeepingPlace: hideKeepingPlace, USE_NEXT: USE_NEXT,
     setFollow: function () { return setFollow(S); },
     stage: function (dir) { moveStage(S, dir); },
     part: function (dir) { movePart(S, dir); },
