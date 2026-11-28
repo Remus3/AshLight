@@ -58,8 +58,11 @@ def test_filed_rows_exist():
             if not m:
                 continue
             row = m.group(1)
+            # a done row is pruned to docs/roadmap/archive/ by roadmap_fold
+            archived = any(row in a.read_text(encoding="utf-8") for a in
+                           (ROOT / "docs" / "roadmap" / "archive").glob("*.md"))
             assert (ROOT / "docs" / "roadmap" / "new" / (row + ".md")).is_file() \
-                or row in _text("ROADMAP.md"), row
+                or row in _text("ROADMAP.md") or archived, row
 
 
 def test_port_advice_avoids_reserved_ports():
