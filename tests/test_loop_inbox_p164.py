@@ -2,9 +2,9 @@
 not what it mentions, and a session-routed order gets one BLOCKED ANSWER after
 24 hours. Git-free: inbox methods are called directly on a Tick with fake deps."""
 
-import hashlib
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -18,19 +18,23 @@ from al_loopkit import ROADMAP, FakeSpawn, _inbox_root, deps  # noqa: E402
 sp = al_loop.session_paths
 ORDER_NAME = ("2026-10-31-2215-from-MAIN-ORDER-to-AL-public-view-w44-sweep-uiux-"
               "batched-ONE-ANSWER.md")
-# A real MAIN note's bytes with the tree code and names rewritten for AL
-# (sha256 e234cab8...), copied into a tests fixture: a test never reads the live
-# inbox (fleet_test_guard).
-# It has seven repo items and one lead-in sentence pointing at the separate
-# kit ORDER 2200 by its version number ("kit v26").
+# A synthetic batched ORDER note in the shape of the one that tripped the
+# router (GP-16: no real note bytes in the public tree); a test never reads
+# the live inbox (fleet_test_guard). It keeps the name the router tests key
+# on, four '## ' sections, seven numbered repo items and one lead-in sentence
+# pointing at the separate kit ORDER 2200 by its version number ("kit v26").
 ORDER_FIXTURE = ROOT / "tests" / "fixtures" / "inbox_p164" / ORDER_NAME
 ORDER_2215 = ORDER_FIXTURE.read_bytes().decode("ascii")
 
 
-def test_order_2215_fixture_is_the_real_note():
-    data = ORDER_FIXTURE.read_bytes()
-    assert hashlib.sha256(data).hexdigest().startswith("e234cab8")
-    assert "kit v26 ORDER (2200)" in ORDER_2215 and ORDER_2215.count(chr(10) + "## ") == 4
+def test_order_2215_fixture_has_the_batched_order_shape():
+    lines = ORDER_2215.splitlines()
+    assert lines[0].startswith("# From MAIN - ORDER to AL")
+    assert "ORDER. HOP: 1" in lines
+    assert ORDER_2215.count(chr(10) + "## ") == 4
+    assert [ln.split(".")[0] for ln in lines if re.match(r"^[0-9]+\. ", ln)] == \
+        [str(n) for n in range(1, 8)]
+    assert ORDER_2215.count("kit v26 ORDER (2200)") == 1
 
 
 FIX_NAME = ("2026-11-01-0825-from-MAIN-FIX-to-AL-loop-router-parks-an-order-on-a-prose-"

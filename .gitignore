@@ -21,8 +21,6 @@ logs/
 # Channel (per-host, never published)
 moon_sync_inbox/*
 moon_sync_outbox/*
-!moon_sync_inbox/.gitkeep
-!moon_sync_outbox/.gitkeep
 
 # Python / Node
 __pycache__/
