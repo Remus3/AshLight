@@ -145,3 +145,11 @@ already has), or the frame's anonymous fetch (cannot read alerts).
 Reverses if: the operator wants the read while the dev host is off (then
 the CI job of docs/plan/06 W9), GitHub treats these as non-metadata, or gh
 leaves the dev host.
+
+Amended 2026-11-27 (REVIEW-GH, decision 0088): METADATA_TAILS gains
+/community/profile on api.github.com (which community files exist and the
+health percentage; every sub-path stays refused), read by the github-page
+source through the same gh path and web-data gate as the dependabot
+source, main checkout only. The README version comes from the commit list
+(/commits?path=README.md), never the /readme content endpoint. Reverses
+if: GitHub treats the profile as non-metadata, or decision 0088 reverses.

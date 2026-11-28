@@ -3,11 +3,13 @@
 One file per decision: `NNNN-<topic>.md` (decision, alternatives, why,
 reverses if). Numbers 0047 to 0076 are reserved for the packages of
 docs/plan/packages.json (docs/plan/07, Reserved decision numbers); a
-package uses the number in its new_files entry. 0077 to 0087
+package uses the number in its new_files entry. 0077 to 0088
 are taken. Numbers are reserved in the plan before a wave starts.
 Numbers are reserved per package in docs/plan/packages.json before a
 wave starts; the wave integrator adds the index line. 0035 stays unused.
 
+- 0088: Weekly GitHub page review row (REVIEW-GH) from the github-page
+  watcher source; six lenses, review lane, not BLOCKED.
 - 0087: CodeQL default setup on for python, javascript-typescript and
   actions; GitHub-managed, no workflow, not a required check.
 - 0086: RUN-DATAAGE-SHARED-PARSE: the data age watch shares the zone

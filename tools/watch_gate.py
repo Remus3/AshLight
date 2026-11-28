@@ -11,7 +11,8 @@ asks this module three things:
   the issue list /issues and the watch workflow /actions/workflows/watch.yml
   and its /runs, decision 0069 amendment 2026-11-21; the open pull request
   list /pulls and the alert list /dependabot/alerts for the Dependabot
-  watch, amendment 2026-11-27) and the exact https URLs
+  watch, and the community profile /community/profile for the GitHub page
+  watch, amendments 2026-11-27) and the exact https URLs
   the source lists in SOURCE['urls'] pass. Every GGG host (the settled docs
   watch and release check keep their own reads, decisions 0044 and 0025),
   the trade site (webfetch.is_trade_url, decision 0017), raw / codeload /
@@ -78,6 +79,10 @@ METADATA_TAILS = tuple(re.compile(p) for p in (
     # request list and the alert list only; every sub-path stays refused.
     r"/pulls",
     r"/dependabot/alerts",
+    # GitHub page watch (REVIEW-GH, decision 0088; 0069 amendment
+    # 2026-11-27): the community profile (which community files exist and
+    # the health percentage); every sub-path stays refused.
+    r"/community/profile",
 ))
 _REPO_PATH = re.compile(r"^/repos/(" + _SEG + r")/(" + _SEG + r")(/.*)?$")
 # Path words that mean file content, never metadata (any GitHub host).
