@@ -127,3 +127,21 @@ read-only repository metadata on api.github.com for the CI issue protocol
 (decision 0076 item 6); other /actions/ and /issues/ sub-paths stay refused.
 Reverses if: GitHub treats these as non-metadata, or the operator limits
 watchers to the earlier tails.
+
+## Amendment 2026-11-27
+
+Amended 2026-11-27 (AUTO-20, DEPBOT-WATCH): METADATA_TAILS gains /pulls and
+/dependabot/alerts on api.github.com (the open pull request list and the
+alert list; every sub-path such as /pulls/<n> or /dependabot/alerts/<n>
+stays refused). The alert list needs an authenticated read, so the
+dependabot source (tools/watch_sources/dependabot.py) reads both through
+`gh api` in the main checkout, as npm-audit reads through npm: only while
+web data is on, only URLs that pass check_url, the AshLight User-Agent,
+hidden and below-normal, never in a lane. No CI workflow holds the alert
+scope: the dev loop does this read, so the watch job keeps its smaller
+permission set. Alternatives: a watch-dependabot.yml job with
+vulnerability-alerts: read (a new workflow scope for one read the dev host
+already has), or the frame's anonymous fetch (cannot read alerts).
+Reverses if: the operator wants the read while the dev host is off (then
+the CI job of docs/plan/06 W9), GitHub treats these as non-metadata, or gh
+leaves the dev host.

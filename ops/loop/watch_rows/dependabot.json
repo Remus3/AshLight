@@ -1,0 +1,38 @@
+{
+ "kinds": {
+  "depbotalert": {
+   "act": "row",
+   "id": "DEPBOT-<PACKAGE>-<GHSA>",
+   "lane": "data",
+   "priority": true,
+   "blocked": null,
+   "text": "Dependabot alert <GHSA> (<severity>) is open on <package> in the app lockfile: move it to the newest release at least 3 days old that clears it, within 24 h (decision 0070 item 2; for electron also config/electron_pin.json); nothing is merged on GitHub (FLEET item 17). ACCEPT: the lockfile holds a <package> release outside <GHSA>; npm test, the static guards and npm audit signatures pass. ZERO-CLICK: the loop works it. SOURCE: watch dependabot <package> <GHSA>, filed <YYYY-MM-DD>.",
+   "tokens": {
+    "PACKAGE": "[A-Z0-9]+(?:-[A-Z0-9]+)*",
+    "GHSA": "GHSA(?:-[0-9A-Z]{4}){3}",
+    "package": "[A-Za-z0-9][A-Za-z0-9._-]*",
+    "severity": "low|moderate|high|critical"
+   },
+   "sample": {
+    "PACKAGE": "ELECTRON",
+    "GHSA": "GHSA-8F24-V5VV-GM5J",
+    "package": "electron",
+    "severity": "high"
+   }
+  },
+  "depbotpr": {
+   "act": "row",
+   "id": "DEPBOT-PR-<n>",
+   "lane": "data",
+   "priority": false,
+   "blocked": "session (gh runs only in the main checkout, never in a lane)",
+   "text": "Dependabot pull request <n> is still open after the daily re-apply worker: run python tools/dependabot_reapply.py apply <n> in the main checkout (re-applied locally as an operator commit, never merged on GitHub, FLEET item 17) or close it with one line. ACCEPT: pull request <n> is closed. ZERO-CLICK: the daily worker re-applies first; this row is only the leftover. SOURCE: watch dependabot pr <n>, filed <YYYY-MM-DD>.",
+   "tokens": {
+    "n": "[1-9][0-9]{0,5}"
+   },
+   "sample": {
+    "n": "17"
+   }
+  }
+ }
+}

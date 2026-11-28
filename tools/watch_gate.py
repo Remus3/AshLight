@@ -9,7 +9,9 @@ asks this module three things:
   api.github.com repository METADATA paths (repository, commits, tags,
   branches, refs, releases by id / tag / latest; for the CI issue protocol
   the issue list /issues and the watch workflow /actions/workflows/watch.yml
-  and its /runs, decision 0069 amendment 2026-11-21) and the exact https URLs
+  and its /runs, decision 0069 amendment 2026-11-21; the open pull request
+  list /pulls and the alert list /dependabot/alerts for the Dependabot
+  watch, amendment 2026-11-27) and the exact https URLs
   the source lists in SOURCE['urls'] pass. Every GGG host (the settled docs
   watch and release check keep their own reads, decisions 0044 and 0025),
   the trade site (webfetch.is_trade_url, decision 0017), raw / codeload /
@@ -72,6 +74,10 @@ METADATA_TAILS = tuple(re.compile(p) for p in (
     r"/issues",
     r"/actions/workflows/watch\.yml",
     r"/actions/workflows/watch\.yml/runs",
+    # Dependabot watch (AUTO-20; 0069 amendment 2026-11-27): the open pull
+    # request list and the alert list only; every sub-path stays refused.
+    r"/pulls",
+    r"/dependabot/alerts",
 ))
 _REPO_PATH = re.compile(r"^/repos/(" + _SEG + r")/(" + _SEG + r")(/.*)?$")
 # Path words that mean file content, never metadata (any GitHub host).
