@@ -640,6 +640,20 @@ def _report(fails, limit=40):
 
 # -- tests without a browser ---------------------------------------------------------
 
+def test_the_driver_owns_its_browser_and_waits_for_each_size():
+    """TEST-PLAYFIT-LOAD-FLAKE: a random DevTools port from a range shared
+    with other drivers let two parallel sweeps drive one page (a size
+    measured under another driver's resize); the OS picks the port and the
+    driver reads it from its own profile, and each measure waits for the
+    page to report the intended viewport."""
+    text = SCRIPT.read_text(encoding="utf-8")
+    assert "--remote-debugging-port=0" in text
+    assert "DevToolsActivePort" in text
+    assert "Math.random" not in text
+    assert re.search(r"innerWidth === \$\{w\} && innerHeight === \$\{h\}", text)
+    assert "window.__alFitOld" in text
+
+
 def test_pending_markers_are_known_one_line_reasons():
     # PLAY-FIT-G5-TOTALS removed the last marker (g.txt); git keeps no empty
     # folder, so no folder means no marker

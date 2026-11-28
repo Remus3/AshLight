@@ -16,7 +16,20 @@
 //   {"cmd": "quit"}
 // Node's global WebSocket (Node 22+) is the only client; no npm package.
 // The page is a loopback test core; nothing is sent to the game.
+//
+// TEST-PLAYFIT-LOAD-FLAKE: the DevTools port is chosen by the OS
+// (--remote-debugging-port=0, read back from the profile's
+// DevToolsActivePort, as capture.mjs does). A random port of a shared range
+// let two drivers of a parallel suite (this file on several workers, and
+// a11y.mjs on the same range) pick one port: the second browser could not
+// bind it and its driver drove the first driver's page, so a size or a
+// state was measured under another driver's resize or navigation. Each
+// measure also waits until the page itself reports the intended viewport,
+// and a load only counts once the new document (not the last state's page
+// on the same url) is live.
 import { spawn } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
 import { createInterface } from "node:readline";
 
 const [chromePath, profile] = process.argv.slice(2);
@@ -27,23 +40,38 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // both stay as they are.
 const CI = process.env.AL_CI === "1";
 const out = (o) => process.stdout.write(JSON.stringify(o) + "\n");
-const port = 9100 + Math.floor(Math.random() * 380);
+const portFile = path.join(profile, "DevToolsActivePort");
+try { fs.rmSync(portFile, { force: true }); } catch { /* none yet */ }
 const chrome = spawn(chromePath, ["--headless=new", "--disable-gpu", "--in-process-gpu",
   "--no-first-run", "--no-default-browser-check", "--disable-extensions",
   "--hide-scrollbars", "--force-device-scale-factor=1",
-  `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, "about:blank"],
+  "--remote-debugging-port=0", `--user-data-dir=${profile}`, "about:blank"],
   { stdio: "ignore" });
 const quit = (code) => { try { chrome.kill(); } catch { /* gone */ } process.exit(code); };
 const killer = setTimeout(() => { out({ error: `watchdog: ${CI ? 900 : 300} s` }); quit(3); },
   CI ? 900000 : 300000);
 
+// the OS-chosen port of this driver's own browser (never another one's)
+let port = 0;
 let targets = null;
 for (let i = 0; i < 150 && !targets; i++) {
-  try { targets = await (await fetch(`http://127.0.0.1:${port}/json`)).json(); }
-  catch { await sleep(100); }
+  if (chrome.exitCode !== null) { break; }
+  if (!port) {
+    try {
+      const first = fs.readFileSync(portFile, "utf8").split(/\r?\n/)[0].trim();
+      if (/^\d{1,5}$/.test(first) && Number(first) > 0) { port = Number(first); }
+    } catch { /* not written yet */ }
+  }
+  if (port) {
+    try { targets = await (await fetch(`http://127.0.0.1:${port}/json`)).json(); }
+    catch { targets = null; }
+  }
+  if (!targets) { await sleep(100); }
 }
 if (!targets) { out({ error: "no DevTools endpoint" }); quit(2); }
-const page = targets.find((t) => t.type === "page");
+const page = targets.find((t) => t.type === "page" &&
+  String(t.webSocketDebuggerUrl).startsWith(`ws://127.0.0.1:${port}/`));
+if (!page) { out({ error: "no page target" }); quit(2); }
 const ws = new WebSocket(page.webSocketDebuggerUrl);
 await new Promise((r) => ws.addEventListener("open", r));
 let seq = 0;
@@ -381,25 +409,42 @@ function metrics(rows) {
 }
 
 const call = (fn, arg) => evaluate(`(${fn.toString()})(${JSON.stringify(arg)})`);
-const frames = () => evaluate(
-  "new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(true))))");
+
+// true once the page reports the intended viewport to script and to its
+// media queries (the em queries of app.css pick the size class), then two
+// frames so layout runs at that size; a size never applied is answered as
+// measured and the Python side names it (vw / vh of every measure)
+const applied = (w, h) => evaluate(`new Promise((r) => {
+  const want = matchMedia("(width: ${w}px) and (height: ${h}px)");
+  let n = 0;
+  const step = () => {
+    if (innerWidth === ${w} && innerHeight === ${h} && want.matches) {
+      requestAnimationFrame(() => requestAnimationFrame(() => r(true)));
+    } else if (++n > 120) { r(false); } else { requestAnimationFrame(step); }
+  };
+  step();
+})`);
 
 async function resize(w, h) {
   await send("Emulation.setDeviceMetricsOverride",
     { width: w, height: h, deviceScaleFactor: 1, mobile: false });
-  await frames();
+  await applied(w, h);
 }
 
 async function load(url) {
   // live once the feed is up and the first state has painted
   for (const tries of CI ? [100, 300] : [100]) {
+    // the last state's page has the same url; mark it so only a new
+    // document can count as live
+    try { await evaluate("window.__alFitOld = true"); } catch { /* no page */ }
     await send("Page.navigate", { url: "about:blank" });
     await send("Page.navigate", { url });
     for (let i = 0; i < tries; i++) {
       await sleep(100);
       let ok = false;
       try {
-        ok = await evaluate("!!document.getElementById('panel-play') && " +
+        ok = await evaluate("!window.__alFitOld && document.readyState === 'complete' && " +
+          "!!document.getElementById('panel-play') && " +
           "/^(running|done|idle|blocked)$/.test((document.getElementById('reading') || {getAttribute(){return ''}}).getAttribute('data-state') || '')");
       } catch { ok = false; }
       if (ok) { await sleep(350); return true; }
