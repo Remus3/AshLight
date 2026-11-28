@@ -127,8 +127,11 @@ def test_github_wiki_and_raw_docs_pass_and_everything_else_on_them_is_refused():
         assert word in reason, (url, reason)
     out = io.StringIO()
     assert divefetch.main(["hosts"], out=out) == divefetch.EXIT_OK
-    assert "github.com/<owner>/<repo>/wiki" in out.getvalue()
-    assert "raw.githubusercontent.com" in out.getvalue()
+    # whole words of the listing, not a substring test (CodeQL
+    # py/incomplete-url-substring-sanitization, alert 12)
+    words = out.getvalue().split()
+    assert "https://github.com/<owner>/<repo>/wiki[/<page>]" in words
+    assert "https://raw.githubusercontent.com/<owner>/<repo>/<ref>/<path>" in words
 
 
 def test_every_fetch_is_logged_with_the_ashlight_user_agent(tmp_path):
