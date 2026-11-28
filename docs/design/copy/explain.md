@@ -66,7 +66,7 @@ changed template is edited in both places together.
     follow.`
 - restarts (`LABEL_RESTARTS` `Restarts`; shown only from 3 restarts in
   24 hours):
-  - fail (`RESTARTS_TEXT`): `AshLight restarted its core <n> times in
+  - fail (`RESTARTS_TEXT`): `AshLight restarted itself <n> times in
     the last 24 hours, last at <HH:MM> (<reason words>).`; fix
     (`RESTARTS_FIX`): `AshLight keeps running by itself. To help find
     the cause, copy this report and add it to a new issue on the AshLight

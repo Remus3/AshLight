@@ -288,7 +288,7 @@ def test_last_restart_row_shows_for_10_minutes(tmp_path):
     f = sp.facts(core, at)
     assert f == {"supervisor_restart": {"at": at, "reason": "hung"}}
     clock = time.strftime("%H:%M", time.localtime(at))
-    want = f"AshLight restarted its core at {clock} (it had stopped answering)."
+    want = f"AshLight restarted itself at {clock} (it had stopped answering)."
     for age in (0.0, 1.0, 300.0, 599.0):
         row = sp.rows(f, at + age)
         assert row == {"id": "supervisor_restart", "label": "Keepalive",

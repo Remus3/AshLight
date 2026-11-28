@@ -199,7 +199,7 @@ def test_restarts_row_only_after_3_in_a_day(tmp_path):
     row = explain.restarts_row(f, localtime=time.gmtime)
     clock = time.strftime("%H:%M", time.gmtime(now - 60))
     assert row == {"id": "restarts", "label": "Restarts", "status": "fail",
-                   "detail": ("AshLight restarted its core 3 times in the last 24 "
+                   "detail": ("AshLight restarted itself 3 times in the last 24 "
                               f"hours, last at {clock} (it did not finish starting)."),
                    "fix": explain.RESTARTS_FIX}
     # the same record read again is not a new restart

@@ -9,7 +9,7 @@ code reload are not restarts and are never recorded. The facts hook reads
 that file only when its size or mtime changed; the row shows while the
 restart is under SHOW_S old, e.g.
 
-    AshLight restarted its core at 21:14 (it had stopped answering).
+    AshLight restarted itself at 21:14 (it had stopped answering).
 
 Nothing to fix (the core came back by itself), so the row is a note.
 Reads only AshLight's own runtime file; no request, nothing sent.
@@ -38,7 +38,7 @@ REASON_WORDS = {
 def restart_text(at, reason, localtime=time.localtime):
     """The note's sentence for a restart at wall time `at`."""
     clock = time.strftime("%H:%M", localtime(at))
-    return f"AshLight restarted its core at {clock} ({REASON_WORDS[reason]})."
+    return f"AshLight restarted itself at {clock} ({REASON_WORDS[reason]})."
 
 
 def facts(core, now):

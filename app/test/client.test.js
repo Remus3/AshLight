@@ -981,16 +981,16 @@ test("give-up reason is shown, no path", (t) => {
                  port: 8960, updated: 1795000000, last_restart: { at: 1795000000, reason: "hung" } };
   assert.deepEqual(rec(gave), { restarts: 5, reason: "hung" });
   assert.equal(ClientWin.giveUpLine(rec(gave)),
-               "AshLight stopped restarting its core after 5 tries (it had stopped answering).");
+               "AshLight stopped trying to restart after 5 tries (it had stopped answering).");
   assert.equal(ClientWin.giveUpLine(rec(Object.assign({}, gave, { last_restart: { at: 1, reason: "crash" } }))),
-               "AshLight stopped restarting its core after 5 tries (it had closed unexpectedly).");
+               "AshLight stopped trying to restart after 5 tries (it had closed unexpectedly).");
   // an unknown reason or count is left out, never echoed
   const drive = "C" + ":" + String.fromCharCode(92);
   assert.equal(ClientWin.giveUpLine(rec(Object.assign({}, gave, { restarts: drive + "x",
     last_restart: { at: 1, reason: drive + "x" + String.fromCharCode(92) + "run.ps1" } }))),
-               "AshLight stopped restarting its core.");
+               "AshLight stopped trying to restart.");
   assert.equal(ClientWin.giveUpLine({ restarts: 1, reason: "start-timeout" }),
-               "AshLight stopped restarting its core after 1 try (it did not finish starting).");
+               "AshLight stopped trying to restart after 1 try (it did not finish starting).");
   // not gave-up, missing, junk, too big: nothing
   for (const doc of [Object.assign({}, gave, { status: "watching" }), undefined, "{nope", "[]",
                      JSON.stringify(Object.assign({}, gave, { pad: "x".repeat(70000) }))]) {

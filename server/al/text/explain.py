@@ -95,7 +95,7 @@ LINES_FIX = ("Set the game's language to English: AshLight reads English game "
 
 # -- restarts
 LABEL_RESTARTS = "Restarts"
-RESTARTS_TEXT = ("AshLight restarted its core {n} times in the last 24 hours, "
+RESTARTS_TEXT = ("AshLight restarted itself {n} times in the last 24 hours, "
                  "last at {clock} ({why}).")
 RESTARTS_FIX = ("AshLight keeps running by itself. To help find the cause, copy "
                 "this report and add it to a new issue on the AshLight issues "

@@ -403,7 +403,7 @@ const EXPLAIN = [
   { id: "log_understood", label: "Log lines understood", status: "pass",
     detail: "Yes. AshLight understands the game log.", fix: null },
   { id: "restarts", label: "Restarts", status: "fail",
-    detail: "AshLight restarted its core 3 times in the last 24 hours, last at 21:14 " +
+    detail: "AshLight restarted itself 3 times in the last 24 hours, last at 21:14 " +
       "(it had stopped answering).",
     fix: "AshLight keeps running by itself. To help find the cause, copy this report " +
       "and send it to the project." }];
