@@ -34,13 +34,21 @@ const chrome = spawn(chromePath, ["--headless=new", "--disable-gpu", "--in-proce
   "--no-first-run", "--no-default-browser-check", "--disable-extensions",
   "--remote-debugging-port=0", `--user-data-dir=${profile}`, "about:blank"],
   { stdio: "ignore" });
+let chromeExit = null;
+// a clean 0 exit may be a hand-off to a running browser: keep polling then
+chrome.on("exit", (code, signal) => { if (signal || code) { chromeExit = signal || code; } });
 const killer = setTimeout(() => { chrome.kill(); process.exit(3); }, CI ? 180000 : 60000);
 
-// the OS-chosen port of this driver's own browser (never another one's)
+// the OS-chosen port of this driver's own browser (never another one's).
+// TEST-CDP-ENDPOINT-CI-WAIT (decision 0080): the DevTools endpoint poll
+// widens 3x under AL_CI only (a cold runner's first Chrome launch outran
+// the fixed bound, TEST-A11Y-NEWEST-DEVTOOLS) and stops at once if Chrome
+// has failed; locally 150 x 100 ms, as play_fit.mjs and a11y.mjs (the
+// port is now read from DevToolsActivePort first, TEST-CDP-OS-PORT).
+const ENDPOINT_POLLS = CI ? 450 : 150;
 let port = 0;
 let targets = null;
-for (let i = 0; i < 100 && !targets; i++) {
-  if (chrome.exitCode !== null) { break; }
+for (let i = 0; i < ENDPOINT_POLLS && !targets && chromeExit === null; i++) {
   if (!port) {
     try {
       const first = readFileSync(portFile, "utf8").split(/\r?\n/)[0].trim();
@@ -53,7 +61,12 @@ for (let i = 0; i < 100 && !targets; i++) {
   }
   if (!targets) { await sleep(100); }
 }
-if (!targets) { chrome.kill(); console.log(JSON.stringify({ error: "no DevTools endpoint" })); process.exit(2); }
+if (!targets) {
+  chrome.kill();
+  console.log(JSON.stringify({ error: "no DevTools endpoint" + (chromeExit === null
+    ? ` after ${ENDPOINT_POLLS} polls` : ` (browser exited: ${chromeExit})`) }));
+  process.exit(2);
+}
 const page = targets.find((t) => t.type === "page" &&
   String(t.webSocketDebuggerUrl).startsWith(`ws://127.0.0.1:${port}/`));
 if (!page) { chrome.kill(); console.log(JSON.stringify({ error: "no page target" })); process.exit(2); }
