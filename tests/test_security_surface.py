@@ -57,7 +57,7 @@ ROUTES = {
     ("GET", "/favicon.ico"): (NONE, None),
     # token-proof GET (1): the client proves the core before it sends the token
     ("GET", "/api/hello"): (PROOF, None),
-    # token GET (19)
+    # token GET (20)
     ("GET", "/api/health"): (HEADER, None),
     ("GET", "/api/version"): (HEADER, None),
     ("GET", "/api/state"): (HEADER, None),
@@ -84,6 +84,8 @@ ROUTES = {
     ("GET", "/api/iteminfo"): (HEADER, None),
     # UI-CARD-COLLAPSE: the plug route (server/al/plug/uilayout.py, decision 0082)
     ("GET", "/api/ui/layout"): (HEADER, None),
+    # PROGRESSION-VIEW: the plug route (server/al/plug/progression.py, decision 0088)
+    ("GET", "/api/progression"): (HEADER, None),
     ("GET", "/events"): (QUERY, None),
     # token POST (21)
     ("POST", "/api/consent"): (HEADER, 4096),
@@ -354,7 +356,7 @@ def test_route_table_matches_http_py():
     counts = {}
     for (method, _), (rule, _) in ROUTES.items():
         counts[(method, rule)] = counts.get((method, rule), 0) + 1
-    assert counts == {("GET", NONE): 5, ("GET", PROOF): 1, ("GET", HEADER): 19,
+    assert counts == {("GET", NONE): 5, ("GET", PROOF): 1, ("GET", HEADER): 20,
                       ("GET", QUERY): 1,
                       ("POST", HEADER): 21, ("PUT", HEADER): 2,
                       ("DELETE", REFUSED): 1, ("PATCH", REFUSED): 1,
