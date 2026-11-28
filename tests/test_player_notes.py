@@ -84,7 +84,14 @@ def test_save_reads_back_per_zone_and_character(tmp_path):
     assert json.loads((tmp_path / pn.FILE_NAME).read_bytes())["notes"] == []
 
 
-def test_the_file_never_exceeds_its_bounds(tmp_path):
+def test_the_file_never_exceeds_its_bounds(tmp_path, monkeypatch):
+    # 339 saves are two durable writes each (file and .bak); the fsync is
+    # disk-bound (about half the call time when quiet, and well past the
+    # 1.5 s slow limit under parallel disk load). This test checks bounds,
+    # not durability (tests/test_jsonfile.py has that), so the fsync is
+    # counted, not run.
+    synced = []
+    monkeypatch.setattr(jsonfile.os, "fsync", lambda fd: synced.append(fd))
     s = _store(tmp_path)
     long = "y" * pn.MAX_NOTE
     for i in range(pn.MAX_ZONES + 25):
@@ -96,6 +103,7 @@ def test_the_file_never_exceeds_its_bounds(tmp_path):
     # the oldest notes left; the newest stays
     assert {r["area_id"] for r in doc["notes"]} == {f"Z{i}" for i in range(25, pn.MAX_ZONES + 25)}
     assert pn.count(s.get()) == pn.MAX_ZONES
+    assert len(synced) == 2 * (pn.MAX_ZONES + 25)  # still the durable path
     # characters: at most 12; the one whose newest note is oldest leaves
     for i in range(pn.MAX_CHARACTERS + 2):
         s.save(f"Other{i}", "G1_1", "n", now=5000 + i)
