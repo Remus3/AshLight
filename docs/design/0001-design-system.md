@@ -738,6 +738,7 @@ Generation rules:
    - kindler: [`docs/design/copy/kindler.md`](copy/kindler.md)
    - mapstats: [`docs/design/copy/mapstats.md`](copy/mapstats.md)
    - progression: [`docs/design/copy/progression.md`](copy/progression.md)
+   - augment: [`docs/design/copy/augment.md`](copy/augment.md)
 3. **Player text is quoted, never rewritten.** Whisper bodies and names
    are shown verbatim (textContent only, never innerHTML), clipped with
    "..." at the line limit.
