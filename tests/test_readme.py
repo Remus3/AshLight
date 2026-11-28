@@ -62,8 +62,16 @@ def test_sections_present_in_order():
     heads = re.findall(r"^## (.+)$", _text(README), re.M)
     idx = [heads.index(h) for h in SECTIONS]
     assert idx == sorted(idx), heads
-    # the player sections come before the source quick start
-    assert idx[-1] < heads.index("Quick start (Windows)")
+    # README-SOURCE-FIRST (GH-1, session 44 choice a): with no release the
+    # one working route comes first - Get started, then Quick start (with
+    # its Stop / Update / Uninstall from source), then the release install
+    qs = heads.index("Quick start (Windows)")
+    assert heads.index("Get started") == qs - 1, heads
+    assert qs < idx[0], heads
+    subs = re.findall(r"^###? (.+)$", _text(README), re.M)
+    q = subs.index("Quick start (Windows)")
+    assert subs[q + 1:q + 4] == ["Stop", "Update from source",
+                                 "Uninstall from source"], subs
 
 
 MARKER = "al-version-stamp"
