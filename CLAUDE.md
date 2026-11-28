@@ -1859,3 +1859,28 @@ of the HALT check.
   drops or reshapes ModRunes.lua, repoe-fork publishes the augment to stat
   join, GGG objects to the relay, a real augment line proves wrong in
   play, or the operator rules otherwise.
+- PROGRESSION-VIEW: one Progression view (passive and ascendancy trees
+  drawn by web/panels/tree.js from the cached GGG export's x / y and out /
+  in links with AshLight's own shapes, no GGG art, at most 10 SVG paths a
+  tree; skill gems with supports, gem timing from the gems snapshot or
+  "unchecked", KINDLER-SUPPORT-FIT applies; PoB Spirit and weapon-set
+  points; the guide's point books counted, never claimed; a next-up strip
+  of at most 3 steps of 52 characters) from the PoB build or a Kindler
+  plan only, never a guess; plug/progression.py rebuilds the model only on
+  a change of the build, level, area, zone, tree, Kindler result, gems or
+  guide and publishes a small "progression" summary, the page reading the
+  token-gated GET /api/progression only when its key changes (at most 2
+  failed reads a key; the last tree stays drawn meanwhile); region I shows
+  the item card first and swaps to Next up by itself on a level-up between
+  two known levels or a change between two known builds, held while an
+  item check is under 20 s old until the next push (no timer), decided in
+  the push hook before the regions paint, a hidden-page return or a core
+  restart is no move, and a new item check gives the region back; the full
+  two-column card opens from the Builds row; no motion (a steady ring
+  marks newly due nodes); spec_picker answers specfollow.pick() with PoB's
+  own active spec as the fallback (decision 0089) and add_next_source is
+  the next-up hook (decision 0092). Reverses if: the export drops
+  positions or links, PoB support skillIds stop starting with "Support",
+  the region I swap misfires or hides the item card in play, the decision
+  0002 budgets are breached, TC-SPEC-FOLLOW changes pick()'s shape, or
+  design 0001 allows motion.

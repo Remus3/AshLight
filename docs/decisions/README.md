@@ -3,11 +3,15 @@
 One file per decision: `NNNN-<topic>.md` (decision, alternatives, why,
 reverses if). Numbers 0047 to 0076 are reserved for the packages of
 docs/plan/packages.json (docs/plan/07, Reserved decision numbers); a
-package uses the number in its new_files entry. 0077 to 0091
+package uses the number in its new_files entry. 0077 to 0092
 are taken. Numbers are reserved in the plan before a wave starts.
 Numbers are reserved per package in docs/plan/packages.json before a
 wave starts; the wave integrator adds the index line. 0035 stays unused.
 
+- 0092: PROGRESSION-VIEW: one Progression view (own-drawn passive and
+  ascendancy trees from the cached GGG export, gems with supports, Spirit,
+  point books counted, next-up strip) from the PoB build or a Kindler plan;
+  region I swaps to Next up on a level-up or build change.
 - 0091: Augment effects, values and slot rules from PoB-PoE2
   src/Data/ModRunes.lua, sha256-pinned and read as text, only while the
   calc component is installed; repoe-fork wins; tradeHashes only as 0037
