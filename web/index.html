@@ -825,10 +825,10 @@
            text the build link recovery shows before its confirm click) -->
       <p id="webdata-sentence" class="row-meta muted">Off unless you turn it on. When on, AshLight asks for three things only.
         It fetches currency and item prices from poe.ninja about once an hour. It opens a build link you
-        paste, once. It checks GitHub once a day for a new AshLight; a new version downloads by itself
-        and installs at a later start. It never asks the trade site anything; the trade link after an
-        item check opens only when you click it. It sends no account, password or cookie, and never
-        touches the game.</p>
+        paste, once. It checks GitHub once a day for a new AshLight. A new version downloads by itself
+        while the game is closed and installs the next time you open AshLight. It never asks the trade
+        site anything; the trade link after an item check opens only when you click it. It sends no
+        account, password or cookie, and never touches the game.</p>
       <p class="row-meta set-row"><span class="muted">Price book</span>
         <span id="book-state" class="badge" data-state="pending"><span class="glyph"
           aria-hidden="true">[ ]</span> <span class="word">currency values not loaded yet</span></span></p>
@@ -1065,8 +1065,9 @@
            ("update_click_only", saved as a one-key settings import). -->
       <p id="update-staged" class="row-meta" hidden></p>
       <p id="update-now-row" class="set-row" hidden><button id="update-now" type="button"
-        class="secondary btn-28" aria-describedby="update-line update-now-said">Update now</button>
-        <span id="update-now-said" class="muted"></span></p>
+        class="secondary btn-28" aria-describedby="update-line update-now-said update-now-note">Update now</button>
+        <span id="update-now-said" class="muted"></span>
+        <span id="update-now-note" class="muted" hidden></span></p>
       <p id="update-click-row" class="set-row" hidden><label class="check" for="update-click-only"><input
         id="update-click-only" type="checkbox" aria-describedby="update-click-said"> Update only when I click Update now</label>
         <span id="update-click-said" class="muted"></span></p>
