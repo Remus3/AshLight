@@ -120,6 +120,27 @@ def test_runtime_state_is_gitignored():
     assert paths.runtime_dir() == ROOT / "ops" / "runtime"
 
 
+def _git_ignored(rel):
+    import subprocess
+    r = subprocess.run(["git", "check-ignore", "-q", "--no-index", rel],
+                       cwd=str(ROOT), capture_output=True)
+    assert r.returncode in (0, 1), r.stderr
+    return r.returncode == 0
+
+
+def test_local_json_temp_leftovers_are_gitignored():
+    # AUDIT-GITIGNORE-TMP (audit 2026-11-28 P2-2): a crash between the
+    # jsonfile write and os.replace leaves <name>.<tag>.tmp beside it.
+    from server.al import jsonfile
+    left = jsonfile.tmp_path(ROOT / "config" / "local.json", "1.ab")
+    rel = left.relative_to(ROOT).as_posix()
+    assert rel == "config/local.json.1.ab.tmp"
+    assert _git_ignored(rel)
+    assert _git_ignored("config/local.json.tmp")
+    assert _git_ignored("config/local.json.bak")
+    assert not _git_ignored("config/local.example.json")
+
+
 def _files():
     for top in SCANNED:
         base = ROOT / top
