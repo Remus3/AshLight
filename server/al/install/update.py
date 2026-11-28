@@ -15,6 +15,10 @@ network, in this fixed order:
    pins; the zip is AshLight-<version>-app.zip and its bytes match their
    SHA256SUMS.txt line (install.verify); the version is newer than the
    marker's. Nothing is written before this passes.
+   Then (REL-DISK-PRECHECK) version folders newer than the marker's that
+   no staged file names are removed (clean_orphans), and a drive with less
+   free space than space_needed() stops the run at stage 'space' with the
+   fixed reason 'not enough free disk space (N MB needed)'.
 3. runtimes: a runtime pin that differs from the marker's folder and is
    not placed yet is placed from the --runtime-dir folder of publisher
    zips (checked against the pin); without that folder the update stops
@@ -71,7 +75,9 @@ API itself. In order:
    digest ("sha256:<hex>"); the zip and release.json are then checked
    against their SHA256SUMS.txt lines (two hash sources). An answer
    without a digest field is recorded (report "digest": "absent") and
-   SHA256SUMS.txt alone decides. Any mismatch stages nothing.
+   SHA256SUMS.txt alone decides; an answer with a digest on some assets
+   only is refused before any request (REL-DIGEST-PARTIAL). Any mismatch
+   stages nothing.
 5. then steps 3 to 6 above from the verified bytes; a runtime pin that
    changed is fetched here, in the installer process, over the pinned
    publisher hosts (payload.place_runtime, checked against the new pin).
@@ -87,6 +93,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import sys
 import time
 from datetime import datetime, timedelta, timezone
@@ -105,6 +112,8 @@ HOLD = timedelta(hours=24)        # apply_after = published_at + HOLD
 STEPS = ("gate", "verify", "runtimes", "extract", "selftest", "stage")
 BELOW_NORMAL = 0x00004000         # BELOW_NORMAL_PRIORITY_CLASS
 MAX_STAGED_BYTES = 64 * 1024
+SPACE_MARGIN = 64 * 1024 * 1024   # REL-DISK-PRECHECK: kept free past the writes
+disk_usage = shutil.disk_usage    # tests replace it
 TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 EXIT_OK = 0
@@ -444,6 +453,44 @@ def _work(home, zip_path, sums, release, runtime_dir, marker, published_at,
                     lambda: runtime_folders(home, pins, marker, runtime_dir))
 
 
+def space_needed(zip_size, runtime_sizes):
+    """REL-DISK-PRECHECK (research 0066 F2): the bytes an update may write:
+    the zip (its cached copy; the tree fits in the margin), three times
+    each changed runtime pin's size (the download, its unpacked tree and
+    the old runtime kept beside it) and SPACE_MARGIN."""
+    return int(zip_size) + 3 * sum(int(s) for s in runtime_sizes) + SPACE_MARGIN
+
+
+def check_space(home, zip_size, runtime_sizes):
+    """UpdateFailed('space', 'not enough free disk space (N MB needed)')
+    when the home's drive has less free space than space_needed; an
+    unreadable drive is not refused (the writes report their own error)."""
+    need = space_needed(zip_size, runtime_sizes)
+    try:
+        free = disk_usage(home).free
+    except (OSError, AttributeError):
+        return
+    if free < need:
+        mb = -(-need // (1024 * 1024))
+        raise UpdateFailed("space", f"not enough free disk space ({mb} MB needed)")
+
+
+def clean_orphans(home, marker, version):
+    """REL-DISK-PRECHECK (research 0066 F2): remove the version folders
+    newer than the marker's that no staged file names (a staged write that
+    failed left them), never the marker's version, its previous or
+    `version` (this run's, which install.lay_out checks or replaces).
+    Plain folders only (switch._remove_dir). Returns the names removed."""
+    staged = {d["version"] for d in (read_staged(home, v) for v in staged_versions(home))
+              if d}
+    keep = staged | {marker["version"], marker.get("previous"), version}
+    floor = homemod.version_key(marker["version"])
+    app = homemod.layout(home)["app"]
+    return [name for name in homemod.version_dirs(home)
+            if name not in keep and homemod.version_key(name) > floor
+            and switchmod._remove_dir(app, name)]
+
+
 def _stage_verified(home, version, data, sums_b, release_b, pins, marker,
                     published_at, selftest, report, now, say, runtimes):
     """Steps 3 to 6 from bytes that passed every check. runtimes() ->
@@ -453,6 +500,7 @@ def _stage_verified(home, version, data, sums_b, release_b, pins, marker,
     hashes = {"zip": _sha(data), "sums": _sha(sums_b), "release": _sha(release_b)}
     steps["verify"] = "ok"
     say(f"update: verify ok ({marker['version']} to {version})")
+    report["cleaned"] = clean_orphans(home, marker, version)
 
     done = _already_staged(home, version, hashes)
     if done is not None:
@@ -463,6 +511,8 @@ def _stage_verified(home, version, data, sums_b, release_b, pins, marker,
                       apply_after=done.get("apply_after"))
         return
 
+    check_space(home, len(data), [pins[n]["size"] for n in pinfetch.RUNTIME_NAMES
+                                  if payload.runtime_folder(n, pins[n]) != marker[n]])
     folders, placed = runtimes()
     steps["runtimes"] = "placed" if placed else "current"
 
@@ -597,7 +647,12 @@ def check_release(release_doc, repo=""):
             digest = dm.group(1)
         out["assets"][name] = {"size": size, "digest": digest, "url": url}
     have = [a["digest"] is not None for a in out["assets"].values()]
-    out["digest"] = "checked" if all(have) else ("absent" if not any(have) else "partial")
+    if any(have) and not all(have):
+        # REL-DIGEST-PARTIAL (research 0066 F5): GitHub gives every asset
+        # a digest or none; a mixed answer is refused, never half-checked
+        raise UpdateFailed("release", "the release lists a digest for some "
+                                      "assets only")
+    out["digest"] = "checked" if all(have) else "absent"
     out["digests"] = {name: "checked" if a["digest"] is not None else "absent"
                       for name, a in out["assets"].items()}
     return out
@@ -681,11 +736,22 @@ def _release_work(home, rel, marker, fetch, opener, runtime_fetch, selftest,
     doc, pins = _verify_release(version, got[zip_name], got[install.SUMS_NAME],
                                 got[install.RELEASE_NAME])
     published_at = rel["published_at"] or doc.get("published_at")
+
+    def runtimes():
+        # REL-DOWNLOAD-RESUME (research 0066 F1): a broken connection while
+        # a changed runtime downloads is a 'download' failure, so the core
+        # retries sooner; a pin mismatch stays a 'runtimes' failure
+        try:
+            return runtime_folders(home, pins, marker, network=True,
+                                   fetch=runtime_fetch, opener=opener)
+        except payload.NETWORK_ERRORS as exc:
+            if isinstance(exc, payload.NOT_NETWORK_ERRORS):
+                raise
+            raise UpdateFailed("download", f"runtime download: "
+                                           f"{exc.__class__.__name__}") from None
     _stage_verified(home, version, got[zip_name], got[install.SUMS_NAME],
                     got[install.RELEASE_NAME], pins, marker, published_at,
-                    selftest, report, now, say,
-                    lambda: runtime_folders(home, pins, marker, network=True,
-                                            fetch=runtime_fetch, opener=opener))
+                    selftest, report, now, say, runtimes)
 
 
 def stage_from_release(home, release_doc, repo="", fetch=None, opener=None,
@@ -814,6 +880,10 @@ def build_parser():
     src.add_argument("--yes", action="store_true",
                      help="download, verify and stage the newer release of the "
                           "cached update check (web data on and acknowledged)")
+    p.add_argument("--auto", action="store_true",
+                   help="with --yes: the core's automatic start; the download "
+                        "and the self-test wait for the running core's "
+                        "game_idle instead of counting as a click")
     p.add_argument("--release-cache", help="the update check answer (default: "
                    "<home>\\cache\\updates\\update_check.json)")
     p.add_argument("--sums", help="SHA256SUMS.txt (default: beside the zip)")
@@ -827,15 +897,21 @@ def build_parser():
     return p
 
 
-def main(argv=None, environ=None, out=None, opener=None):
+def main(argv=None, environ=None, out=None, opener=None, idle=None):
     """The typed or pasted `update` line is the player's own act: a click
-    (the game_idle gate is for the automatic callers). `opener` is for
-    tests only (the --yes downloads)."""
+    (the game_idle gate is for the automatic callers). `--yes --auto` is
+    the core's automatic start (REL-UPDATE-AUTO-IDLE, research 0066 F4):
+    not a click, so the download and the self-test each wait for the
+    running core's game_idle (switch.default_idle of the home; `idle` is
+    for tests only). `opener` is for tests only (the --yes downloads)."""
     argv = list(sys.argv[1:] if argv is None else argv)
     try:
         args = build_parser().parse_args(argv)
     except SystemExit as exc:
         return EXIT_USAGE if exc.code else EXIT_OK
+    if args.auto and not args.yes:
+        print("update: --auto needs --yes", file=sys.stderr)
+        return EXIT_USAGE
     if args.yes:
         if any(v is not None for v in (args.sums, args.release, args.runtime_dir,
                                        args.published_at)):
@@ -850,9 +926,14 @@ def main(argv=None, environ=None, out=None, opener=None):
         else:
             cache = Path(args.release_cache) if args.release_cache else cache_path(home)
             release_doc, repo = read_cached_release(cache)
+        if args.auto:
+            gate = {"clicked": False,
+                    "idle": idle or (lambda: switchmod.default_idle(home))}
+        else:
+            gate = {"clicked": True}
         code, _report = stage_from_release(home, release_doc, repo=repo,
-                                           clicked=True, opener=opener,
-                                           out=out or sys.stdout)
+                                           opener=opener, out=out or sys.stdout,
+                                           **gate)
         return code
     if args.release_cache is not None:
         print("update: --release-cache needs --yes", file=sys.stderr)

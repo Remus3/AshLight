@@ -1435,6 +1435,9 @@ class Core:
         client = self.updates
         alive = client.running()
         if self._update_child_running and not alive:
+            # REL-DOWNLOAD-RESUME: the ended run's result sets the next hold
+            facts = self._install_facts()
+            client.note_result(facts.get("last") if isinstance(facts, dict) else None)
             self.publish_update()
             if self._apply_after_run:
                 self._apply_after_run = False
@@ -2044,6 +2047,7 @@ class Core:
     # REL-UPDATE-CHECKS: the update words the installer writes (switch.py,
     # update.py); any other word reads as no result
     _UPDATE_ACTIONS = ("update", "apply", "rollback", "confirm")
+    _UPDATE_STAGES = ("space", "download")
     _STAGED_MAX_BYTES = 64 * 1024
     _REPORT_MAX_BYTES = 256 * 1024
 
@@ -2132,6 +2136,11 @@ class Core:
                                "version": new[1] if new else None,
                                "from": old[1] if old else None,
                                "at": self._install_time(last.get("at"))}
+                # REL-DISK-PRECHECK / REL-DOWNLOAD-RESUME: only the fixed
+                # stage words the Checks row and the retry hold read; never
+                # the free-text reason
+                if last.get("stage") in self._UPDATE_STAGES:
+                    out["last"]["stage"] = last["stage"]
         return out
 
     def _ggg_reg_open(self):

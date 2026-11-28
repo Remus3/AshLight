@@ -605,7 +605,9 @@ def test_idle_installed_copy_starts_the_installer_once_hidden_below_normal(tmp_p
     assert len(spawn.calls) == 1
     argv, flags = spawn.calls[0]
     assert Path(argv[1]).name == "boot.py"
-    assert argv[2:] == ["server.al.install", "update", "--yes", "--home", str(home)]
+    # REL-UPDATE-AUTO-IDLE: the automatic start is not a click
+    assert argv[2:] == ["server.al.install", "update", "--yes", "--home", str(home),
+                        updates.AUTO_ARG]
     assert Path(argv[0]).name.lower() in ("pythonw.exe", "python.exe", "pythonw", "python")
     assert flags == updates.creation_flags()
     if updates.os.name == "nt":
@@ -628,6 +630,62 @@ def test_idle_installed_copy_starts_the_installer_once_hidden_below_normal(tmp_p
     _run(core)
     assert len(spawn.calls) == 2
     assert core.state.snapshot()["update"]["staged"] == "9.0.0"
+
+
+def _report(home, status, stage, version="9.0.0"):
+    folder = home / "logs" / "reports"
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "last-update.json").write_text(json.dumps({
+        "kind": "update", "status": status, "stage": stage, "version": version,
+        "from": VERSION, "reason": "x", "at": "2026-11-20T10:00:00Z"}), encoding="ascii")
+
+
+def test_a_download_failure_or_deferral_retries_after_1_h_then_4_h_then_daily(
+        tmp_path, monkeypatch):
+    # REL-DOWNLOAD-RESUME (research 0066 F1)
+    core, _, clock, home = _trigger_core(tmp_path, monkeypatch)
+    spawn = core.update_spawn
+    _run(core)
+    assert len(spawn.calls) == 1
+    start = clock[0]
+    _report(home, "failed", "download")
+    spawn.finish()
+    _run(core, start + 3599)       # the end is seen; the hold is now 1 h
+    assert len(spawn.calls) == 1
+    _run(core, start + 3600)
+    assert len(spawn.calls) == 2
+    start = start + 3600
+    _report(home, "deferred", "gate")   # the game woke during the run
+    spawn.finish()
+    _run(core, start + 4 * 3600 - 1)
+    assert len(spawn.calls) == 2
+    _run(core, start + 4 * 3600)
+    assert len(spawn.calls) == 3
+    start = start + 4 * 3600
+    _report(home, "failed", "download")  # the soon retries are used up
+    spawn.finish()
+    _run(core, start + DAY - 1)
+    assert len(spawn.calls) == 3
+    _run(core, start + DAY)
+    assert len(spawn.calls) == 4
+
+
+def test_any_other_failure_keeps_the_daily_hold(tmp_path, monkeypatch):
+    for stage, status, version in (("verify", "failed", "9.0.0"),
+                                   ("space", "failed", "9.0.0"),
+                                   ("download", "failed", "8.0.0")):
+        sub = tmp_path / stage / version
+        sub.mkdir(parents=True)
+        core, _, clock, home = _trigger_core(sub, monkeypatch)
+        spawn = core.update_spawn
+        _run(core)
+        start = clock[0]
+        _report(home, status, stage, version)
+        spawn.finish()
+        _run(core, start + 4 * 3600)
+        assert len(spawn.calls) == 1, stage
+        _run(core, start + DAY)
+        assert len(spawn.calls) == 2, stage
 
 
 def test_game_not_idle_never_starts(tmp_path, monkeypatch):
@@ -654,6 +712,7 @@ def test_click_only_waits_for_update_now(tmp_path, monkeypatch):
     assert core.update_now() == updates.STARTED
     assert len(core.update_spawn.calls) == 1
     assert core.update_spawn.calls[0][0][2:5] == ["server.al.install", "update", "--yes"]
+    assert updates.AUTO_ARG not in core.update_spawn.calls[0][0]  # a click
     assert core.update_now() == updates.RUNNING  # never doubled
     assert len(core.update_spawn.calls) == 1
 

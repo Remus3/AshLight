@@ -137,6 +137,18 @@ def test_steps_in_order():
     assert at == sorted(at), dict(zip([m[0] for m in markers], at))
 
 
+def test_the_release_body_carries_the_sums_file_sha256():
+    # REL-INSTALL-SUMS-PRINT (research 0066 F6): the same value install.ps1
+    # prints, kept out of the uploaded folder (the body is not an asset)
+    draft = [s for s in _steps(_text()) if "gh release create" in s]
+    assert len(draft) == 1
+    step = draft[0]
+    assert "Get-FileHash -Algorithm SHA256" in step and "'SHA256SUMS.txt'" in step
+    assert "SHA-256 of SHA256SUMS.txt: $sumsHash" in step
+    assert "Join-Path $env:RUNNER_TEMP 'release-body.md'" in step
+    assert "--notes-file $body" in step
+
+
 def test_publish_marks_rc_tags_prerelease():
     pub = [s for s in _steps(_text()) if "gh release edit" in s]
     assert len(pub) == 1

@@ -31,6 +31,7 @@ reads or writes a game folder; standard library only.
 """
 
 import hashlib
+import http.client
 import io
 import json
 import os
@@ -57,6 +58,12 @@ MAX_SUMS_BYTES = 64 * 1024
 MAX_RELEASE_BYTES = 256 * 1024
 MAX_PATH_CHARS = 200
 CHUNK = 1024 * 1024
+# REL-DOWNLOAD-RESUME (research 0066 F1): the errors of a broken or refused
+# connection (install/update.py reports them at stage 'download', and the
+# core retries such a run after 1 h, then 4 h); a refused address is not one
+NETWORK_ERRORS = (urllib.error.URLError, ConnectionError, TimeoutError,
+                  http.client.HTTPException, webfetch.FetchError)
+NOT_NETWORK_ERRORS = (webfetch.UrlNotAllowed, webfetch.WebDataOff)
 
 _SEGMENT = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9._+-]*$")
 _RESERVED = frozenset(["CON", "PRN", "AUX", "NUL"]

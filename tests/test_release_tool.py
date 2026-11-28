@@ -229,6 +229,25 @@ def test_real_zip_is_under_two_megabytes():
     assert len(blob) < 2000000
 
 
+# REL-ZIP-BUDGET-WARN (research 0066 G3): the payload must stay under 90
+# percent of the ship list's max_zip_bytes, so a growing payload is caught
+# and the budget raised in a normal commit, never on release day when
+# rel_build refuses the zip (decision 0064 item 3).
+ZIP_BUDGET_WARN = 0.90
+
+
+def test_real_zip_stays_under_ninety_percent_of_its_budget():
+    spec, _head, files = _real_files()
+    blob = rb.write_zip(files, "AshLight-0.0.0", WHEN_TS, spec["compression"],
+                        spec["compresslevel"])
+    limit = int(spec["max_zip_bytes"] * ZIP_BUDGET_WARN)
+    assert len(blob) < limit, (
+        "the app zip is %d bytes, over 90 percent of max_zip_bytes %d in "
+        "config/ship_list.json: raise the budget (decision 0064 item 3) or "
+        "shrink the payload now, before a release refuses it"
+        % (len(blob), spec["max_zip_bytes"]))
+
+
 def test_manifest_check_catches_changed_missing_and_unsafe(tmp_path):
     repo = _scratch(tmp_path)
     res = _build(repo, tmp_path, "out")

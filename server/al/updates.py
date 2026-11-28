@@ -75,6 +75,12 @@ INSTALLER_MODULE = "server.al.install"
 UPDATE_ARGS = ("update", "--yes")
 CLICK_ONLY_KEY = "update_click_only"   # the Settings switch (local config)
 RETRY_S = DAY_S              # one automatic start per version a day
+# REL-DOWNLOAD-RESUME (research 0066 F1): after an automatic run that failed
+# while downloading, or was deferred because the game woke (REL-UPDATE-AUTO-
+# IDLE), the next automatic starts wait 1 h, then 4 h, then RETRY_S again
+RETRY_SOON_S = (3600, 4 * 3600)
+AUTO_ARG = "--auto"          # REL-UPDATE-AUTO-IDLE: the automatic start's flag
+STATUS_DEFERRED = "deferred"  # the installer report's word (install/update.py)
 BELOW_NORMAL = 0x00004000    # BELOW_NORMAL_PRIORITY_CLASS
 NO_WINDOW = 0x08000000       # CREATE_NO_WINDOW
 DETACHED = 0x00000008        # DETACHED_PROCESS
@@ -334,6 +340,7 @@ class UpdateClient:
         self.command = command
         self._child = None
         self._attempt = None     # (version, epoch s) of the last start
+        self._soon = 0           # REL-DOWNLOAD-RESUME: retriable results in a row
         # its own lock: a start never waits on a release read in flight
         self._start_lock = threading.Lock()
         self.repo = load_repo() if repo is None else clean_repo(repo)
@@ -457,6 +464,38 @@ class UpdateClient:
         """True while the update process this client started still runs."""
         return _alive(self._child)
 
+    def retry_hold(self):
+        """Seconds an automatic start of the attempted version waits after
+        the last start: RETRY_SOON_S[n - 1] after n retriable results in a
+        row (note_result), RETRY_S otherwise and once those are used up."""
+        if 0 < self._soon <= len(RETRY_SOON_S):
+            return RETRY_SOON_S[self._soon - 1]
+        return RETRY_S
+
+    def _held(self, version, now):
+        return (self._attempt is not None and self._attempt[0] == version
+                and 0 <= now - self._attempt[1] < self.retry_hold())
+
+    def note_result(self, last):
+        """REL-DOWNLOAD-RESUME (research 0066 F1), from the core when a run
+        it started has ended. `last`: the installed copy's last update
+        result ({"action", "status", "version"[, "stage"]}, the core's
+        install facts). A result for the attempted version that failed at
+        stage 'download' or was deferred (the game was not idle) is
+        retriable: the next automatic start comes sooner. Any other result
+        goes back to the once-a-day hold."""
+        if not isinstance(last, dict):
+            last = {}
+        retriable = last.get("action") == "update" and (
+            last.get("status") == STATUS_DEFERRED
+            or (last.get("status") == FAILED and last.get("stage") == "download"))
+        with self._start_lock:
+            if self._attempt is None:
+                return
+            if retriable and last.get("version") != self._attempt[0]:
+                retriable = False
+            self._soon = self._soon + 1 if retriable else 0
+
     def _start(self, now, spawn, staged, auto):
         """Start the installer's update process once; one fixed word."""
         if not self.allowed():
@@ -466,8 +505,7 @@ class UpdateClient:
         version = self.newer_version()
         if version is None:
             return CURRENT
-        if (auto and self._attempt is not None and self._attempt[0] == version
-                and 0 <= now - self._attempt[1] < RETRY_S):
+        if auto and self._held(version, now):
             return WAITING
         cmd = self.command() if callable(self.command) else None
         if not cmd:
@@ -478,9 +516,15 @@ class UpdateClient:
             done = None
         if done == version:
             return STAGED
+        if self._attempt is None or self._attempt[0] != version:
+            self._soon = 0
         self._attempt = (version, now)
+        # REL-UPDATE-AUTO-IDLE (research 0066 F4): the automatic start is not
+        # a click; --auto makes the installer re-check game_idle before the
+        # download and the self-test. 'Update now' stays a click.
+        argv = list(cmd) + ([AUTO_ARG] if auto else [])
         try:
-            self._child = (spawn or spawn_hidden)(list(cmd), creationflags=creation_flags())
+            self._child = (spawn or spawn_hidden)(argv, creationflags=creation_flags())
         except (OSError, ValueError):
             self._child = None
             return FAILED
@@ -492,16 +536,16 @@ class UpdateClient:
         the game is idle (`idle`: the core's game_idle, exactly True) and
         a newer release is known and not staged (`staged`: callable -> the
         staged version or None, read only right before a start). At most
-        one automatic start per version every RETRY_S, never beside a run
-        still going. True when it started one."""
+        one automatic start per version every retry_hold() (RETRY_S, or
+        sooner after a retriable result), never beside a run still going;
+        the command carries AUTO_ARG. True when it started one."""
         now = float(now)
         with self._start_lock:
             # the cheap memory checks first: the tick calls this every pass
             if idle is not True or _alive(self._child):
                 return False
             version = self.newer_version()
-            if version is None or (self._attempt is not None and self._attempt[0] == version
-                                   and 0 <= now - self._attempt[1] < RETRY_S):
+            if version is None or self._held(version, now):
                 return False
             if bool(_call(self.click_only)):
                 return False

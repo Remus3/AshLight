@@ -97,7 +97,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $notes = Join-Path $env:AL_REL_OUT "AshLight-$env:AL_REL_VERSION-notes.md"
-          gh release create "$env:AL_REL_TAG" --draft --verify-tag --title "AshLight $env:AL_REL_VERSION" --notes-file $notes
+          # REL-INSTALL-SUMS-PRINT (research 0066 F6): the body ends with the
+          # SHA-256 of SHA256SUMS.txt, the value install.ps1 prints at its end
+          $sumsHash = (Get-FileHash -Algorithm SHA256 (Join-Path $env:AL_REL_OUT 'SHA256SUMS.txt')).Hash.ToLowerInvariant()
+          $body = Join-Path $env:RUNNER_TEMP 'release-body.md'
+          $text = [IO.File]::ReadAllText($notes).TrimEnd() + "`n`nSHA-256 of SHA256SUMS.txt: $sumsHash`n"
+          [IO.File]::WriteAllText($body, $text, [Text.UTF8Encoding]::new($false))
+          gh release create "$env:AL_REL_TAG" --draft --verify-tag --title "AshLight $env:AL_REL_VERSION" --notes-file $body
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: upload the release assets
         shell: pwsh
