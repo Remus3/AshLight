@@ -5,7 +5,7 @@ module is the command line only.
 
 Exit codes: 0 start as usual (nothing staged, not due, or a start of a
 version still waiting for its confirm counted), 10 the marker moved
-(switched, or rolled back at the second start without a confirm):
+(switched, or rolled back at the third start without a confirm):
 relaunch from the marker, 3 a core of this home runs (nothing switched),
 1 failed, 2 usage or a refused home. With nothing staged it costs one
 folder listing and the marker read.

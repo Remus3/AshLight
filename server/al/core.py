@@ -2104,8 +2104,7 @@ class Core:
                "staged": None, "last": None}
         skip = jsonfile.read_json(home / paths.DATA_DIR / "update_skip.json",
                                   max_bytes=self._STAGED_MAX_BYTES, kind=dict, default={})
-        skipped = {r.get("version") for r in (skip.get("versions") or [])
-                   if isinstance(r, dict)} if isinstance(skip.get("versions"), list) else set()
+        skipped = paths.held_skips(skip)  # REL-CONFIRM-PATIENCE: re-offers
         try:
             names = os.listdir(home / "staged")
         except OSError:

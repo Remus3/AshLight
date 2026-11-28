@@ -324,15 +324,39 @@ def test_a_shell_failure_puts_the_old_marker_back(home):
 
 # --- rollback ------------------------------------------------------------------------
 
-def test_a_version_that_never_confirms_is_rolled_back_at_the_second_start(home, fake):
+def test_the_confirm_waits_180_s_and_three_starts_decide(home):
+    # REL-CONFIRM-PATIENCE (research 0066 F12): a slow first start keeps
+    # its release
+    from server.al.install import confirm as confirm_cmd
+    assert switch.CONFIRM_WAIT_S == 180.0
+    assert switch.MAX_ATTEMPTS == 3
+    seen = {}
+    real = switch.confirm
+
+    def spy(h, **kw):
+        seen.update(kw)
+        return real(h, **kw)
+    try:
+        switch.confirm = spy
+        confirm_cmd.main(["--home", str(home), "--wait"], health=lambda h: OLD,
+                         out=io.StringIO())
+    finally:
+        switch.confirm = real
+    assert seen.get("wait_s") == 180.0
+
+
+def test_a_version_that_never_confirms_is_rolled_back_at_the_third_start(home, fake):
     _stage(home, NEW, WHEN - timedelta(hours=1))
     assert _apply(home, fake)[0] == switch.EXIT_SWITCHED
-    # the relaunch from the marker: the first start of NEW is counted
+    # the relaunch from the marker: the first and second starts of NEW count
     code, res = _apply(home, fake)
     assert (code, res["status"]) == (switch.EXIT_OK, switch.STARTED)
     assert homemod.read_marker(home)["start_attempts"] == 1
+    code, res = _apply(home, fake)
+    assert (code, res["status"]) == (switch.EXIT_OK, switch.STARTED)
+    assert homemod.read_marker(home)["start_attempts"] == 2
     lines = len(_lines(home))
-    # no health answer came: the second start rolls back by itself
+    # no health answer came: the third start rolls back by itself
     code, res = _apply(home, fake)
     assert (code, res["status"]) == (switch.EXIT_SWITCHED, switch.ROLLED_BACK), res
     marker = homemod.read_marker(home)
@@ -342,16 +366,84 @@ def test_a_version_that_never_confirms_is_rolled_back_at_the_second_start(home, 
     _points_at(fake, home, OLD)
     skip = json.loads((home / "data" / switch.SKIP_NAME).read_text(encoding="ascii"))
     assert [r["version"] for r in skip["versions"]] == [NEW]
-    assert switch.skipped(home) == {NEW}
+    assert skip["versions"][0]["class"] == switch.SKIP_NO_ANSWER
+    assert skip["versions"][0]["offers"] == 1
+    assert switch.skipped(home, now=WHEN) == {NEW}
     assert len(_lines(home)) == lines + 1
     assert f"from {NEW} to {OLD}" in _lines(home)[-1]
-    # NEW is never applied again; a newer release is
+    # NEW is not applied again within the 7 days; a newer release is
     _stage(home, NEW, WHEN - timedelta(hours=1))
     assert _apply(home, fake)[1]["status"] == switch.NOTHING
     _payload(home, NEWER)
     _stage(home, NEWER, WHEN - timedelta(hours=1))
     assert _apply(home, fake)[0] == switch.EXIT_SWITCHED
     assert homemod.read_marker(home)["version"] == NEWER
+
+
+def _never_confirms(home, fake, now):
+    for _ in range(switch.MAX_ATTEMPTS):
+        code, res = _apply(home, fake, now=now)
+    assert (code, res["status"]) == (switch.EXIT_SWITCHED, switch.ROLLED_BACK), res
+
+
+def test_a_no_answer_skip_is_offered_once_more_after_7_days(home, fake):
+    _stage(home, NEW, WHEN - timedelta(hours=1))
+    assert _apply(home, fake)[0] == switch.EXIT_SWITCHED
+    _never_confirms(home, fake, WHEN)
+    held = WHEN + timedelta(days=7) - timedelta(seconds=1)
+    assert switch.skipped(home, now=held) == {NEW}
+    _stage(home, NEW, WHEN - timedelta(hours=1))
+    assert _apply(home, fake, now=held)[1]["status"] == switch.NOTHING
+    # 7 days on: offered once more and switched to
+    later = WHEN + timedelta(days=7)
+    assert switch.skipped(home, now=later) == set()
+    _stage(home, NEW, later - timedelta(hours=1))
+    code, res = _apply(home, fake, now=later)
+    assert (code, res["status"]) == (switch.EXIT_SWITCHED, switch.SWITCHED), res
+    # no answer again: this time the skip holds for good
+    _never_confirms(home, fake, later)
+    skip = json.loads((home / "data" / switch.SKIP_NAME).read_text(encoding="ascii"))
+    assert [(r["version"], r["class"], r["offers"]) for r in skip["versions"]] == [
+        (NEW, switch.SKIP_NO_ANSWER, 2)]
+    assert switch.skipped(home, now=later + timedelta(days=400)) == {NEW}
+
+
+def test_a_confirmed_reoffer_needs_no_skip_and_old_rows_hold(home, fake):
+    # a re-offered version that answers is just the active version
+    _stage(home, NEW, WHEN - timedelta(hours=1))
+    _apply(home, fake)
+    _never_confirms(home, fake, WHEN)
+    later = WHEN + timedelta(days=8)
+    _stage(home, NEW, later - timedelta(hours=1))
+    assert _apply(home, fake, now=later)[0] == switch.EXIT_SWITCHED
+    code, res = switch.confirm(home, health=lambda h: NEW, now=later)
+    assert res["status"] == switch.CONFIRMED
+    assert homemod.read_marker(home)["version"] == NEW
+    # a row written before the classes (no class) and an unknown class hold
+    path = home / "data" / switch.SKIP_NAME
+    path.write_text(json.dumps({"schema": 1, "name": "AshLight", "versions": [
+        {"version": "2.0.0", "at": homemod.now_text(WHEN),
+         "reason": "no health answer after 2 starts"},
+        {"version": "2.1.0", "at": homemod.now_text(WHEN), "reason": "x",
+         "class": "crash"},
+        {"version": "2.2.0", "at": "not a time", "reason": "x",
+         "class": switch.SKIP_NO_ANSWER}]}), encoding="ascii")
+    assert switch.skipped(home, now=WHEN + timedelta(days=400)) == {
+        "2.0.0", "2.1.0", "2.2.0"}
+    # a class the caller makes up is stored as manual (holds for good)
+    switch.record_skip(home, "2.3.0", "x", now=WHEN, kind="bogus")
+    rows = json.loads(path.read_text(encoding="ascii"))["versions"]
+    assert rows[-1]["class"] == switch.SKIP_MANUAL
+
+
+def test_the_core_staged_note_follows_the_reoffer(home, fake):
+    from server.al import paths as pathsmod
+    _stage(home, NEW, WHEN - timedelta(hours=1))
+    _apply(home, fake)
+    _never_confirms(home, fake, WHEN)
+    doc = json.loads((home / "data" / switch.SKIP_NAME).read_text(encoding="ascii"))
+    assert pathsmod.held_skips(doc, WHEN) == {NEW}
+    assert pathsmod.held_skips(doc, WHEN + timedelta(days=7)) == set()
 
 
 def test_rollback_by_hand_restores_n_and_reads_back(home, fake, monkeypatch):
@@ -371,6 +463,10 @@ def test_rollback_by_hand_restores_n_and_reads_back(home, fake, monkeypatch):
     _points_at(fake, home, OLD)
     assert fake.entry["install_location"] == str(home)
     assert switch.skipped(home) == {NEW}
+    skip = json.loads((home / "data" / switch.SKIP_NAME).read_text(encoding="ascii"))
+    assert skip["versions"][-1]["class"] == switch.SKIP_MANUAL
+    # a skip by hand holds for good
+    assert switch.skipped(home, now=WHEN + timedelta(days=400)) == {NEW}
     # nothing left to go back to
     code, res = real(home, runner=fake, running=_idle, now=WHEN, out=out)
     assert code == switch.EXIT_FAIL and "no previous version" in res["reason"]
@@ -477,8 +573,7 @@ def test_default_health_needs_this_homes_own_core(home):
 def test_the_report_and_skip_file_name_no_path(home, fake, tmp_path):
     _stage(home, NEW, WHEN - timedelta(hours=1))
     _apply(home, fake)
-    _apply(home, fake)
-    _apply(home, fake)  # rolled back
+    _never_confirms(home, fake, WHEN)  # rolled back
     for path in (home / "logs" / "reports" / "last-update.json",
                  home / "data" / switch.SKIP_NAME):
         text = path.read_text(encoding="ascii")

@@ -176,6 +176,59 @@ def install_info(environ=None):
     return {"mode": mode, "previous": previous}
 
 
+# REL-CONFIRM-PATIENCE (research 0066 F12): the reason class of an
+# update_skip.json row. A "no health answer" skip is offered once more
+# after SKIP_REOFFER_S; every other class (a rollback by hand, or a row
+# with no class, written before the classes existed) holds for good.
+SKIP_MANUAL, SKIP_NO_ANSWER = "manual", "no_answer"
+SKIP_CLASSES = (SKIP_MANUAL, SKIP_NO_ANSWER)
+SKIP_REOFFER_S = 7 * 24 * 3600
+
+
+def _skip_time(text):
+    from datetime import datetime, timezone  # late: the resolver needs none
+    if not isinstance(text, str) or not 10 <= len(text) <= 40:
+        return None
+    raw = text.strip()
+    if raw.endswith("Z"):
+        raw = raw[:-1] + "+00:00"
+    try:
+        when = datetime.fromisoformat(raw)
+    except ValueError:
+        return None
+    return when if when.tzinfo else when.replace(tzinfo=timezone.utc)
+
+
+def skip_reoffered(row, now=None):
+    """True when an update_skip.json row no longer holds its version: class
+    no_answer, skipped once (offers 1 or absent) and at least SKIP_REOFFER_S
+    old. A row whose time does not parse holds."""
+    from datetime import datetime, timezone
+    if not isinstance(row, dict) or row.get("class") != SKIP_NO_ANSWER:
+        return False
+    offers = row.get("offers", 1)
+    if isinstance(offers, bool) or not isinstance(offers, int) or offers != 1:
+        return False
+    at = _skip_time(row.get("at"))
+    if at is None:
+        return False
+    when = now if isinstance(now, datetime) else datetime.now(timezone.utc)
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=timezone.utc)
+    return (when - at).total_seconds() >= SKIP_REOFFER_S
+
+
+def held_skips(doc, now=None):
+    """The versions an update_skip.json document still holds back, as a set
+    of strings (re-offered rows left out; see skip_reoffered)."""
+    rows = doc.get("versions") if isinstance(doc, dict) else None
+    if not isinstance(rows, list):
+        return set()
+    return {r["version"] for r in rows
+            if isinstance(r, dict) and isinstance(r.get("version"), str)
+            and not skip_reoffered(r, now)}
+
+
 def data_dir(environ=None):
     """<home>/data in an install (all player state), else None."""
     home = install_home(environ)

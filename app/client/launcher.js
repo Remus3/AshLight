@@ -20,7 +20,7 @@
    REL-UPDATE-LAUNCH (F-077, DEP-11): in an installed copy startCore() first
    runs the installer's own 'apply-staged --if-due' (applyStaged, one hidden
    process when nothing is staged). Exit 10 means the marker moved
-   (switched, or rolled back at the second start without a confirm): the
+   (switched, or rolled back at the third start without a confirm): the
    client is started again from the marker's version (relaunch) and this
    process exits, so the new version's core serves its own web files
    (research 0050 F31). While pending_confirm is true the installer counts

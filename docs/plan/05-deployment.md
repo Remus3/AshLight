@@ -243,10 +243,14 @@ How an update swaps versions:
 Rollback:
 
 - Automatic: the launcher adds 1 to `start_attempts` before each start
-  while `pending_confirm` is true; at the second start without a confirm
-  it switches the marker back, rewrites and reads back the shell
-  entries, records the bad version in `<home>\data\update_skip.json`
-  (never offered again; a newer release is) and adds one Checks line.
+  while `pending_confirm` is true; each start runs its own confirm (up to
+  180 s); at the third start without a confirm it switches the marker
+  back, rewrites and reads back the shell entries, records the bad
+  version in `<home>\data\update_skip.json` with reason class
+  `no_answer` and adds one Checks line. A `no_answer` skip is offered
+  once more 7 days later and holds for good if it fails again; a
+  rollback by hand (`manual`) holds for good; a newer release is offered
+  (REL-CONFIRM-PATIENCE, research 0066 F12).
 - By hand: `installer rollback` (README), same switch.
 - A failed self-test never reaches the marker, so it needs no rollback.
 

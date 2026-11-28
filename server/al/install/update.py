@@ -53,8 +53,10 @@ API itself. In order:
    acknowledged wording (web_data_ack, updates.ack_ok); else nothing is
    requested.
 2. the answer: a tag that is a newer X.Y.Z release than the marker's (a
-   pre-release, an older or equal version, or a version in
-   data/update_skip.json is never staged: nothing is requested); the
+   pre-release, an older or equal version, or a version
+   data/update_skip.json still holds (switch.skipped: a "no health answer"
+   skip is offered once more after 7 days) is not staged: nothing is
+   requested); the
    assets AshLight-<version>-app.zip, SHA256SUMS.txt and release.json,
    each with a size and a https://github.com/<owner>/<repo>/releases/
    download/<tag>/<name> url (the cached repository when it names one).
@@ -734,9 +736,9 @@ def stage_from_release(home, release_doc, repo="", fetch=None, opener=None,
             report.update(status=CURRENT, stage="release",
                           reason=f"{version} is not newer than the active "
                                  f"{marker['version']}")
-        elif version in switchmod.skipped(home):
+        elif version in switchmod.skipped(home, now):
             report.update(status=SKIPPED, stage="release",
-                          reason=f"{version} was rolled back and is never staged again")
+                          reason=f"{version} was rolled back and is not staged again")
         else:
             steps["release"] = "ok"
             done = _staged_current(home, rel)
