@@ -190,7 +190,8 @@ def test_network_failure_uses_the_day_and_never_raises():
         broken.n += 1
         raise webfetch.FetchError("network: down")
     broken.n = 0
-    c = updates.UpdateClient(lambda: True, lambda: 1, repo=REPO, fetch=broken, clock=lambda: T0)
+    c = updates.UpdateClient(lambda: True, lambda: updates.WORDING_VERSION, repo=REPO,
+                             fetch=broken, clock=lambda: T0)
     assert c.tick(T0) is True
     assert c.tick(T0 + 3600) is False
     assert broken.n == 1
