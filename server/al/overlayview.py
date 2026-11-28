@@ -30,6 +30,14 @@ CARD_HOLDERS: the first holder with a card wins.
   same entry (the scene line after the closing generation): that zone
   card is dropped, never queued, and the zone counts as seen. Like the
   zone card it never waits and never returns.
+- gem (TC-GEM-UNLOCK): the player's level-up that unlocked gems of the
+  loaded build (state.gem_unlock, gemunlock.py) shows one card naming
+  them (text/gemunlock.py) for the layout's card time (decision 0014,
+  card_s 20 / 60 / 200 s). It shows while no earlier holder has a card,
+  no open trade request takes the slot and parts.moment is on: it waits
+  behind earlier holders within its card time, and is dropped when that
+  time ends, on a press or on a new game run. Its twin is the row the
+  state lists in the recent events.
 - hint (OVL-KEY-HINT): the empty slot teaches the item-check key: one
   line, '<key>: check an item', the bound key of the hotkeys view
   (OVL-KEYS-CORE; no key known = no hint). CARD-LINE-LIMIT-COPY2: over
@@ -73,12 +81,15 @@ import threading
 import time
 
 from .text.common import CARD_LINE, _is_time
+from .text.gemunlock import card_lines as gem_card_lines
 from .text.overlaycard import EVAL_CARD_S, overlay_card
 from .text.overlaycard import (  # noqa: F401 - OVL-ZONE-CARD card copy, re-exported
     BONUS_TEXT, BOSS_LINE, CLEAR_LINE, FIT_LINE, MOMENT_CARD_S, NEXT_TEXT,
     PUSH_LINE, _LEVELS, _lv, _plain, clip, clip_words, zone_lines)
 from .text.overlaycard import (  # noqa: F401 - OVL-ACT-CARD card copy, re-exported
     ACT_FASTER, ACT_HEAD, ACT_SAME, ACT_SLOWER, ACT_TIME, ACT_TIME_PARTIAL)
+
+GEM_CARD_S = EVAL_CARD_S  # the default card time (layout.CARD_S[0], decision 0014)
 
 FILE_NAME = "overlay-view.json"
 SCHEMA = 1
@@ -116,6 +127,9 @@ CARD_HOLDERS = (
      "exempt": "shown only on its Settings button, which is its own twin"},
     {"kind": "moment", "life_s": MOMENT_CARD_S, "cards": ("zone", "act"),
      "twin": ("zone-guide", "actsbox")},
+    # TC-GEM-UNLOCK: life_s is the default card time; the layout's card_s
+    # (decision 0014, 20 / 60 / 200 s) decides at show time
+    {"kind": "gem", "life_s": GEM_CARD_S, "twin": ("events",)},
     # life_s None: no expiry while due; it retires after the first press
     {"kind": "hint", "life_s": None,
      "exempt": "not a self-leaving answer: it stays until the first press, "
@@ -125,14 +139,14 @@ CARD_HOLDERS = (
 
 def _layout_allows(state, kind="zone"):
     """parts.moment on and, for the zone card, zone_guide not "never" (no
-    layout = defaults). The act card follows parts.moment only."""
+    layout = defaults). The act and gem cards follow parts.moment only."""
     lay = getattr(state, "overlay_layout", None)
     if not isinstance(lay, dict):
         return True
     parts = lay.get("parts") if isinstance(lay.get("parts"), dict) else {}
     if parts.get("moment", True) is False:
         return False
-    return kind == "act" or lay.get("zone_guide") != "never"
+    return kind in ("act", "gem") or lay.get("zone_guide") != "never"
 
 
 def _clock_text(seconds):
@@ -245,6 +259,8 @@ class OverlayView:
         self.calm_at = None
         self._guide_key = None  # the zone generation guide_short was read for
         self._counts = (0, 0)  # (deaths, level_ups) after the last event
+        # TC-GEM-UNLOCK: {"at", "head", "line2", "line3"}, in memory only
+        self.gem = None
         # OVL-KEY-HINT: the stored marker, None until its first change
         self._store_key_hint = None
 
@@ -261,11 +277,14 @@ class OverlayView:
             self.calm_at = float(now) + CALM_S
             changed = True
         self._counts = counts
+        if t == "level_up" and _is_time(now):
+            changed = self._gem_unlocked(state, now) or changed
         if t == "log_opened":
             # a new game run: every zone may show its card once again
             changed = changed or bool(self.seen) or self.moment is not None
             self.seen = {}
             self.moment = None
+            self.gem = None
             if _hint_head(_hint_key(state)) is not None:
                 # a game session counts only while a key is known and fits
                 # the hint line (the hint could teach it); no client, no
@@ -288,10 +307,35 @@ class OverlayView:
         if not marker["pressed"]:
             self._store_key_hint = dict(marker, pressed=True)
             self.dirty = changed = True
-        if self.moment is not None:
-            self.moment = None
+        if self.moment is not None or self.gem is not None:
+            self.moment = self.gem = None
             changed = True
         return changed
+
+    # -- the gem unlock card (TC-GEM-UNLOCK)
+    def _gem_unlocked(self, state, now):
+        """The player's level-up just unlocked build gems (the state's
+        gem_unlock.last stamped `now`): one card naming them all."""
+        last = getattr(getattr(state, "gem_unlock", None), "last", None)
+        if not isinstance(last, dict) or last.get("at") != now or not last.get("names"):
+            return False
+        head, line2, line3 = gem_card_lines(last["level"], last["names"])
+        self.gem = {"at": float(now), "head": head, "line2": line2, "line3": line3}
+        return True
+
+    def _gem_card(self, state, now):
+        g = self.gem
+        if g is None:
+            return None
+        until = g["at"] + getattr(state, "card_s", GEM_CARD_S)
+        if now >= until:
+            self.gem = None  # its card time is over: it leaves by itself
+            return None
+        if (now < g["at"] or _trade_takes_slot(state)
+                or not _layout_allows(state, "gem")):
+            return None
+        return {"kind": "gem", "head": g["head"], "line2": g["line2"],
+                "line3": g["line3"], "verdict": "", "expires_at": until}
 
     # -- the key hint (OVL-KEY-HINT)
     def _hint_state(self):
@@ -453,6 +497,8 @@ class OverlayView:
                 c = self._press_card(state, now, alert)
             elif kind == "moment":
                 c = self._moment_card(state, now)
+            elif kind == "gem":
+                c = self._gem_card(state, now)
             elif kind == "hint":
                 c = self._hint_card(state)
             else:  # pragma: no cover - a holder without a producer

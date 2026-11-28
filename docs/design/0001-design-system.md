@@ -610,6 +610,7 @@ Red (`status-bad`) is reserved for failures and deaths. Do not use red for
 | In a map / zone | zone, time in zone, level, deaths | strip G: zone, level, deaths, session |
 | Entering a guided campaign zone (OVL-ZONE-CARD) | zone card in the card slot for 12 s, only into a free slot (setting "Zone guide on the overlay": On entry, the default, or Always; not under Never) | the zone guide in context region C |
 | Closing an act split (OVL-ACT-CARD) | act card for 12 s (`<act> done`, the split time, the gap to the best saved run while run history is on); it drops that entry's zone card | Acts card (Run tab) |
+| Level-up unlocks gems of the loaded build (TC-GEM-UNLOCK) | gem card for the card time (`Gem usable at level <n>` or `<n> gems usable at level <n>`, then the names), after the zone and act cards and while no open trade takes the slot, under parts.moment; a press, a new game run or the end of its card time drops it | the `Level <n> makes <names> usable` row in Recent (Run tab); the `Gem usable now: <name>` steps on the Progression next-up strip |
 | In town or hideout | zone with "(HO)" tag; trade card if any | context region C in town mode, the feed |
 | Trade request arrives | the newest open trade card (who, what, price, where; "+N more" for the rest) | a one-line trade row in feed T with its own Dismiss (plus "Dismiss all" from 2 open requests); all 5 open requests show |
 | Died | deaths count changes; no flash, no pop-up; while the opt-in guide line holds line 2, the level and deaths text come back for 20 s | the death row in feed T; the Deaths card (Run tab: newest first, local time, zone and level) |
@@ -630,8 +631,11 @@ Progressive disclosure (source 9; TD-17): the overlay holds the 2-line
 HUD plus one card slot. Its holder is, first match: the press card (item
 check, price or merged), the Settings sample card (10 s, only on its
 button), the newest open trade card, a zone or act card (12 s, only into
-a free slot; it never waits and never returns), the key hint line,
-nothing (`server/al/overlayview.py` CARD_HOLDERS; the trade card is built
+a free slot; it never waits and never returns), a gem unlock card (the
+card time from its level-up; it waits behind the cards before it and an
+open trade request, and a press, a new game run or the end of its card
+time drops it), the
+key hint line, nothing (`server/al/overlayview.py` CARD_HOLDERS; the trade card is built
 on the overlay page). Everything else (history, stash coordinates in
 full, settings) lives on the dashboard. Never add a third HUD line to fit
 a feature; add a dashboard card instead.
@@ -739,6 +743,8 @@ Generation rules:
    - mapstats: [`docs/design/copy/mapstats.md`](copy/mapstats.md)
    - progression: [`docs/design/copy/progression.md`](copy/progression.md)
    - augment: [`docs/design/copy/augment.md`](copy/augment.md)
+   - gemadvice: [`docs/design/copy/gemadvice.md`](copy/gemadvice.md)
+   - gemunlock: [`docs/design/copy/gemunlock.md`](copy/gemunlock.md)
 3. **Player text is quoted, never rewritten.** Whisper bodies and names
    are shown verbatim (textContent only, never innerHTML), clipped with
    "..." at the line limit.
@@ -837,13 +843,16 @@ Generation rules:
   loaded; "Copy the item first" for an empty clipboard), the Settings
   sample card (10 s, on its button only), the newest open trade card
   ("+N more" for the rest), a zone or act card (12 s, only into a free
-  slot, never queued), the key hint line. When a holder leaves, the next
+  slot, never queued), a gem unlock card (TC-GEM-UNLOCK; a press drops
+  it), the key hint
+  line. When a holder leaves, the next
   one due comes back by itself. The card's near edge is anchored 62px
   from the window's anchored edge in every state (the 2-line HUD, 55.6px,
   plus 6), so nothing moves when line 2 changes.
 - Card time (TD-18, OVL-TD18-CARD-TIME): the press card shows for 20 s by
   default; the setting "Keep a card for" (Settings > Overlay) picks 20,
-  60 or 200 s (layout `card_s`; the default is never stored). The zone
+  60 or 200 s (layout `card_s`; the default is never stored); the gem
+  unlock card keeps the same card time from its level-up. The zone
   and act cards keep 12 s and the sample card 10 s; the trade card stays
   while its request is open; the key hint has no expiry while it is due.
 - Plate (TD-05, OVL-TD05-PLATE): `--al-plate` (86 percent by default,
@@ -884,8 +893,8 @@ Generation rules:
   build loaded, Not an item, Can't compare this, Build loaded, Build not
   loaded, Can't check this item, Waystone unidentified, Copy the item
   first). A merged card starts with its item check head. A zone or act
-  card and the key hint start with their subject (the zone's short, `<act>
-  done`, the key).
+  card, the gem unlock card and the key hint start with their subject
+  (the zone's short, `<act> done`, `Gem usable at level <n>`, the key).
 - Every card that leaves the overlay by itself has a dashboard twin that
   stays: the item check card and the price card (and the merged card) stay
   in the item check (region I on Play; `#eval-result`, `#price-result` on

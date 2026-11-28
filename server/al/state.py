@@ -12,6 +12,7 @@ import time
 
 from . import acts as acts_mod
 from . import campaign as campaign_mod
+from . import gemunlock as gemunlock_mod
 from . import langguard as langguard_mod
 from . import mapstats as mapstats_mod
 from . import overlayview as overlayview_mod
@@ -51,6 +52,7 @@ from .text.price import (  # noqa: F401 - re-exported, state.<name> stays
     EMPTY_CLIPBOARD, EMPTY_CLIPBOARD_TEXT, LEAGUE_NEW_S, PRICE_AGED_S, PRICE_LISTINGS,
     PRICE_OLD_S, PRICE_STATUSES, PRICE_TEXT, _age_s, _listing_text, _ninja_amount,
     _price_amount, ninja_text, price_card_text)
+from .text.gemunlock import row_text as gem_row_text
 from .text.waystone import (  # noqa: F401 - re-exported, state.<name> stays
     WAYSTONE_LISTED, _reward_pct, _waystone_risk_text, waystone_rewards_text,
     waystone_text)
@@ -165,6 +167,9 @@ class SessionState(CardsMixin, TradesMixin, CharsMixin, IdleMixin, ViewsMixin):
         self.campaign_facts = None
         self.flask_table = {}
         self.boots_level = campaign_mod.DEFAULT_BOOTS_LEVEL
+        # TC-GEM-UNLOCK: the build's gems, the gems snapshot index and the
+        # last unlock (gemunlock.py; fed by plug/gemunlock.py)
+        self.gem_unlock = gemunlock_mod.GemUnlock()
         self._init_chars()
         # LANG-GUARD (ruling K, decision 0040): the in-memory language
         # verdict from the log; DIAG-SELF (ruling J): the core's checks view.
@@ -286,6 +291,14 @@ class SessionState(CardsMixin, TradesMixin, CharsMixin, IdleMixin, ViewsMixin):
                 setattr(self, k, v)
             self.version += 1
             return True
+
+    def set_gem_unlock(self, gems=False, index=False):
+        """TC-GEM-UNLOCK: any of the loaded build's gem names
+        (gemunlock.build_gems) and the gems snapshot index
+        (archetypes.gem_index); an argument left out keeps its value.
+        Nothing shows until a level-up, so no version bump."""
+        with self._lock:
+            return self.gem_unlock.set(gems=gems, index=index)
 
     def set_underlevel_gap(self, value):
         """UTIL-UNDERLEVEL: the threshold from the local config (core
@@ -435,6 +448,7 @@ class SessionState(CardsMixin, TradesMixin, CharsMixin, IdleMixin, ViewsMixin):
         self.events_seen += 1
         changed = False
         listed = t in LISTED
+        gem_names = []  # TC-GEM-UNLOCK: listed after the level-up row
         # LANG-GUARD: the language verdict from area loads and system lines
         if ev.get("source") != "tailer" and self.lang.feed(ev, now):
             changed = True
@@ -519,7 +533,9 @@ class SessionState(CardsMixin, TradesMixin, CharsMixin, IdleMixin, ViewsMixin):
             if ev.get("character") == self.character:
                 self._first_gen_at = None
                 self.char_class = ev.get("class")
+                prev_level = self.level
                 self.level = ev.get("level")
+                gem_names = self.gem_unlock.on_level(prev_level, self.level, now)
                 self.level_ups += 1
                 self.pace.on_level(self.level, now)
                 self.maps.on_level_up(now)  # UTIL-MAP-LADDER
@@ -605,6 +621,12 @@ class SessionState(CardsMixin, TradesMixin, CharsMixin, IdleMixin, ViewsMixin):
             changed = True
         if listed:
             self.recent_events.append(self._row(ev, now))
+            changed = True
+        if gem_names:
+            # TC-GEM-UNLOCK: the gem card's dashboard twin row
+            self.recent_events.append({"seq": None, "type": "gem_unlock", "at": now,
+                                       "text": gem_row_text(self.level, gem_names),
+                                       "trade": False, "whisper": False})
             changed = True
         if active:
             self.stretch.touch(now, self._counters())

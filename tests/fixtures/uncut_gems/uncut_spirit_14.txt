@@ -1,0 +1,7 @@
+Item Class: Uncut Spirit Gems
+Rarity: Currency
+Uncut Spirit Gem (Level 14)
+--------
+Creates a Persistent Skill Gem or Level an existing gem to Level 14
+--------
+Right Click to engrave a Persistent Skill Gem.

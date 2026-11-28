@@ -237,7 +237,8 @@ def test_press_builds_ctx_and_publishes_parts(core, use_parts):
 
     use_parts(part("probe", 1, compute=grab,
                    words=lambda v, c, o: o["notes"].append("Probe note")))
-    assert set(core.last_eval.ctx_extra) == {"config", "area_id"}
+    # TC-UNCUT-GEM (decision 0094): plug/gemadvice.py adds plan_gems, gem_table
+    assert set(core.last_eval.ctx_extra) == {"config", "area_id", "plan_gems", "gem_table"}
     core.state.area_id = "G1_1"
     core.last_eval.run(RARE_GLOVES, "Gloves")
     ctx = seen[-1]

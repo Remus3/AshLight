@@ -168,6 +168,14 @@ test("parts.trade and parts.item hide their card kinds", () => {
                              1005, "live").evalHead, "Upgrade: +12% DPS");
 });
 
+test("TC-GEM-UNLOCK: the gem card follows parts.moment, not parts.item", () => {
+  const gem = { card: card("gem", { head: "Gem usable at level 14", line2: "Frost Bomb",
+                                    line3: "", verdict: "" }) };
+  assert.equal(gate.hudModel(snap({ item: false }, gem), 1005, "live").evalHead,
+               "Gem usable at level 14");
+  assert.equal(gate.hudModel(snap({ moment: false }, gem), 1005, "live").evalHead, "");
+});
+
 test("no repaint when a hidden part changes", () => {
   const a = gate.hudModel(snap({ deaths: false, status: false }), 1005, "live");
   const b = gate.hudModel(snap({ deaths: false, status: false }, {
