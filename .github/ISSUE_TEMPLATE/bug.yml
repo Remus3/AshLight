@@ -20,6 +20,7 @@ body:
     id: install
     attributes:
       label: How did you install AshLight?
+      description: There is no release yet, so today only From source applies.
       options:
         - From source
         - From a release

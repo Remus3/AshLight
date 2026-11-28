@@ -1,6 +1,7 @@
 # Contributing
 
-Thanks for your interest in AshLight.
+Thanks for your interest in AshLight. Questions and bugs: open an issue and
+pick a template. Security problems go privately, see [SECURITY.md](SECURITY.md).
 
 - Read the README's
   ["What AshLight never does"](README.md#what-ashlight-never-does) first. A change that reads
@@ -29,6 +30,9 @@ Thanks for your interest in AshLight.
 - The git hooks in `.githooks/` (tests, identity check, leak sweep) are the
   maintainer's gates. A clone does not install them and you do not need
   them: CI runs the same checks on every pull request.
+
+## For maintainers
+
 - `.claude/settings.json` holds hooks for the maintainer's AI coding
   assistant. They apply only to Claude Code users, and only after Claude
   Code's trust prompt for this folder is accepted; otherwise nothing reads

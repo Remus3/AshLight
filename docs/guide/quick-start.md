@@ -23,7 +23,9 @@ setting stays as it is.
 
 It checks what you have, makes AshLight's folders and, when Node.js is
 installed, sets up the desktop client and puts an "AshLight" shortcut in the
-Start Menu and on the desktop.
+Start Menu and on the desktop. The first setup downloads the desktop
+client's packages (about 400 MB of disk in all), so allow a few minutes. A
+later run skips every finished step.
 
 ## 2. Start it
 
@@ -67,9 +69,12 @@ changed with Change a key under Settings, Keys.
 - Start at logon: `scripts\autostart.ps1 -Enable` starts AshLight in the tray
   when you log on; `-Disable` turns it off.
 
-Something not working? See [Common issues](common-issues.md).
+To stop AshLight, right-click the tray icon and choose Quit AshLight. To
+update or uninstall a source copy, see the README's
+[Update from source](../../README.md#update-from-source) and
+[Uninstall from source](../../README.md#uninstall-from-source).
 
-Next: [Common issues](common-issues.md).
+Something not working? See [Common issues](common-issues.md).
 
 ---
 
