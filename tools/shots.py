@@ -63,8 +63,10 @@ UI_SOURCES = ("web", "app/overlay", "app/shared", "ops/fleet_kit/tokens.css",
 # capture.mjs --tab, in both schemes at both widths, and the overlay page,
 # which the helper loads as the app file page app/overlay/index.html (the
 # demo core passes the helper's checks through --core) on a plain dark or
-# light ground. The overlay gets no port or token, so it shows its own
-# waiting state. PENDING names shots the helper cannot render yet: none.
+# light ground. The overlay gets no port or token; the helper replays the
+# demo core's state to it as one feed frame on a fixed shot clock
+# (capture.mjs shotFrame), so it shows the live demo HUD.
+# PENDING names shots the helper cannot render yet: none.
 SIZES = ((1440, 900), (360, 800))
 SCHEMES = ("dark", "light")
 TABS = ("play", "build", "run", "settings")

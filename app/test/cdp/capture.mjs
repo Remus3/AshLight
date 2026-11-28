@@ -20,9 +20,13 @@
 // app/overlay/index.html under this repository's app folder (no query, no
 // fragment); it needs --core=<demo core url>, which passes every check
 // below in place of the page url, and takes no --tab. Any other file URL or
-// target is refused. The overlay page gets no port or token (it renders its
-// own waiting state and opens no connection); --scheme picks a plain dark or
-// light ground behind its transparent body.
+// target is refused. The overlay page gets no port or token and opens no
+// connection: this helper reads the demo core's /api/state itself (after
+// the checks below) and replays it to the page as one "state" frame through
+// a stand-in EventSource added before the page loads (shotFrame: a fixed
+// clock, the log just read), so the shot shows the
+// demo core's live HUD (invented demo data only) with overlay.js unchanged;
+// --scheme picks a plain dark or light ground behind its transparent body.
 // Before any browser starts, every check below must pass, in this order:
 //   1. no network: the url is plain http to exactly 127.0.0.1 with an
 //      explicit port that is not the core port or the dev port (both read
@@ -323,6 +327,45 @@ async function devtoolsPort(profile, child) {
   throw new Error("no DevToolsActivePort file");
 }
 
+// The overlay shot's fixed clock: 12m34s into the demo zone, the log read
+// a moment ago (the fixture's lines are days old, so the core itself reads
+// it as quiet); a fixed clock also keeps the image the same run to run.
+export const SHOT_ZONE_S = 754;
+
+/** The demo state as the shot shows it: a copy whose clock is SHOT_ZONE_S
+    into its zone with the log just read (not idle, game not idle). */
+export function shotFrame(state) {
+  const f = JSON.parse(JSON.stringify(state || {}));
+  if (typeof f.zone_entered_at === "number") { f.now = f.zone_entered_at + SHOT_ZONE_S; }
+  if (f.tailer && typeof f.tailer === "object") {
+    f.tailer.idle = false;
+    if (typeof f.now === "number") { f.tailer.last_line_at = f.now; }
+  }
+  if ("game_idle" in f) { f.game_idle = false; }
+  return f;
+}
+
+/** The overlay page's stand-in feed: window.al with a placeholder port and
+    token (never the demo token) and an EventSource that answers "open" and
+    then one "state" frame holding shotFrame(state). No network. */
+export function replayScript(state) {
+  const data = JSON.stringify(JSON.stringify(shotFrame(state)));
+  return `(function () {
+  "use strict";
+  var data = ${data};
+  window.al = { token: "demo-replay", port: 1, credit: "" };
+  window.EventSource = function () {
+    var on = {};
+    this.addEventListener = function (type, fn) { (on[type] = on[type] || []).push(fn); };
+    this.close = function () {};
+    setTimeout(function () {
+      (on.open || []).forEach(function (fn) { fn({}); });
+      (on.state || []).forEach(function (fn) { fn({ data: data }); });
+    }, 0);
+  };
+}());`;
+}
+
 async function capture(opts, target) {
   const want = opts.page; // {href, overlay}: the checked page to open
   below(process.pid); // the browser inherits below-normal from this process
@@ -360,6 +403,9 @@ async function capture(opts, target) {
       { features: [{ name: "prefers-color-scheme", value: opts.scheme }] });
     if (want.overlay) {
       await send("Emulation.setDefaultBackgroundColorOverride", { color: GROUND[opts.scheme] });
+      // the checked demo core's state, replayed as the feed's one frame
+      const frame = await getJson(target.port, "/api/state", { "X-AL-Token": target.token });
+      await send("Page.addScriptToEvaluateOnNewDocument", { source: replayScript(frame) });
     }
     await send("Page.navigate", { url: want.href });
     let ready = false;
