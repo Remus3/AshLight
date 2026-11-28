@@ -27,7 +27,7 @@ median), so a tick inside a map rebuilds nothing.
 
 from pathlib import Path
 
-from . import jsonfile, num, runhistory
+from . import jsonfile, mapstats, num, runhistory
 
 FILE_NAME = "map_ladder.json"
 SCHEMA = 1
@@ -108,7 +108,9 @@ def ladder(rows, title=TITLE_SESSION):
         text = (f"Highest map level: {highest}, over "
                 f"{_plural(total, 'map')}. {MEDIAN_NOTE}")
     return {"title": title, "levels": levels, "highest": highest, "maps": total,
-            "text": text, "empty_text": "" if levels else EMPTY_TEXT}
+            "text": text, "empty_text": "" if levels else EMPTY_TEXT,
+            # UTIL-MAP-STATS: the same rows per map area id
+            "by_map": mapstats.table(rows, title)}
 
 
 def clean(rec):

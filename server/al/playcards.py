@@ -36,6 +36,7 @@ Pure: no I/O, no clock read, every field read defensively (FUZZ-3).
 
 import re
 
+from . import mapstats
 from . import playview as pv
 from . import runs
 from . import zoneguide
@@ -305,6 +306,11 @@ def map_block(snap):
         time_s = _num(cur.get("time_s"))
         rows.append(_row(f"This map: {runs.clock_text(time_s)}, "
                          f"{_deaths(_int(cur.get('deaths')) or 0)}"))
+        # UTIL-MAP-STATS (research 0064 G5): this map's runs so far, once
+        # it was run before (this run counted)
+        seen = mapstats.here(maps, snap.get("area_id"))
+        if seen and (_int(seen.get("runs")) or 0) >= 2 and _text(seen.get("here")):
+            rows.append(_row(_text(seen.get("here"))))
     else:
         full = title = BETWEEN_TITLE
         last = next(iter(_dicts(maps.get("recent"))), None)

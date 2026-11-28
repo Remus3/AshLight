@@ -154,7 +154,9 @@ function runCards(size) {
     page("ladder", "By map level, this session", [mk(d, "p", { id: "ladder-text" }),
       mk(d, "div", { id: "ladder-rows" })], "ladder"),
     page("saved", "By map level, all saved sessions", [mk(d, "p", { id: "ladder-all-text" }),
-      mk(d, "div", { id: "ladder-all-rows" })], "ladder-all")
+      mk(d, "div", { id: "ladder-all-rows" })], "ladder-all"),
+    page("bymap", "By map name", [mk(d, "p", { id: "bymap-text" }),
+      mk(d, "div", { id: "bymap-rows" })], "bymap")
   ]);
   mk(d, "section", { id: "deathsbox", class: "card grid-card", "data-home": "main" }, [
     head("Deaths"),
@@ -265,14 +267,51 @@ test("the Maps and Deaths cards: pages in the markup, no table, no fold", () => 
   const html = web.source("index.html");
   const at = (id) => html.indexOf('id="' + id + '"');
   const maps = html.slice(at("mapsbox"), html.indexOf("</section>", at("mapsbox")));
-  ["summary", "ladder", "saved"].forEach((p) => {
+  ["summary", "ladder", "saved", "bymap"].forEach((p) => {
     assert.ok(maps.includes('data-card-open="' + p + '"') && maps.includes('data-page="' + p + '"'), p);
   });
-  ["maps-rows", "ladder-rows", "ladder-all-rows"].forEach((id) => {
+  ["maps-rows", "ladder-rows", "ladder-all-rows", "bymap-rows"].forEach((id) => {
     assert.ok(maps.includes('id="' + id + '" class="pager-slot"'), id);
   });
   const deaths = html.slice(at("deathsbox"), html.indexOf("</section>", at("deathsbox")));
   assert.ok(deaths.includes('id="deaths-list" class="pager-slot"'));
   assert.ok(deaths.includes('id="deaths-worst" class="row-meta one-line"'));
   [maps, deaths].forEach((box) => assert.ok(!/<table|<details/.test(box)));
+});
+
+/* UTIL-MAP-STATS (research 0064 G5): the By map page shows the saved
+   sessions' table while run history is on, else this session's; each row
+   is the core's sentence plus the local time of its last run. */
+test("paint: the By map page, saved table first, last run as local time", () => {
+  const d = runCards();
+  const now = new Date(2026, 10, 16, 21, 40, 0).getTime() / 1000;
+  const today = new Date(2026, 10, 16, 21, 20, 0).getTime() / 1000;
+  const older = new Date(2026, 10, 14, 9, 5, 0).getTime() / 1000;
+  const session = { areas: [{ area_id: "MapBog", text: "Bog: 2 runs, 2 deaths, median 4:00",
+    last_at: today }], text: "This session: 1 map. Median time counts finished runs.",
+  empty_text: "" };
+  const saved = { areas: [
+    { area_id: "MapBog", text: "Bog: 5 runs, 2 deaths, median 4:00", last_at: today },
+    { area_id: "MapCrypt", text: "Crypt: 1 run, 0 deaths, median 6:00", last_at: older },
+    { area_id: "MapAsh", text: "Ash: 1 run, 0 deaths, no finished run yet", last_at: null }],
+  text: "All saved sessions: 3 maps. Median time counts finished runs.", empty_text: "" };
+  const maps = Object.assign({}, MAPS, { ladder: Object.assign({}, LADDER, { by_map: session }),
+    ladder_all: null });
+  r.paint(d, { now, maps, death_recap: null }, now, true);
+  assert.deepEqual(texts(listOf(d, "bymap-rows")), ["Bog: 2 runs, 2 deaths, median 4:00, last run 21:20"]);
+  assert.equal(d.getElementById("bymap-text").textContent, session.text);
+  const withAll = Object.assign({}, maps, { ladder_all: Object.assign({}, LADDER, { by_map: saved }) });
+  r.paint(d, { now, maps: withAll, death_recap: null }, now, true);
+  assert.deepEqual(texts(listOf(d, "bymap-rows")), [
+    "Bog: 5 runs, 2 deaths, median 4:00, last run 21:20",
+    "Crypt: 1 run, 0 deaths, median 6:00, last run 2026-11-14 09:05",
+    "Ash: 1 run, 0 deaths, no finished run yet"]);
+  assert.equal(d.getElementById("bymap-text").getAttribute("title"), saved.text);
+  // no maps yet: the core's empty sentence, no rows
+  const empty = { areas: [], text: "", empty_text: "No maps yet. Each map shows here by itself as you play it." };
+  r.paint(d, { now, maps: Object.assign({}, MAPS, { ladder: Object.assign({}, LADDER, { by_map: empty }) }),
+    death_recap: null }, now, true);
+  assert.equal(d.getElementById("bymap-rows").hidden, true);
+  assert.equal(d.getElementById("bymap-text").textContent, empty.empty_text);
+  assert.equal(r.byMap(null), null);
 });
