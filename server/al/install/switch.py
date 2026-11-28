@@ -4,8 +4,8 @@
 
 - apply(home, now): run by the launcher before every client start
   (`apply-staged --if-due`). While the marker's pending_confirm is true it
-  only counts the start (bump_attempt); at the second start without a
-  confirm it rolls back by itself. Otherwise, when a staged version is
+  only counts the start (bump_attempt); at the MAX_ATTEMPTS-th start
+  without a confirm it rolls back by itself. Otherwise, when a staged version is
   due (apply_after reached; without if_due at once: "Update now") and no
   core of this home runs, it switches the marker (previous = old,
   pending_confirm = true, start_attempts = 0), rewrites and reads back the
@@ -16,8 +16,11 @@
   and read back.
 - rollback(home): the marker goes back to `previous` (its runtimes too),
   the shell entries are rewritten and read back, the version that was
-  left lands in <home>/data/update_skip.json (never applied or offered
-  again; a newer release is) and the report gains one line.
+  left lands in <home>/data/update_skip.json with a reason class and the
+  report gains one line. A rollback by hand ("manual") holds for good; a
+  "no health answer" skip ("no_answer") is offered once more after 7 days
+  (paths.skip_reoffered) and holds for good when it fails again
+  (REL-CONFIRM-PATIENCE, research 0066 F12). A newer release is offered.
 - confirm(home, health=callable): the first health answer of the active
   version clears pending_confirm; then the version folders that are
   neither `version`, `previous` nor staged, and the runtime folders none
@@ -48,9 +51,10 @@ from .. import NAME, jsonfile, paths, ports
 from . import home as homemod
 from . import shell as shellmod
 
-MAX_ATTEMPTS = 2              # the second start without a confirm rolls back
+MAX_ATTEMPTS = 3              # the third start without a confirm rolls back
 SKIP_NAME = "update_skip.json"
-SKIP_SCHEMA = 1
+SKIP_SCHEMA = 1               # rows gain "class" and "offers"; old rows hold
+SKIP_MANUAL, SKIP_NO_ANSWER = paths.SKIP_MANUAL, paths.SKIP_NO_ANSWER
 SKIP_KEPT = 50
 LINES_KEPT = 20
 REPORT_NAME = "last-update.json"
@@ -61,7 +65,7 @@ MAX_HEALTH_BYTES = 64 * 1024
 PREVIOUS_RUNTIMES = "previous_runtimes"  # marker key beyond MARKER_FIELDS
 RUNTIME_KEYS = ("python", "electron")
 HEALTH_TIMEOUT_S = 3.0
-CONFIRM_WAIT_S = 60.0
+CONFIRM_WAIT_S = 180.0        # a first start compiles bytecode and is scanned
 CONFIRM_POLL_S = 1.0
 
 EXIT_OK = 0          # nothing changed: start as usual
@@ -143,32 +147,48 @@ def skip_path(home):
     return homemod.layout(home)["data"] / SKIP_NAME
 
 
-def skipped(home):
-    """The versions in <home>/data/update_skip.json, as a set."""
+def _skip_rows(home):
     doc = jsonfile.read_json(skip_path(home), max_bytes=MAX_STAGED_BYTES, kind=dict,
                              default=None, backup=True)
     rows = doc.get("versions") if isinstance(doc, dict) else None
-    if not isinstance(rows, list):
-        return set()
-    return {r.get("version") for r in rows
-            if isinstance(r, dict) and homemod.is_version(r.get("version"))}
+    return [r for r in rows if isinstance(r, dict) and homemod.is_version(r.get("version"))
+            ] if isinstance(rows, list) else []
 
 
-def record_skip(home, version, reason, now=None):
+def skipped(home, now=None):
+    """The versions <home>/data/update_skip.json still holds back, as a set:
+    a "no_answer" row skipped once is left out from 7 days after it was
+    written (paths.held_skips)."""
+    return paths.held_skips({"versions": _skip_rows(home)}, now)
+
+
+def _offers(row):
+    n = row.get("offers", 1)
+    return n if isinstance(n, int) and not isinstance(n, bool) and n > 0 else 1
+
+
+def record_skip(home, version, reason, now=None, kind=SKIP_MANUAL):
     """Add `version` to update_skip.json (one row per version, the newest
-    SKIP_KEPT kept), written with one .bak and read back."""
-    path = skip_path(home)
-    doc = jsonfile.read_json(path, max_bytes=MAX_STAGED_BYTES, kind=dict,
-                             default=None, backup=True)
-    rows = doc.get("versions") if isinstance(doc, dict) else None
-    rows = [r for r in rows if isinstance(r, dict) and homemod.is_version(r.get("version"))
-            and r.get("version") != version] if isinstance(rows, list) else []
-    rows.append({"version": version, "at": homemod.now_text(now), "reason": str(reason)[:120]})
+    SKIP_KEPT kept), written with one .bak and read back. kind is the reason
+    class (SKIP_MANUAL or SKIP_NO_ANSWER; anything else is stored as
+    SKIP_MANUAL). "offers" counts the no_answer skips of the version, so a
+    re-offered version that again gives no answer holds for good. Returns
+    the row written."""
+    rows = _skip_rows(home)
+    kind = kind if kind in paths.SKIP_CLASSES else SKIP_MANUAL
+    offers = 1
+    for r in rows:
+        if r.get("version") == version and r.get("class") == SKIP_NO_ANSWER:
+            offers = min(_offers(r) + 1, 99)
+    rows = [r for r in rows if r.get("version") != version]
+    row = {"version": version, "at": homemod.now_text(now), "reason": str(reason)[:120],
+           "class": kind, "offers": offers}
+    rows.append(row)
     out = {"schema": SKIP_SCHEMA, "name": NAME, "versions": rows[-SKIP_KEPT:]}
-    jsonfile.write_text(path, jsonfile.dumps(out), backup=True)
-    if version not in skipped(home):
+    jsonfile.write_text(skip_path(home), jsonfile.dumps(out), backup=True)
+    if version not in skipped(home, now):
         raise SwitchFailed("update_skip.json did not read back")
-    return path
+    return row
 
 
 # --- the report ---------------------------------------------------------------------
@@ -285,9 +305,11 @@ def _rewrite(home, version, runner, effect_root):
 
 
 def rollback(home, reason="by hand", runner=None, effect_root=None, running=None,
-             now=None, out=None):
+             now=None, out=None, kind=SKIP_MANUAL):
     """Make `previous` the active version again. Returns (exit code, result).
-    The version left lands in update_skip.json; one report line is added."""
+    The version left lands in update_skip.json with reason class `kind`
+    (result "skip": the row's class and offers); one report line is
+    added."""
     say = _say(out)
     result = {"action": "rollback", "status": FAILED, "version": None, "from": None,
               "reason": ""}
@@ -314,7 +336,8 @@ def rollback(home, reason="by hand", runner=None, effect_root=None, running=None
             if not _runtime_ready(home, current):
                 raise SwitchFailed(f"the runtimes of {prev} are not in place")
             runtimes = current
-        record_skip(home, bad, reason, now)
+        row = record_skip(home, bad, reason, now, kind=kind)
+        result["skip"] = {"class": row["class"], "offers": row["offers"]}
         doc = {k: v for k, v in marker.items() if k != PREVIOUS_RUNTIMES}
         doc.update(version=prev, previous=None, channel=homemod.channel_of(prev),
                    pending_confirm=False, start_attempts=0,
@@ -331,8 +354,11 @@ def rollback(home, reason="by hand", runner=None, effect_root=None, running=None
                   result["version"], result["from"], now)
         say(f"rollback: failed: {result['reason']}")
         return EXIT_FAIL, result
+    again = ("will be offered once more in 7 days"
+             if result["skip"] == {"class": SKIP_NO_ANSWER, "offers": 1}
+             else "will not be offered again")
     _try_line(home, f"rolled back from {result['from']} to {result['version']} "
-                    f"({result['reason']}); {result['from']} will not be offered again",
+                    f"({result['reason']}); {result['from']} {again}",
               "rollback", ROLLED_BACK, result["version"], result["from"], now)
     say(f"rollback: {result['from']} to {result['version']}")
     return EXIT_SWITCHED, result
@@ -404,7 +430,7 @@ def apply(home, now=None, if_due=True, runner=None, effect_root=None, running=No
         if not _listing(lay["staged"]):
             result["status"] = NOTHING
             return EXIT_OK, result
-        doc = _pick(home, marker, skipped(home))
+        doc = _pick(home, marker, skipped(home, now))
         if doc is None:
             result["status"] = NOTHING
             say("apply-staged: nothing staged")
@@ -452,7 +478,8 @@ def _listing(folder):
 
 
 def _pending(home, marker, result, runner, effect_root, running, now, out, say):
-    """pending_confirm: count this start, or roll back at the second one."""
+    """pending_confirm: count this start, or roll back at the MAX_ATTEMPTS-th
+    one (a "no_answer" skip, offered once more after 7 days)."""
     result["version"] = marker["version"]
     if running(home):
         result["status"], result["reason"] = BUSY, "a core of this home runs"
@@ -461,7 +488,7 @@ def _pending(home, marker, result, runner, effect_root, running, now, out, say):
         code, res = rollback(home, reason="no health answer after "
                              f"{MAX_ATTEMPTS} starts", runner=runner,
                              effect_root=effect_root, running=lambda _h: False,
-                             now=now, out=out)
+                             now=now, out=out, kind=SKIP_NO_ANSWER)
         res["action"] = "apply"
         return code, res
     result["start_attempts"] = bump_attempt(home, now)
