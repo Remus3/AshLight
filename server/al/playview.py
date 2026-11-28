@@ -90,7 +90,11 @@ BUILD_WORDS = {
     "wrong_class": ("needs-operator", "Wrong class"),
     "none": ("pending", "No build"),
 }
-BUILD_FIX = "Copy a PoB code, press the item key."
+# UX-BUILD-FIX-KEY (docs/reviews/ux/2026-11-28.md P2-9): the bound item key
+# from the published hotkeys view, else the key-free form (no key, or the
+# keyed line over CAP_BUILD_ROW; never clipped)
+BUILD_FIX_KEY = "Copy a PoB code, press {key}."
+BUILD_FIX = "Copy a PoB code, then check it."
 BUILD_CALC_ON = "Checks use Path of Building numbers."
 BUILD_CALC_OFF = "Checks use your stat weights."
 # ACTIVE-BUILD-PICK (decision 0096): the build in use and the one switch
@@ -551,6 +555,19 @@ def notices_view(snap):
 
 # -- B build line ------------------------------------------------------------
 
+def build_fix(snap):
+    """The build fix line: BUILD_FIX_KEY with the bound item-check key of the
+    published hotkeys view (snap["hotkeys"]["eval"]["key"]) when it fits
+    CAP_BUILD_ROW, else BUILD_FIX."""
+    entry = _dict(_dict(snap.get("hotkeys")).get("eval"))
+    key = entry.get("key")
+    if isinstance(key, str) and key.strip() and key.isascii():
+        line = BUILD_FIX_KEY.format(key=key.strip())
+        if len(line) <= CAP_BUILD_ROW:
+            return line
+    return BUILD_FIX
+
+
 def build_view(snap):
     build = _dict(snap.get("build"))
     alert = _dict(snap.get("build_alert"))
@@ -591,7 +608,7 @@ def build_view(snap):
     elif state == "none" and switch is not None:
         row2 = BUILD_PASTE_TOO
     else:
-        row2 = BUILD_FIX
+        row2 = build_fix(snap)
     return {"state": state, "kit": kit, "glyph": _glyph(kit), "word": word,
             "row1": row1, "row2": clip(row2, CAP_BUILD_ROW),
             "can_paste": state == "none" and switch is None, "switch": switch}

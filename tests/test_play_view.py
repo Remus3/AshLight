@@ -243,7 +243,7 @@ def test_no_broken_part_notice_while_reading_is_down():
 def test_build_line_states():
     assert pv.build_view(_snap(build={"loaded": False})) == {
         "state": "none", "kit": "pending", "glyph": "[ ]", "word": "No build", "row1": "",
-        "row2": "Copy a PoB code, press the item key.", "can_paste": True,
+        "row2": "Copy a PoB code, then check it.", "can_paste": True,
         "switch": None}  # ACTIVE-BUILD-PICK: nothing to switch to
     fits = pv.build_view(_snap(sources={"calc_on": True},
                                build={"loaded": True, "class_name": "Ranger",
@@ -257,6 +257,30 @@ def test_build_line_states():
                                                                    False)
     missing = pv.build_view(_snap(build_alert={"kind": "missing"}))
     assert missing["state"] == "none" and missing["can_paste"] is True
+
+
+def test_build_fix_names_the_bound_item_key():
+    # UX-BUILD-FIX-KEY (docs/reviews/ux/2026-11-28.md P2-9): the bound key
+    # of the published hotkeys view, else the key-free form
+    def row2(hotkeys, **kw):
+        snap = _snap(build={"loaded": False}, **kw)
+        if hotkeys is not None:
+            snap["hotkeys"] = hotkeys
+        return pv.build_view(snap)["row2"]
+
+    keyed = row2({"eval": {"key": "Alt+Shift+E", "registered": True}})
+    assert keyed == "Copy a PoB code, press Alt+Shift+E."
+    assert len(keyed) <= pv.CAP_BUILD_ROW
+    assert row2({"eval": {"key": "Ctrl+Alt+F9"}},
+                build_alert={"kind": "class"}) == "Copy a PoB code, press Ctrl+Alt+F9."
+    plain = "Copy a PoB code, then check it."
+    assert pv.BUILD_FIX == plain
+    # no view, no eval entry, no key, a bad type or a non-ASCII key
+    for hk in (None, {}, {"eval": None}, {"eval": {"key": None}}, {"eval": {"key": ""}},
+               {"eval": {"key": 7}}, {"eval": {"key": "Alt+" + chr(0xE9)}}, "Alt+E"):
+        assert row2(hk) == plain, hk
+    # a key too long for the 36 cap falls back, never clipped
+    assert row2({"eval": {"key": "Ctrl+Shift+Alt+F12"}}) == plain
 
 
 def test_long_text_everywhere_stays_under_the_caps():
@@ -294,7 +318,7 @@ EXPECT = {
         "strip": {"zone": None, "sub": "", "level_sub": "", "deaths_sub": "",
                   "session_sub": "", "fresh": True},
         "trades": [], "events": {"death": None, "level": None, "zone": None},
-        "notices": [], "build": ("none", "No build", "", "Copy a PoB code, press the item key."),
+        "notices": [], "build": ("none", "No build", "", "Copy a PoB code, then check it."),
     },
     "a2": {
         "strip": {"zone": None, "sub": "", "level_sub": "", "deaths_sub": "",
@@ -303,7 +327,7 @@ EXPECT = {
         "notices": [(4, "[ ]", "Setup", "1 step left",
                      ["Still to set: your build.", "It is optional; Settings has the control."],
                      "Settings")],
-        "build": ("none", "No build", "", "Copy a PoB code, press the item key."),
+        "build": ("none", "No build", "", "Copy a PoB code, then check it."),
     },
     "b": {
         "strip": {"zone": "Clearfell", "sub": "Act 1 - area level 2", "level_sub": "Sorceress",
@@ -314,7 +338,7 @@ EXPECT = {
         "notices": [(6, "[-]", "Tip", "Campaign deaths",
                      ["Campaign deaths cost no experience. The Deaths card",
                       "shows where each one happened."], "")],
-        "build": ("none", "No build", "", "Copy a PoB code, press the item key."),
+        "build": ("none", "No build", "", "Copy a PoB code, then check it."),
     },
 }
 C_TRADES = [("Secondbuyer_WithALongAccountName wants Example Unique Quarterstaff of Many Words"
@@ -324,7 +348,7 @@ CAMPAIGN_TIP = (6, "[-]", "Tip", "Campaign deaths",
                 ["Campaign deaths cost no experience. The Deaths card",
                  "shows where each one happened."], "")
 WRONG_CLASS = ("wrong_class", "Wrong class", "Ranger, level 80",
-               "Copy a PoB code, press the item key.")
+               "Copy a PoB code, then check it.")
 for _name in ("c", "c2", "d", "c5"):
     EXPECT[_name] = dict(EXPECT["b"], trades=C_TRADES, notices=[CAMPAIGN_TIP],
                          build=WRONG_CLASS)
