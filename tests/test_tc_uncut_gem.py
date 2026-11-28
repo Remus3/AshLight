@@ -290,7 +290,7 @@ def card_for(text, build, plan_gems=None):
 
 
 def test_card_names_the_gems(monkeypatch):
-    monkeypatch.setattr(uncut, "_table", lambda: GEMS)
+    monkeypatch.setattr(uncut, "_table", lambda ctx: GEMS)
     card, out = card_for(SKILL_10, BUILD)
     assert card["parts"]["uncut"]["gems"][0]["name"] == "Ember Bolt"
     assert "A level 10 skill cut can make your build's Ember Bolt." in out["notes"]
@@ -301,7 +301,7 @@ def test_card_names_the_gems(monkeypatch):
 
 
 def test_card_reads_the_kindler_stage_without_a_build(monkeypatch):
-    monkeypatch.setattr(uncut, "_table", lambda: GEMS)
+    monkeypatch.setattr(uncut, "_table", lambda ctx: GEMS)
     stage = gemadvice.stage_gems([{"name": "Frost Lance", "supports": []}])
     card, _ = card_for(SKILL_10, None, plan_gems=lambda: stage)
     assert card["parts"]["uncut"]["gems"] == [{"name": "Frost Lance", "level": 10, "have": 0}]
@@ -310,18 +310,18 @@ def test_card_reads_the_kindler_stage_without_a_build(monkeypatch):
 
 
 def test_card_part_absent_without_build_or_snapshot(monkeypatch):
-    monkeypatch.setattr(uncut, "_table", lambda: GEMS)
+    monkeypatch.setattr(uncut, "_table", lambda ctx: GEMS)
     card, _ = card_for(SKILL_10, None)
     assert "uncut" not in card["parts"]
     card, _ = card_for(SKILL_10, None, plan_gems=lambda: [])
     assert "uncut" not in card["parts"]
-    monkeypatch.setattr(uncut, "_table", lambda: None)
+    monkeypatch.setattr(uncut, "_table", lambda ctx: None)
     card, _ = card_for(SKILL_10, BUILD)
     assert "uncut" not in card["parts"]
 
 
 def test_other_items_never_read_the_snapshot(monkeypatch):
-    def boom():
+    def boom(ctx):
         raise AssertionError("snapshot read for a non-uncut press")
     monkeypatch.setattr(uncut, "_table", boom)
     card, _ = card_for(PLAIN_GEM, BUILD)
@@ -372,12 +372,13 @@ BUILD_XML = """<?xml version="1.0" encoding="UTF-8"?>
 
 
 def test_press_through_the_core(tmp_path, monkeypatch):
-    monkeypatch.setattr(uncut, "_table", lambda: GEMS)
+    monkeypatch.setattr(uncut, "_table", lambda ctx: GEMS)
     log = tmp_path / "Client.txt"
     log.write_bytes(b"")
     core = Core(runtime=tmp_path / "rt", log_path=str(log), poll_s=0.05)
     try:
         assert callable(core.last_eval.ctx_extra.get("plan_gems"))
+        assert callable(core.last_eval.ctx_extra.get("gem_table"))
         core.last_eval.run(SKILL_10)
         assert "uncut" not in core.state.snapshot()["eval"]["parts"]  # no build, no plan
         core.builds.load_code(codec.encode(BUILD_XML))
@@ -385,5 +386,21 @@ def test_press_through_the_core(tmp_path, monkeypatch):
         ev = core.state.snapshot()["eval"]
         assert ev["parts"]["uncut"]["gems"] == [{"name": "Ember Bolt", "level": 10, "have": 6}]
         assert "A level 10 skill cut can make your build's Ember Bolt." in ev["text"]["notes"]
+    finally:
+        core.close()
+
+
+def test_the_core_reads_its_own_cached_snapshot(tmp_path):
+    rt = tmp_path / "rt"
+    (rt / "gamedata").mkdir(parents=True)
+    (rt / "gamedata" / "gems.json").write_text(json.dumps(GEMS_DOC), encoding="ascii")
+    log = tmp_path / "Client.txt"
+    log.write_bytes(b"")
+    core = Core(runtime=rt, log_path=str(log), poll_s=0.05)
+    try:
+        core.builds.load_code(codec.encode(BUILD_XML))
+        core.last_eval.run(SKILL_10)
+        ev = core.state.snapshot()["eval"]
+        assert ev["parts"]["uncut"]["gems"] == [{"name": "Ember Bolt", "level": 10, "have": 6}]
     finally:
         core.close()

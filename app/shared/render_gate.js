@@ -252,8 +252,10 @@
      card kind follows. The zone moment card (overlayview CARD_HOLDERS
      "moment") has its own part; every other card the core sends (item
      check, price, both, waystone, sample) is a press card: parts.item.
-     OVL-KEY-HINT: the key hint card follows parts.hint. */
-  var CARD_PART = { zone: "moment", hint: "hint" };
+     OVL-KEY-HINT: the key hint card follows parts.hint. TC-GEM-UNLOCK:
+     the gem unlock card (CARD_HOLDERS "gem") follows parts.moment, as
+     the core decides it. */
+  var CARD_PART = { zone: "moment", gem: "moment", hint: "hint" };
 
   function cardPart(c) {
     var k = (c && c.kind) ? String(c.kind) : "";

@@ -106,7 +106,9 @@ def test_holder_order_is_press_then_sample_then_moment():
     # the trade card is built on the overlay page between sample and
     # moment (render_gate.js), then the zone moment card (OVL-ZONE-CARD),
     # then the key hint last (OVL-KEY-HINT)
-    assert [h["kind"] for h in CARD_HOLDERS] == ["press", "sample", "moment", "hint"]
+    # TC-GEM-UNLOCK: the gem unlock card after the moment card
+    assert [h["kind"] for h in CARD_HOLDERS] == ["press", "sample", "moment", "gem",
+                                                 "hint"]
     for h in CARD_HOLDERS:
         if h["kind"] == "hint":
             assert h["life_s"] is None, h  # no expiry while due
@@ -119,7 +121,8 @@ def test_holder_order_is_press_then_sample_then_moment():
     assert moment["life_s"] == overlayview.MOMENT_CARD_S == 12
     assert moment["cards"] == ("zone", "act")
     assert moment["twin"] == ("zone-guide", "actsbox")
-    hint = CARD_HOLDERS[3]
+    assert CARD_HOLDERS[3]["twin"] == ("events",)
+    hint = CARD_HOLDERS[4]
     assert "twin" not in hint and "item-check help text" in hint["exempt"]
 
 

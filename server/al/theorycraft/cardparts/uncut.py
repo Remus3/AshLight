@@ -25,7 +25,15 @@ NAME = "uncut"
 ORDER = 25  # after keep (20): an item part
 
 
-def _table():
+def _table(ctx):
+    """The snapshot table: the core's (ctx "gem_table", its own cache
+    path), else the sidecar cache's."""
+    fn = ctx.get("gem_table")
+    if callable(fn):
+        try:
+            return fn()
+        except Exception:  # noqa: BLE001 - no table then means no advice
+            return None
     return gemadvice.index()
 
 
@@ -47,7 +55,7 @@ def compute(ctx):
     gems = _gems(ctx)
     if not gems:
         return None
-    tab = _table()
+    tab = _table(ctx)
     if not tab:
         return None
     return gemadvice.cut_options(ctx["text"], gems, tab)

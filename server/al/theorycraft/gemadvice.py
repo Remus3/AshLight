@@ -23,10 +23,13 @@ build answers nothing; a field the snapshot lacks is never guessed.
 - parse_uncut(text): {"kind", "level"} of an uncut gem item text.
 - cut_options(text, gems, tab): which build gems a level N cut can make
   and the build does not show as socketed at that level yet.
+- unlocked(prev, level, gems, tab): build gems whose snapshot level
+  requirement the move from prev to level meets (TC-GEM-UNLOCK).
 """
 
 import json
 import re
+import threading
 from pathlib import Path
 
 from .. import hotreload
@@ -186,18 +189,34 @@ def _load(path):
     return table(json.loads(p.read_bytes())) or None
 
 
-_watch = None
+WATCH_MAX = 4  # cached snapshot paths watched at once (the core's, a test's)
+_watch_lock = threading.Lock()
+_watches = {}  # {path: hotreload.Watched}
+
+
+def gems_file(core=None):
+    """The gems snapshot path beside the base list a core reads (its own
+    runtime cache in a test core), else the sidecar cache."""
+    names = getattr(core, "base_names", None)
+    base = getattr(names, "path", None)
+    if base is not None:
+        return Path(base).parent / archetypes.GEMS_FILE
+    return archetypes.gems_path()
 
 
 def index(path=None):
     """table() of the cached gems snapshot (re-read on change, the last
-    good copy kept), or None when it is missing or unreadable."""
-    global _watch
+    good copy kept), or None when it is missing or unreadable. One watch
+    per path, at most WATCH_MAX paths."""
     target = Path(path) if path is not None else archetypes.gems_path()
-    if _watch is None or _watch.path != target:
-        _watch = hotreload.Watched(target, _load, name="skill gem list",
-                                   default=None, registry=False)
-    return _watch.get()
+    with _watch_lock:
+        watch = _watches.get(target)
+        if watch is None:
+            if len(_watches) >= WATCH_MAX:
+                _watches.pop(next(iter(_watches)))
+            watch = _watches[target] = hotreload.Watched(
+                target, _load, name="skill gem list", default=None, registry=False)
+    return watch.get()
 
 
 def lookup(tab, gem):
@@ -306,3 +325,27 @@ def cut_options(text, gems, tab):
             "more": max(0, len(sure) - SHOW_MAX),
             "unchecked_more": max(0, len(unsure) - SHOW_MAX)}
 
+
+# --- TC-GEM-UNLOCK -----------------------------------------------------------------
+
+def unlocked(prev, level, gems, tab):
+    """[{"name", "kind", "need"}] of the build gems (enabled, each once, in
+    build order) whose snapshot level requirement the move from `prev` to
+    `level` meets: prev < need <= level (only need == level when prev is
+    unknown or not lower). [] without a snapshot, a gem it does not name or
+    a need it does not give."""
+    if _num(level, CHAR_MAX) is None or not tab or not gems:
+        return []
+    low = prev if _num(prev, CHAR_MAX) is not None and prev < level else level - 1
+    out, seen = [], set()
+    for gem in gems:
+        if not gem.get("on"):
+            continue
+        row = lookup(tab, gem)
+        need = row.get("need") if row else None
+        key = norm(row["name"]) if row else None
+        if need is None or key in seen or not low < need <= level:
+            continue
+        seen.add(key)
+        out.append({"name": gem["name"], "kind": row["kind"], "need": need})
+    return out
