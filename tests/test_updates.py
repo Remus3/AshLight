@@ -21,6 +21,11 @@ from server.al.http import serve
 ROOT = Path(__file__).resolve().parents[1]
 TOKEN = "u" * 48
 
+# TEST-UPDATES-NINJA-STUB: a background thread that raises (the al-ninja
+# league read hitting a GitHub-only fake) fails the test, never a warning.
+pytestmark = pytest.mark.filterwarnings(
+    "error::pytest.PytestUnhandledThreadExceptionWarning")
+
 REPO = "example-owner/example-app"
 T0 = 1_800_000_000.0
 DAY = updates.DAY_S
@@ -334,6 +339,13 @@ def _core(tmp_path, monkeypatch, fake, cfg=None, repo=REPO):
     path.write_text(json.dumps(cfg or {"web_data": False}), encoding="ascii")
     core = core_mod.Core(runtime=tmp_path / "rt", log_path=str(log), tail=False,
                          config_path=path, web_fetch=fake, update_repo=repo)
+    # TEST-UPDATES-NINJA-STUB: turning web data on starts the al-ninja
+    # refresh (league list, overviews) on its own thread; these tests cover
+    # the release check only, so the poe.ninja refresh is stubbed out and
+    # no ninja request (fake or real) is ever made.
+    core.ninja_refreshes = []
+    monkeypatch.setattr(core.rates, "refresh_async",
+                        lambda: core.ninja_refreshes.append(True) or False)
     clock = [T0]
     core.updates.clock = lambda: clock[0]
     return core, path, clock
@@ -357,6 +369,7 @@ def test_core_tick_drives_the_client_once_a_day_only_when_on_and_acked(tmp_path,
         clock[0] += DAY
     assert fake.calls == []
     core.set_web_data(True)  # an opt-in with no acknowledgement
+    assert core.ninja_refreshes == [True]  # asked for, stubbed: no thread
     assert core.web_data_acked() is None
     for _ in range(3):
         assert _run(core) is None
