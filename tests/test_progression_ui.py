@@ -296,3 +296,68 @@ def test_kindler_gem_buttons_send_no_level():
     src = (ROOT / "web" / "kindler.js").read_text(encoding="utf-8")
     calls = re.findall(r"info\.button\(([^)]*)\)", src)
     assert calls == ["s.doc, name"]
+
+
+ASC_NONE_JS = r"""
+const P = require("./web/panels/progression.js");
+function mk(tag, ns) {
+  const n = { tagName: tag, namespaceURI: ns || "http://www.w3.org/1999/xhtml", id: "",
+    hidden: false, children: [], attrs: {}, on: {}, textContent: "", className: "",
+    scrollHeight: 0, clientHeight: 0,
+    setAttribute(k, v) { this.attrs[k] = String(v); if (k === "id") { this.id = v; } },
+    getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; },
+    removeAttribute(k) { delete this.attrs[k]; },
+    hasAttribute(k) { return k in this.attrs; },
+    appendChild(c) { this.children.push(c); return c; },
+    removeChild(c) { this.children.splice(this.children.indexOf(c), 1); return c; },
+    replaceChildren() { this.children = []; },
+    get lastChild() { return this.children[this.children.length - 1]; },
+    addEventListener(t, f) { this.on[t] = f; },
+    focus() {},
+    getBoundingClientRect() { return { width: 0, height: 0 }; } };
+  return n;
+}
+function find(n, id) {
+  if (n.id === id) { return n; }
+  for (const c of n.children) { const f = find(c, id); if (f) { return f; } }
+  return null;
+}
+let data = "";
+process.stdin.on("data", (c) => { data += c; });
+process.stdin.on("end", () => {
+  const models = JSON.parse(data);
+  const body = mk("body");
+  const panel = body.appendChild(mk("section")); panel.id = "panel-build";
+  const doc = { hidden: false, createElement: (t) => mk(t), createElementNS: (ns, t) => mk(t, ns),
+    getElementById: (id) => find(body, id) };
+  P.reset();
+  P.wire(doc, { api: () => new Promise(() => {}), getSnap: () => null });
+  const out = [];
+  models.forEach((m) => {
+    P.state().model = m; P.state().key = m.key; P.state().filled = null;
+    P.setOpen(doc, true, false);
+    const asc = doc.getElementById("pg-asc"), none = doc.getElementById("pg-asc-none");
+    out.push({ svgHidden: asc.hasAttribute("hidden"), line: none.textContent,
+               lineShown: !none.hidden, muted: none.className.indexOf("muted") >= 0 });
+  });
+  process.stdout.write(JSON.stringify(out));
+});
+"""
+
+
+def test_an_empty_ascendancy_box_shows_one_line():
+    """PROGRESSION-ASC-EMPTY: with no ascendancy to draw the svg frame is
+    hidden (an svg has no hidden property, so the attribute) and the
+    server's one muted line shows instead; a drawn ascendancy hides it."""
+    import dataclasses
+    t = pf.tree()
+    b = pf.build(t)
+    drawn = progression.build_model(build=b, tree=t, level=30)
+    none = progression.build_model(build=dataclasses.replace(b, ascendancy=None), tree=t,
+                                   level=30)
+    got = run(ASC_NONE_JS, [none, drawn, none])
+    line = "No ascendancy in this build yet."
+    assert got[0] == {"svgHidden": True, "line": line, "lineShown": True, "muted": True}
+    assert got[1]["svgHidden"] is False and got[1]["lineShown"] is False
+    assert got[1]["line"] == ""
+    assert got[2] == got[0]

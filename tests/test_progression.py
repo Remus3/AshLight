@@ -467,3 +467,59 @@ def test_the_copy_sheet_lists_every_template():
     for word in ("Next up", "Item check", "Progression", "Back to build",
                  "Skills and supports", "Hover a node to read it."):
         assert word in js and f"`{word}`" in sheet, word
+
+
+def test_one_tree_build_says_it_has_no_order_by_level(tree):
+    """PROGRESSION-NEXTUP-ORDER (decision 0097): a pasted build with one tree
+    holds no order by level, so the strip says so in fixed words and orders
+    nothing (no distance order from the class start, never a guess)."""
+    b = pf.build(tree, count=60)
+    assert len(b.specs) == 1
+    m = progression.build_model(build=b, tree=tree, level=12)
+    assert m["empty"] == words.ONE_TREE
+    assert m["counts"]["due"] == 0 and m["counts"]["later"] == 0
+    assert not [s for s in m["next"] if s["kind"] == "passive"]
+    assert progression.summary(m)["empty"] == words.ONE_TREE
+    # the point lines still give the count and the budget, never "taken"
+    assert any(p.startswith("Passives: ") for p in m["points"])
+    assert len(words.ONE_TREE) <= progression.STEP_CHARS
+    # a build with level-banded trees keeps the plain empty words
+    nodes = pf.path_from_start(tree, 40)
+    multi = pf.model.parse(pf.build_xml(tree, nodes, specs=[("Level 1-20", nodes[:15]),
+                                                            ("Level 21-40", nodes)]))
+    assert progression.build_model(build=multi, tree=tree, level=50)["empty"] == \
+        words.NOTHING_NEXT
+    # a Kindler plan keeps its own order and the plain empty words
+    assert kmodel(tree, 29)["empty"] == words.NOTHING_NEXT
+
+
+def test_the_ascendancy_box_says_why_it_is_empty(tree):
+    """PROGRESSION-ASC-EMPTY: with nothing to draw the model carries one
+    short line for the ascendancy box instead of an empty frame."""
+    import dataclasses
+    b = pf.build(tree)
+    drawn = progression.build_model(build=b, tree=tree, level=30)
+    assert drawn["asc"] is not None and drawn["asc_note"] == ""
+    none = progression.build_model(build=dataclasses.replace(b, ascendancy=None), tree=tree,
+                                   level=30)
+    assert none["asc"] is None and none["asc_note"] == words.ASC_NONE
+    gone = progression.build_model(build=dataclasses.replace(b, ascendancy="Nowhere Walker"),
+                                   tree=tree, level=30)
+    assert gone["asc"] is None
+    assert gone["asc_note"] == words.ASC_NOT_IN_TREE.format(name="Nowhere Walker")
+    # no tree data: the tree note says it, the box adds nothing
+    notree = progression.build_model(build=b, tree=None, level=30)
+    assert notree["note"] == words.NO_TREE and notree["asc_note"] == ""
+    # a Kindler plan with no ascendancy says plan
+    plan = pf.plan(tree)
+    plan = dict(plan, ascendancy=None, stages=[{k: v for k, v in st.items() if k != "ascendancy"}
+                                              for st in plan["stages"]])
+    kin = progression.build_model(tree=tree, level=29, kindler={"plan": plan, "stage": 2,
+                                                                "label": "Demo"})
+    assert kin["asc"] is None and kin["asc_note"] == words.ASC_NONE_PLAN
+    assert words.ASC_NONE_PLAN == "No ascendancy in this plan yet."
+    # nothing loaded: nothing to say
+    assert progression.build_model(tree=tree, level=30)["asc_note"] == ""
+    assert words.ASC_NONE == "No ascendancy in this build yet."
+    assert words.ASC_NOT_IN_TREE == "{name} isn't in the saved tree data yet."
+    assert words.ONE_TREE == "Your build has one tree, with no order by level."

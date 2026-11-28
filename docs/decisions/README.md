@@ -3,11 +3,13 @@
 One file per decision: `NNNN-<topic>.md` (decision, alternatives, why,
 reverses if). Numbers 0047 to 0076 are reserved for the packages of
 docs/plan/packages.json (docs/plan/07, Reserved decision numbers); a
-package uses the number in its new_files entry. 0077 to 0096
+package uses the number in its new_files entry. 0077 to 0097
 are taken. Numbers are reserved in the plan before a wave starts.
 Numbers are reserved per package in docs/plan/packages.json before a
 wave starts; the wave integrator adds the index line. 0035 stays unused.
 
+- 0097: PROGRESSION-NEXTUP-ORDER: a pasted build with one tree gets no
+  order by level; Next up says so in fixed words, never a distance order.
 - 0096: ACTIVE-BUILD-PICK: one active build source per character, the
   pasted build or a Kindler plan (Use Kindler plan / Use pasted build), kept
   across restarts; item check and Progression follow it.

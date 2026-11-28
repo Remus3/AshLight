@@ -26,6 +26,11 @@ States of a node: "h" planned by the current level (a PoB spec's nodes,
 or a Kindler plan's first point_budget(level) passives), "d" due next (the
 next DUE_MAX planned passives, or the next spec's new nodes), "l" planned
 later, "o" not in the plan. Nothing here says a passive was taken.
+A pasted build with one tree holds no order by level, so its nodes all
+read "h" and the strip's empty line says so (words.ONE_TREE, decision
+0097); AshLight never orders them itself (no distance from the class
+start). With nothing to draw in the ascendancy box, "asc_note" holds the
+one line the page shows there instead (PROGRESSION-ASC-EMPTY).
 
 TC-SPEC-FOLLOW hook: pick_specs() reads the chosen spec through one
 `picker(build, level) -> spec index or None` callable with a fallback to
@@ -616,6 +621,7 @@ def build_model(build=None, tree=None, level=None, area_id=None, zone=None, guid
     source, line, spec, plan, stage_i = "none", words.SOURCE_NONE, None, None, None
     main, asc, due_ids, trial, asc_due, asc_name, start = {}, {}, [], None, [], None, None
     skills, gem_step, next_band = [], None, 0
+    empty = words.NOTHING_NEXT
     if build is not None and build.specs:
         source = "pob"
         cur, nxt = pick_specs(build, level, picker)
@@ -623,6 +629,10 @@ def build_model(build=None, tree=None, level=None, area_id=None, zone=None, guid
         line = (words.SOURCE_POB_SPEC.format(title=_clip(spec.title, 40)) if spec.title
                 and len(build.specs) > 1 else words.SOURCE_POB)
         main, asc = _pob_states(tree, build, cur, nxt)
+        if len(build.specs) == 1:
+            # one tree holds no order by level: say so, never order it
+            # (decision 0097)
+            empty = words.ONE_TREE
         due_ids = sorted(n for n, s in main.items() if s == "d")
         next_band = len(due_ids)
         asc_name = build.ascendancy
@@ -649,6 +659,11 @@ def build_model(build=None, tree=None, level=None, area_id=None, zone=None, guid
     guide_books = books(guide, area_id, zone)
     tview = tree_view(tree, main, start) if tree_ok else None
     aview = asc_view(tree, asc_name, asc) if tree_ok else None
+    asc_note = ""
+    if tree_ok and aview is None and source != "none":
+        asc_note = (words.ASC_NOT_IN_TREE.format(name=_clip(asc_name, NAME_CHARS))
+                    if isinstance(asc_name, str) and asc_name
+                    else words.ASC_NONE_PLAN if source == "kindler" else words.ASC_NONE)
     prev_due = set()
     if isinstance(prev, dict) and prev.get("source") == source:
         prev_due = set(prev.get("due") or ())
@@ -682,8 +697,8 @@ def build_model(build=None, tree=None, level=None, area_id=None, zone=None, guid
     strip = [dict(s, text=step_text(s["text"])) for _o, s in steps][:NEXT_MAX]
     model = {
         "schema": SCHEMA, "source": source, "source_line": line, "level": level,
-        "note": note, "tree": tview, "asc": aview, "new": new, "due": all_due,
-        "skills": _lines(skills), "empty": words.NOTHING_NEXT,
+        "note": note, "tree": tview, "asc": aview, "asc_note": asc_note, "new": new,
+        "due": all_due, "skills": _lines(skills), "empty": empty,
         "points": _points(source, main, asc, level, build, spec, trial, guide_books)
         if source != "none" else [],
         "next": strip,

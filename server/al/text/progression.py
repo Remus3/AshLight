@@ -32,6 +32,13 @@ BOOK_HERE = "Here: {text}"
 GEM_WORD = "Gem"
 SUPPORT_WORD = "Support"
 NOTHING_NEXT = "Nothing new is due at this level."
+# a pasted build with one tree holds no order by level (decision 0097)
+ONE_TREE = "Your build has one tree, with no order by level."
+
+# the ascendancy box when there is nothing to draw (PROGRESSION-ASC-EMPTY)
+ASC_NONE = "No ascendancy in this build yet."
+ASC_NONE_PLAN = "No ascendancy in this plan yet."
+ASC_NOT_IN_TREE = "{name} isn't in the saved tree data yet."
 
 # point lines
 PASSIVES = "Passives: {have} planned by level {level}"

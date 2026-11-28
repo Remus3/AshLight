@@ -28,6 +28,19 @@ test_the_copy_sheet_lists_every_template).
 - `After ascendancy trial {trial}: {names}` and `After ascendancy trial {trial} (+{n}): {names}`.
 - `Here: {text}` (the guide's own book line of this zone).
 - Empty: `Nothing new is due at this level.`
+- Empty, a pasted build with one tree (decision 0097: one tree holds no
+  order by level, so AshLight orders nothing):
+  `Your build has one tree, with no order by level.`
+
+## Ascendancy box (server; PROGRESSION-ASC-EMPTY)
+
+Shown in place of the ascendancy drawing when there is nothing to draw
+(14 px, muted); the tree data note covers a missing tree.
+
+- `No ascendancy in this build yet.` (the pasted build names none)
+- `No ascendancy in this plan yet.` (the Kindler plan names none)
+- `{name} isn't in the saved tree data yet.` (named, but the cached tree
+  export has no node of it)
 
 ## Point lines (server)
 

@@ -138,7 +138,16 @@
     return n;
   }
   function setText(n, text) { if (n && n.textContent !== text) { n.textContent = text; } }
-  function show(n, on) { if (n && n.hidden === !!on) { n.hidden = !on; } }
+  /* An svg element has no hidden property (HTMLElement only), so it gets
+     the attribute, which the page's [hidden] rule hides. */
+  function show(n, on) {
+    if (!n) { return; }
+    if (n.namespaceURI === "http://www.w3.org/2000/svg") {
+      if (on) { n.removeAttribute("hidden"); } else { n.setAttribute("hidden", ""); }
+      return;
+    }
+    if (n.hidden === !!on) { n.hidden = !on; }
+  }
 
   function summaryOf(snap) {
     var p = snap && snap.progression;
@@ -424,6 +433,10 @@
     c2.appendChild(h3(doc, WORDS.asc, "pg-asc-h"));
     var asc = svg(doc, "pg-asc", "pg-svg pg-asc", WORDS.ascLabel);
     c2.appendChild(asc);
+    var ascNone = el(doc, "p", "row-meta muted pg-asc-none");
+    ascNone.id = "pg-asc-none";
+    ascNone.hidden = true;
+    c2.appendChild(ascNone);
     c2.appendChild(h3(doc, WORDS.points));
     var pts = el(doc, "ul", "pg-list");
     pts.id = "pg-points";
@@ -533,6 +546,10 @@
     show(asc, !!m.asc);
     setText(doc.getElementById("pg-asc-h"), m.asc ? WORDS.asc + ": " + m.asc.name : WORDS.asc);
     if (m.asc) { draw(doc, asc, m.asc, "full", ASC_W, ASC_H); }
+    /* nothing to draw: the server's one line says why (PROGRESSION-ASC-EMPTY) */
+    var ascNone = doc.getElementById("pg-asc-none");
+    setText(ascNone, m.asc ? "" : (m.asc_note || ""));
+    show(ascNone, !!(ascNone && ascNone.textContent));
   }
 
   function setOpen(doc, on, focus) {
