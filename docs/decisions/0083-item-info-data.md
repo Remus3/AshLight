@@ -119,3 +119,65 @@ Reverses if: a source publishes an API or app-use terms; a source owner
 gives written permission; or a source states its data is under a
 licence that allows this use (then point 3 applies, code stays
 Apache-2.0).
+
+## Amendment 2026-11-28 (ITEM-INFO-GEM-DETAIL: gem details in the popover)
+
+Operator ask: the popover of a gem name (Kindler, Progression) should show
+the gem's in-game details, for example Spark's spell effect lines.
+
+Decision:
+
+1. A skill, spirit or support gem name answers a "gem" field from the
+   repoe-fork poe2 export only: skill_gems.json (cached under the reader
+   name gems.json), skills.json and gem_tags.json, all three in
+   snapshot.SOURCES under decision 0009 (one web_data opt-in, sidecar
+   cache, AshLight User-Agent, repoe-fork credit; probes "gems",
+   "skills", "gem_tags"). The export already words each level's stat
+   lines with the game's own stat description files, so neither the
+   stat_translations snapshot nor a Path of Building file is needed; the
+   lines are shown as written, markup read as its shown words.
+2. Fields, each only when the export holds it: kind, tags (tags with no
+   shown word are left out), description (the active skill's
+   description, or the support text, filling "description" when
+   base_items has none), max_level, the asked level, costs (known cost
+   types only), Spirit reservation, cooldown, cast time (non-attack
+   skills only), cost multiplier (supports), and per stat set its label
+   (only when there is more than one set), attack damage percent, critical
+   hit chance and lines in the game's tooltip order. GET /api/iteminfo
+   takes an optional level=1..40 (default 1); a button made with
+   button(doc, name, level) asks for it.
+3. The snapshot tool, in its own process, turns the 28 MB skills.json
+   into one small file per gem name under <cache>/gem_details/ (about
+   1100 files, 60 KB at most, 5.8 MB in all, rebuilt only when the
+   three inputs' sha256 change). The core reads one file per popover
+   look and never parses skills.json (decision 0002 budgets).
+4. Left out, with no permitted local source or no safe reading: quality
+   lines (their numbers need the game's per-quality maths), attack
+   speed multipliers (the export does not say how the game words them),
+   per-level attribute and character level requirements (not in the
+   export), the extra skills a gem grants beside its first one, and gem
+   icons (a DDS path, not a shown image).
+5. DATA-GEMS-SNAP's URL moved: the poe2 export has no gems.json (HTTP 404
+   on 2026-11-28; the export's poe2 parser writes skill_gems.json). Its
+   entries carry the name under base_item.display_name, which
+   archetypes.gem_index already reads, so Kindler's gem names now read
+   checked; the export has no gem level requirement, so Kindler gem
+   levels stay unchecked. The CLAUDE.md DATA-GEMS-SNAP entry still names
+   gems.json; the integrator updates its wording (not this package's
+   file to write).
+
+Alternatives: parse skills.json in the core on first look (about 250 MB
+peak in the core, past decision 0002); render stat lines from
+stat_translations ourselves (the export already ships the game's own
+wording, and an own renderer would drift); read PoB-PoE2 skill Lua files
+as text (repoe-fork already holds every needed field, and repoe-fork wins
+conflicts anyway); compute quality lines (guessing the game's maths).
+
+Why: the export holds the in-game tooltip words per level, it is the same
+licensed, attributed, opt-in cache as base_items, and per-gem files keep
+the core's cost to one small read per click.
+
+Reverses if: repoe-fork drops or reshapes skills.json / skill_gems.json /
+gem_tags.json (the probes fail and the last good copy stays), its terms
+forbid this use, a shown line proves different from the game's tooltip
+in play, or the derived folder costs the snapshot run's budget.

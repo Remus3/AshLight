@@ -24,6 +24,11 @@ def name_long(name_max):
             "Use the name as the game shows it.")
 
 
+def bad_level(level_max):
+    """The refusal for a gem level that is not a whole number 1..level_max."""
+    return f"A gem level is a whole number from 1 to {level_max}. Open the gem again."
+
+
 # The market block's credit (decision 0083 point 1; = ninja.SHORT_CREDIT)
 CREDIT = "Prices: poe.ninja"
 # The only rarity the lookup gives (uniques; currency has none)

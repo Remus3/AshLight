@@ -422,7 +422,9 @@ def test_snapshot_fetches_the_gems_file_resolve_checks(tmp_path):
     authored gems checked with the snapshot level."""
     from server.al.theorycraft import snapprobe, snapshot
     url = snapshot.SOURCES["gems"]
-    assert url.endswith("/" + ar.GEMS_FILE)
+    # the poe2 export's gem list is skill_gems.json, cached as GEMS_FILE
+    # (decision 0083 amendment 2026-11-28)
+    assert url.endswith("/skill_gems.json")
     assert ar.gems_path({"AL_SIDECAR_ROOT": str(tmp_path)}).name == ar.GEMS_FILE
     table = {"gems": dict(snapprobe.PROBES["gems"], min=1, names=1)}
     body = json.dumps(kf.gems_doc()).encode("ascii")

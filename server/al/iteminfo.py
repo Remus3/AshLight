@@ -21,6 +21,14 @@ on this computer; nothing goes on the network:
   change_7d, listings, few, volume, league, age_s, credit "Prices:
   poe.ninja"}, plus the unique's "icon" URL and "flavour" text when the
   cache holds them;
+- ITEM-INFO-GEM-DETAIL (decision 0083 amendment 2026-11-28): "gem" for a
+  skill, spirit or support gem name, from the per-gem files the snapshot
+  tool derives from the cached repoe-fork skill_gems / skills / gem_tags
+  export (theorycraft/gemdetail.py, the gem_details folder beside
+  base_items): kind, tags, cast time, max_level and, for one gem level
+  (lookup's `level`, default 1), costs, spirit, cooldown, cost multiplier
+  and each stat set's worded lines; its "description" fills the item's
+  description when base_items has none. Source id "repoe-fork";
 - ITEM-INFO-POB-TEXT (decision 0083 points 1 and 3): "where_found"
   {drops: [{boss, zone?, map?}], no_longer_obtainable?} from the Source
   lines of the hash-pinned Path of Building PoE2 checkout, text-parsed by
@@ -50,7 +58,7 @@ from pathlib import Path
 
 from . import hotreload, num
 from .text import iteminfo as text
-from .theorycraft import pobtext
+from .theorycraft import gemdetail, pobtext
 
 NAME_MAX = 120          # the price book keeps names to 120 characters too
 TEXT_MAX = 600          # description / directions
@@ -214,13 +222,17 @@ class ItemInfo:
     """The lookup over the cached tables. `rates`: ninja.RatesClient (its
     doc, book and enabled switch) or None. `pob`: a pobtext.WhereFound (or
     any object with lookup(key)), None for none, AUTO (the default) for
-    auto_pob(bases_path)."""
+    auto_pob(bases_path). `gems`: a gemdetail.GemDetails (or any object
+    with lookup(key, level)), None for none, AUTO (the default) for the
+    gem_details folder beside bases_path."""
 
     def __init__(self, bases_path, uniques_path, rates=None, clock=time.time,
-                 pob=AUTO):
+                 pob=AUTO, gems=AUTO):
         self.rates = rates
         self.clock = clock
         self.pob = auto_pob(bases_path) if pob is AUTO else pob
+        self.gems = (gemdetail.GemDetails(Path(bases_path).with_name(gemdetail.DIR_NAME))
+                     if gems is AUTO else gems)
         self.bases = hotreload.Watched(
             bases_path, None, name=text.BASES_NAME, default=_empty_bases,
             check=hotreload.check_json(MAX_BYTES), from_doc=bases_from_doc,
@@ -320,10 +332,23 @@ class ItemInfo:
             return None
         return where if isinstance(where, dict) and where else None
 
+    # -- gem details (derived repoe-fork files)
+    def _gem(self, k, level):
+        lookup = getattr(self.gems, "lookup", None)
+        if not callable(lookup):
+            return None
+        try:
+            gem = lookup(k, level)
+        except Exception:  # noqa: BLE001 - a bad reader omits the field
+            return None
+        return gem if isinstance(gem, dict) and gem else None
+
     # -- the lookup
-    def lookup(self, name):
+    def lookup(self, name, level=None):
         """{"name", "fields", "sources"} for one item name (see the module
-        text); ValueError for a name that is not a short line of text."""
+        text); ValueError for a name that is not a short line of text.
+        level: the gem level a gem's lines are given for (1 to
+        gemdetail.LEVEL_MAX, default 1)."""
         asked = clean_name(name)
         k = asked.lower()
         fields, sources, shown = {}, [], None
@@ -344,6 +369,12 @@ class ItemInfo:
                         fields["full_stack_turns_into"] = turned
                     continue
                 fields[f] = v
+        gem = self._gem(k, level)
+        if gem:
+            desc = gem.pop("description", None)
+            if desc and "description" not in fields:
+                fields["description"] = desc
+            fields["gem"] = gem
         if fields:
             sources.append(REPOE)
         where = self._where(k)

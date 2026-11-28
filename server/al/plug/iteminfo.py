@@ -1,8 +1,9 @@
 """ITEM-INFO-CORE (decision 0083, decision 0082 part 1): GET /api/iteminfo
 through the plug seam (decision 0056).
 
-GET /api/iteminfo?name=<exact item name> answers server/al/iteminfo.py's
-lookup: {"name", "fields", "sources"} from the local caches only (the
+GET /api/iteminfo?name=<exact item name>[&level=<1-40>] answers
+server/al/iteminfo.py's lookup (level: the gem level a gem's lines are
+given for, ITEM-INFO-GEM-DETAIL; a bad or repeated level is 400): {"name", "fields", "sources"} from the local caches only (the
 repoe-fork base_items and uniques snapshots, the poe.ninja price book
 while web data is on). An unknown name is 200 with empty fields; a
 missing, repeated, over-long or multi-line name is 400. The route runs
@@ -38,13 +39,22 @@ def lookup_of(core):
 
 def get_iteminfo(req, query, extra):
     from ..text import iteminfo as text  # lazy, as lookup_of
+    from ..theorycraft import gemdetail
     names = (query or {}).get("name") or []
     if len(names) > 1:
         return req._json(400, {"error": text.MANY_NAMES}, extra)
     if not names:
         return req._json(400, {"error": text.NO_NAME}, extra)
+    levels = (query or {}).get("level") or []
+    level = None
+    if levels:
+        raw = levels[0]
+        if (len(levels) > 1 or not raw.isdigit() or len(raw) > 2
+                or not 1 <= int(raw) <= gemdetail.LEVEL_MAX):
+            return req._json(400, {"error": text.bad_level(gemdetail.LEVEL_MAX)}, extra)
+        level = int(raw)
     try:
-        reply = lookup_of(req.server.core).lookup(names[0])
+        reply = lookup_of(req.server.core).lookup(names[0], level)
     except ValueError as exc:
         return req._json(400, {"error": str(exc)}, extra)
     return req._json(200, reply, extra)

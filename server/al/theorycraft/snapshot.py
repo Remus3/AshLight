@@ -45,6 +45,15 @@ the export's own page lists gems) as gems.json, the file
 theorycraft/archetypes.py reads (GEMS_FILE) so Kindler gem names and levels
 read checked. Its probe (snapprobe.PROBES "gems") counts the entries that
 yield a gem name the way archetypes.gem_index reads them.
+
+ITEM-INFO-GEM-DETAIL (decision 0083 amendment 2026-11-28): the poe2 export
+has no gems.json, so "gems" reads skill_gems.json (the same export's gem
+list, still cached as gems.json); "skills" (skills.json) and "gem_tags"
+(gem_tags.json) join SOURCES with the same opt-in, cache, User-Agent and
+attribution. After the run, main() calls gemdetail.refresh, which turns
+the three into one small file per gem under gem_details/ when their
+sha256 changed, so the core reads a few KB per popover instead of the
+28 MB skills file.
 """
 
 import argparse
@@ -106,6 +115,9 @@ SOURCE_CAPS = {
     "uniques": 16 * MiB,
     # the reader's own ceiling (archetypes.GEMS_MAX_BYTES)
     "gems": 64 * MiB,
+    # 28 MB in 2026-11; read only by this tool (gemdetail.refresh)
+    "skills": 128 * MiB,
+    "gem_tags": 1 * MiB,
 }
 DEFAULT_CAP = 32 * MiB  # a caller's own source name
 TIMEOUT_S = 60
@@ -138,9 +150,17 @@ SOURCES = {
     "skilltree": GGG_TREE_POE2,
     # HUD-ACT (decision 0020): act / zone levels; reader server/al/acts.py.
     "world_areas": REPOE_POE2 + "world_areas.json",
-    # DATA-GEMS-SNAP (decisions 0009, 0081): gem names and levels for
-    # Kindler; reader server/al/theorycraft/archetypes.py (load_gems).
-    "gems": REPOE_POE2 + "gems.json",
+    # DATA-GEMS-SNAP (decisions 0009, 0081): gem names for Kindler; reader
+    # server/al/theorycraft/archetypes.py (load_gems). The poe2 export has no
+    # gems.json (HTTP 404, 2026-11-28): its gem list is skill_gems.json, cached
+    # under the reader's name (decision 0083 amendment 2026-11-28).
+    "gems": REPOE_POE2 + "skill_gems.json",
+    # ITEM-INFO-GEM-DETAIL (decision 0083 amendment 2026-11-28): each gem
+    # skill's worded stat lines per level and the gem tag words; reader
+    # theorycraft/gemdetail.py, which this tool turns into small per-gem
+    # files (the core never parses skills.json).
+    "skills": REPOE_POE2 + "skills.json",
+    "gem_tags": REPOE_POE2 + "gem_tags.json",
     # ITEM-INFO-CORE (decision 0083): unique item list for the item info
     # popover; reader server/al/iteminfo.py (uniques_from_doc).
     "uniques": REPOE_POE2 + "uniques.json",
@@ -537,6 +557,8 @@ def main(argv=None, environ=None, fetch=http_fetch, contact=None, web_data=None)
                  runtime=paths.runtime_dir(), log_dir=paths.sidecar_dir("Logs", env))
     for name in sorted(result):
         print(f"snapshot: {name}: {result[name]}")
+    from . import gemdetail  # lazy: only a full run derives the gem files
+    print(f"snapshot: gem_details: {gemdetail.refresh(directory, load_manifest(directory))}")
     failed = any(v.startswith("error") for v in result.values())
     return 1 if (failed and args.strict) else 0
 

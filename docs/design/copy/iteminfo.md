@@ -21,7 +21,12 @@ one change. tests/test_iteminfo.py
   at a time.` (MANY_NAMES: more than one name), `An item name is at most <n>
   characters. Use the name as the game shows it.` (`name_long`, n =
   iteminfo.NAME_MAX, 120), `An item name is one line of text. Use the name
-  as the game shows it.` (ONE_LINE: a control character in the name).
+  as the game shows it.` (ONE_LINE: a control character in the name),
+  `A gem level is a whole number from 1 to <n>. Open the gem again.`
+  (`bad_level`, n = gemdetail.LEVEL_MAX, 40: a level query that is not
+  one whole number from 1 to n; ITEM-INFO-GEM-DETAIL). An API-only
+  refusal: the page only asks for a level its button holds (1 to n), so
+  the popover never shows it.
 - Market credit (decision 0083 point 1): `Prices: poe.ninja` (CREDIT, the
   same words as ninja.SHORT_CREDIT), shown with the cache age.
 - Rarity word: `Unique` (UNIQUE), given only to items in the cached
@@ -32,7 +37,12 @@ one change. tests/test_iteminfo.py
   today neither name is shown; the core's own base list watch reports a
   bad base_items file.
 - Not in this module: the popover's own labels, the poe2db line and the
-  credit line layout belong to ITEM-INFO-UI (web/iteminfo.js). Field
+  credit line layout belong to ITEM-INFO-UI (web/iteminfo.js), and so do
+  the gem rows (Gem, Tags, Gem level, Cost, Reservation, Cast time,
+  Cooldown, Cost multiplier) and the "At gem level <n>" / "Effect"
+  section titles of ITEM-INFO-GEM-DETAIL (with more than one stat set a
+  title adds ": <set label>", else ": Set <n>"); a gem's stat lines are the
+  repoe-fork export's own words. Field
   values (descriptions, directions, flavour text, names) are the sources'
   own text, shown as text only, never reworded beyond reading repoe-fork
   markup such as `[ItemRarity|Rare]` as its shown words.

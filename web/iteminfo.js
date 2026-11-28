@@ -29,6 +29,13 @@
    (decision 0041; poe2db.tw is in config/link_hosts.json). No poe2db text
    is fetched or copied.
 
+   ITEM-INFO-GEM-DETAIL (decision 0083 amendment 2026-11-28): for a gem the
+   reply's "gem" field adds its kind, tags, level, cost, reservation, cast
+   time, cooldown and cost multiplier rows, then each stat set's lines as
+   the game words them, under "At gem level <n>" (a button made with
+   button(doc, name, level) asks for that level, else level 1). The words
+   are the repoe-fork export's; a field the reply lacks is left out.
+
    Text goes in through textContent only; no timer, no clipboard, no live
    region, no storage. UMD like web/prices.js: CommonJS for node
    (tests/test_iteminfo_ui.py drives it there), window.ALItemInfo in the
@@ -74,6 +81,10 @@
     flavour: "Flavour text: poe.ninja"
   };
   var STATES = { legacy: "Legacy", unreleased: "Unreleased", unique_only: "Unique only" };
+  var GEM_KINDS = { active: "Skill gem", support: "Support gem", spirit: "Spirit gem" };
+  var COSTS = { Mana: "Mana", Life: "Life", Ward: "Ward", ManaPerMinute: "Mana a minute",
+                LifePerMinute: "Life a minute", WardPerMinute: "Ward a minute" };
+  var LEVEL_MAX = 40;
 
   function prices() {
     if (root && root.ALPrices) { return root.ALPrices; }
@@ -158,6 +169,48 @@
     return rows.length ? { title: WHERE_TITLE, rows: rows } : null;
   }
 
+  function secs(v) { return num(Math.round(v * 100) / 100) + " s"; }
+
+  /* A gem's rows and stat-line sections ({rows, sets}); an unknown cost
+     type or field is left out. */
+  function gemView(g) {
+    var rows = [];
+    var sets = [];
+    if (!g || typeof g !== "object") { return { rows: rows, sets: sets }; }
+    function add(label, value) { if (value) { rows.push({ label: label, value: value }); } }
+    add("Gem", GEM_KINDS[str(g.kind)] || "");
+    var tags = (Array.isArray(g.tags) ? g.tags : []).map(str).filter(Boolean);
+    add("Tags", tags.join(", "));
+    var many = isNum(g.max_level) && g.max_level > 1;
+    if (many && isNum(g.level)) { add("Gem level", num(g.level)); }
+    var costs = (Array.isArray(g.costs) ? g.costs : []).filter(function (c) {
+      return c && COSTS[c.type] && isNum(c.amount);
+    }).map(function (c) { return num(c.amount) + " " + COSTS[c.type]; });
+    add("Cost", costs.join(", "));
+    if (isNum(g.spirit) && g.spirit > 0) { add("Reservation", num(g.spirit) + " Spirit"); }
+    if (isNum(g.cast_time_s)) { add("Cast time", secs(g.cast_time_s)); }
+    if (isNum(g.cooldown_s) && g.cooldown_s > 0) { add("Cooldown", secs(g.cooldown_s)); }
+    if (isNum(g.cost_multiplier) && g.cost_multiplier > 0) {
+      add("Cost multiplier", num(g.cost_multiplier) + "%");
+    }
+    var level = many && isNum(g.level) ? "At gem level " + num(g.level) : "Effect";
+    var list = Array.isArray(g.sets) ? g.sets : [];
+    list.forEach(function (st, i) {
+      if (!st || typeof st !== "object") { return; }
+      var lines = [];
+      if (isNum(st.damage_pct)) { lines.push("Attack damage: " + num(st.damage_pct) + "% of base"); }
+      if (isNum(st.crit_pct)) { lines.push("Critical hit chance: " + num(st.crit_pct) + "%"); }
+      (Array.isArray(st.lines) ? st.lines : []).forEach(function (t) {
+        if (str(t)) { lines.push(str(t)); }
+      });
+      if (!lines.length) { return; }
+      // more than one set: each heading names its set (its label, else "Set <n>")
+      var label = list.length > 1 ? (str(st.label) || "Set " + (i + 1)) : "";
+      sets.push({ title: level + (label ? ": " + label : ""), rows: lines });
+    });
+    return { rows: rows, sets: sets };
+  }
+
   /* The popover's words for one /api/iteminfo reply {name, fields,
      sources}: {name, empty, rows [{label, value}], texts [{cls, text}],
      where {title, rows} | null, credits [text], more {line, text, href,
@@ -181,6 +234,8 @@
 
     row("Item class", str(f.item_class));
     row("Rarity", str(f.rarity));
+    var gem = gemView(f.gem);
+    gem.rows.forEach(function (g) { row(g.label, g.value); });
     var market = marketRows(f.market);
     market.forEach(function (m) { rows.push(m); });
     var stack = typeof f.stack_size === "number" && isFinite(f.stack_size) && f.stack_size > 1
@@ -199,6 +254,7 @@
     if (flavour) { texts.push({ cls: "iteminfo-flavour", text: flavour }); }
     row("Release state", stateWords(f.release_state));
     var where = whereView(f.where_found);
+    if (gem.sets.length) { fromRepoe = true; }
 
     if (fromRepoe && sources.indexOf("repoe-fork") >= 0) { credits.push(CREDITS["repoe-fork"]); }
     // the market block carries its own credit: shown prices are always credited
@@ -213,8 +269,8 @@
     var href = poe2dbHref(name);
     return {
       name: name,
-      empty: !rows.length && !texts.length && !where,
-      rows: rows, texts: texts, where: where, credits: credits,
+      empty: !rows.length && !texts.length && !where && !gem.sets.length,
+      rows: rows, texts: texts, gem: gem.sets, where: where, credits: credits,
       more: href ? { line: MORE_LINE, text: MORE_TEXT, href: href,
                      label: MORE_TEXT + " about " + name + " (opens in a new tab)" } : null
     };
@@ -233,8 +289,9 @@
     return { top: Math.round(top), left: Math.round(left) };
   }
 
-  /* An item name as a link-like button that opens the popover. */
-  function button(doc, name) {
+  /* An item name as a link-like button that opens the popover; level (a
+     gem level, 1 to LEVEL_MAX) asks for a gem's lines at that level. */
+  function button(doc, name, level) {
     var b = doc.createElement("button");
     b.type = "button";
     b.className = "link " + CLS;
@@ -243,6 +300,9 @@
     b.setAttribute("aria-expanded", "false");
     b.setAttribute("aria-controls", POP_ID);
     b.setAttribute("aria-haspopup", "dialog");
+    if (isNum(level) && level >= 1 && level <= LEVEL_MAX && level === Math.floor(level)) {
+      b.setAttribute("data-level", String(level));
+    }
     return b;
   }
 
@@ -329,6 +389,12 @@
       body.appendChild(dl);
     }
     v.texts.forEach(function (t) { body.appendChild(el(doc, "p", t.cls, t.text)); });
+    (v.gem || []).forEach(function (st) {
+      body.appendChild(el(doc, "h3", "iteminfo-sub", st.title));
+      var gl = el(doc, "ul", "iteminfo-where iteminfo-gem");
+      st.rows.forEach(function (t) { gl.appendChild(el(doc, "li", null, t)); });
+      body.appendChild(gl);
+    });
     if (v.where) {
       body.appendChild(el(doc, "h3", "iteminfo-sub", v.where.title));
       var ul = el(doc, "ul", "iteminfo-where");
@@ -369,11 +435,13 @@
     var seq = ++ctl.seq;
     var v = view(null, name);
     show(ctl.pop);
-    fill({ name: v.name, empty: false, rows: [], texts: [], where: null, credits: [],
+    fill({ name: v.name, empty: false, rows: [], texts: [], gem: [], where: null, credits: [],
            more: v.more }, false);
     ctl.doc.getElementById("iteminfo-title").focus();
     if (typeof ctl.api !== "function") { return; }
-    ctl.api("GET", PATH + encodeURIComponent(name)).then(function (reply) {
+    var lvl = btn.getAttribute("data-level") || "";
+    var tail = /^[1-9][0-9]?$/.test(lvl) ? "&level=" + lvl : "";
+    ctl.api("GET", PATH + encodeURIComponent(name) + tail).then(function (reply) {
       if (seq === ctl.seq) { fill(view(reply, name), false); }
     }, function () {
       if (seq === ctl.seq) { fill(view(null, name), true); }
@@ -450,6 +518,7 @@
   return { NAME: NAME, ORDER: ORDER, POP_ID: POP_ID, CLS: CLS, PATH: PATH,
            EMPTY: EMPTY, FAILED: FAILED, MORE_LINE: MORE_LINE, MORE_TEXT: MORE_TEXT,
            WHERE_TITLE: WHERE_TITLE, GONE: GONE, CREDITS: CREDITS,
-           view: view, place: place, poe2dbHref: poe2dbHref, button: button, parts: parts,
+           GEM_KINDS: GEM_KINDS, COSTS: COSTS, LEVEL_MAX: LEVEL_MAX,
+           view: view, gemView: gemView, place: place, poe2dbHref: poe2dbHref, button: button, parts: parts,
            attach: attach, sync: sync, close: close, isOpen: isOpen };
 }));

@@ -306,12 +306,16 @@ def test_sources_policy():
     assert s["skilltree"] == TREE_URL
     # HUD-ACT (decision 0020): world areas for the zone level table.
     assert s["world_areas"] == "https://repoe-fork.github.io/poe2/world_areas.json"
-    # DATA-GEMS-SNAP (decision 0081): gem names and levels for Kindler.
-    assert s["gems"] == "https://repoe-fork.github.io/poe2/gems.json"
+    # DATA-GEMS-SNAP (decision 0081): gem names for Kindler; the poe2 export's
+    # gem list is skill_gems.json (decision 0083 amendment 2026-11-28).
+    assert s["gems"] == "https://repoe-fork.github.io/poe2/skill_gems.json"
+    # ITEM-INFO-GEM-DETAIL: skill lines and tag words for the item popover.
+    assert s["skills"] == "https://repoe-fork.github.io/poe2/skills.json"
+    assert s["gem_tags"] == "https://repoe-fork.github.io/poe2/gem_tags.json"
     # ITEM-INFO-UNIQUES-PROBE: the unique item list joined SOURCES.
     assert s["uniques"] == "https://repoe-fork.github.io/poe2/uniques.json"
     assert set(s) == {"base_items", "stat_translations", "skilltree", "world_areas", "gems",
-                      "uniques"}
+                      "uniques", "skills", "gem_tags"}
     assert set(snapshot.ALLOWED_HOSTS) == {"repoe-fork.github.io", "raw.githubusercontent.com"}
 
 
@@ -329,7 +333,7 @@ def test_real_source_names_mocked_fetch(tmp_path):
     man = json.loads((tmp_path / "manifest.json").read_text(encoding="ascii"))
     assert man["files"]["skilltree"]["url"] == TREE_URL
     assert man["files"]["world_areas"]["url"].endswith("/world_areas.json")
-    assert len(man["files"]) == 6
+    assert len(man["files"]) == len(snapshot.SOURCES)
     assert (tmp_path / "skilltree.json").is_file()
     assert "tree export" in snapshot.ATTRIBUTION
     for _, headers in fake.calls:
@@ -378,15 +382,16 @@ def test_a_changed_file_keeps_one_previous_copy(tmp_path):
     assert snapshot.keep_previous(tmp_path / "missing.json") is False
 
 
-def test_a_fresh_snapshot_and_its_manifest_list_six_files(tmp_path):
-    # DATA-SNAP-TRIM: a default run fetches six files (DATA-GEMS-SNAP added
-    # gems, ITEM-INFO-UNIQUES-PROBE uniques), never mods or stats.
+def test_a_fresh_snapshot_and_its_manifest_list_eight_files(tmp_path):
+    # DATA-SNAP-TRIM: a default run fetches eight files (DATA-GEMS-SNAP added
+    # gems, ITEM-INFO-UNIQUES-PROBE uniques, ITEM-INFO-GEM-DETAIL skills and
+    # gem_tags), never mods or stats.
     bodies = {u: b'{"nodes": {}}' for u in snapshot.SOURCES.values() if u}
     fake = Fake(bodies)
     out = snapshot.run(tmp_path, fetch=fake, now=1_800_000_000, contact="test-contact",
                        probes={})
     assert set(out) == {"base_items", "stat_translations", "skilltree", "world_areas",
-                        "gems", "uniques"}
+                        "gems", "uniques", "skills", "gem_tags"}
     man = json.loads((tmp_path / "manifest.json").read_text(encoding="ascii"))
     assert set(man["files"]) == set(out)
     assert not (tmp_path / "mods.json").exists() and not (tmp_path / "stats.json").exists()
