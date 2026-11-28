@@ -253,3 +253,16 @@ def test_player_sentences_live_in_the_text_module_and_copy_sheet():
               text.LABEL_RESTARTS, text.AGE_UNDER_5]
     for w in words:
         assert w.replace("{sec}", "<sec>") in sheet, w
+
+
+def test_report_fixes_name_the_issues_page():
+    # UX-46-P3 (P3-3): the fix says where the report goes
+    from server.al.text import explain as text
+    assert text.RESTARTS_FIX == (
+        "AshLight keeps running by itself. To help find the cause, copy this "
+        "report and add it to a new issue on the AshLight issues page.")
+    assert text.PRESS_FIX == (
+        "Press the key again. If it keeps failing, copy this report and add "
+        "it to a new issue on the AshLight issues page.")
+    for t in (text.RESTARTS_FIX, text.PRESS_FIX):
+        assert "send it to the project" not in t

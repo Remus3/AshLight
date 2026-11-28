@@ -201,8 +201,8 @@ Optional per-computer settings live in `config/local.json` (not tracked;
 track), `overlay_toggle` and `eval_hotkey` (the overlay and item check
 shortcuts), `port` (default 8960),
 `web_data` (the web-data opt-in, default `false`), `league` (optional league
-for prices), `contact` (how poe.ninja and GGG can reach you, sent in the
-User-Agent; without it price fetches stay off) and `tc_calc` (the optional
+for prices), `contact` (optional; how poe.ninja can reach you, sent in the
+User-Agent; without it AshLight sends its issues page) and `tc_calc` (the optional
 calc component).
 
 ### Stop
@@ -312,30 +312,29 @@ without opening AshLight.
 
 ## Update
 
-Automatic update is not finished yet. For now, update by hand: paste the
-install line again. It upgrades in place and keeps your settings and data.
-The release-files route above, with the new release's files, does the
-same. From a source copy, see [Update from source](#update-from-source).
-
-<details>
-<summary>When automatic update ships</summary>
-
-When automatic update ships, it works only with web data on. An installed
-copy will look for a newer release once a day and download it. It will
-check the size and SHA-256 against the release's `SHA256SUMS.txt` and
-GitHub's own record of the file. It will test the new version next to the
-one you run. It will switch at the next start of AshLight, at least 24
-hours after the release was published. If the new version does not start,
-AshLight goes back to the previous one by itself. Test versions
+An installed copy updates itself while web data is on. With web data on, it
+looks for a newer release once a day and downloads it while the game looks
+closed. It checks
+the size and SHA-256 against the release's `SHA256SUMS.txt` and GitHub's
+own record of the file. It switches at the next start of AshLight, at least
+24 hours after the release was published. If the new version does not
+start, AshLight goes back to the previous one by itself. Test versions
 (pre-releases) are never offered. With web data off, AshLight checks
 nothing.
 
-</details>
+To update at once, click Update now in Settings, About and data; AshLight
+restarts while it switches. Tick Update only when I click
+Update now there to stop the automatic download.
+
+To update by hand, paste the install line again. It upgrades in place and
+keeps your settings and data. The release-files route above, with the new
+release's files, does the same. From a source copy, see
+[Update from source](#update-from-source).
 
 ## Uninstall
 
-An installed copy: open Settings, then Apps, then Installed apps (Apps and
-features on Windows 10), and choose Uninstall next to AshLight. Or run:
+An installed copy: open Windows Settings, then Apps, then Installed apps
+(Apps and features on Windows 10), and choose Uninstall next to AshLight. Or run:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\Programs\AshLight\uninstall.ps1"

@@ -124,7 +124,7 @@ function setupBlock(over) {
   return {
     mode: "setup", title: "Set up AshLight", full: "Set up AshLight",
     rows: [
-      { kind: "step", text: "Let AshLight read the game's log, read only:", state: "pending",
+      { kind: "step", text: "AshLight follows your game through its log file.", state: "pending",
         glyph: "[ ]", step: "log" },
       o.path ? { kind: "path", text: o.path, full: o.path }
         : { kind: "path", text: "Client.txt not found yet. Start the game once.",
@@ -233,6 +233,10 @@ test("no setup block: the same words, the path and the one button", () => {
   assert.equal(byClass(doc, "su-path")[0].textContent,
     "Client.txt not found yet. Start the game once.");
   assert.equal(primaries(doc).length, 1);
+  // UX-46-P3 (P3-4): the ask has no colon and leaves "read only" to the promise
+  const ask = byClass(doc, "su-row")[0].textContent;
+  assert.ok(ask.indexOf("AshLight follows your game through its log file.") >= 0, ask);
+  assert.ok(ask.indexOf("read only") < 0 && !/:\s*$/.test(ask), ask);
   // a long path keeps its end
   const long = "Games\\".repeat(13) + "logs\\Client.txt";
   C.paint(doc, coldSnap({ tailer: { consented: false, reading: false, path: long },

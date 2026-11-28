@@ -66,7 +66,7 @@ MODES = ("setup", "idle", "map", "town", "guide")
 
 # -- words (design 0001 section 9) -----------------------------------------------
 SETUP_TITLE = "Set up AshLight"
-SETUP_ASK = "Let AshLight read the game's log, read only:"
+SETUP_ASK = "AshLight follows your game through its log file."
 SETUP_NO_PATH = "Client.txt not found yet. Start the game once."
 SETUP_BUTTON = "Allow reading Client.txt"  # the floor's opt-in words, unchanged
 SETUP_PROMISE = "Read only. Play in Windowed Fullscreen."

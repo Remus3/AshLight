@@ -40,7 +40,7 @@ PRESS_WORDS = {
     "error": ("fail", "The item check stopped with an error."),
 }
 PRESS_FIX = ("Press the key again. If it keeps failing, copy this report and "
-             "send it to the project.")
+             "add it to a new issue on the AshLight issues page.")
 AGE_UNDER_5 = "under 5 min ago"
 AGE_MIN = "{n} min ago"
 AGE_HOURS = "{n} h ago"
@@ -98,4 +98,5 @@ LABEL_RESTARTS = "Restarts"
 RESTARTS_TEXT = ("AshLight restarted its core {n} times in the last 24 hours, "
                  "last at {clock} ({why}).")
 RESTARTS_FIX = ("AshLight keeps running by itself. To help find the cause, copy "
-                "this report and send it to the project.")
+                "this report and add it to a new issue on the AshLight issues "
+                "page.")

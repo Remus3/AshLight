@@ -63,7 +63,7 @@
   /* the floor's opt-in words (CLAUDE.md, decision 0003): unchanged */
   var CONSENT_BUTTON = "Allow reading Client.txt";
   var SETUP_TITLE = "Set up AshLight";
-  var SETUP_ASK = "Let AshLight read the game's log, read only:";
+  var SETUP_ASK = "AshLight follows your game through its log file.";
   var SETUP_NO_PATH = "Client.txt not found yet. Start the game once.";
   var SETUP_PROMISE = "Read only. Play in Windowed Fullscreen.";
   var NOT_SAVED = "Not saved. Try again.";

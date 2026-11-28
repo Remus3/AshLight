@@ -133,7 +133,7 @@ def test_setup_block_rows():
     b = pc.setup_block({"tailer": {"consented": False, "path": None}})
     assert b["title"] == "Set up AshLight"
     assert [(r["kind"], r.get("glyph"), r["text"]) for r in b["rows"]] == [
-        ("step", "[ ]", "Let AshLight read the game's log, read only:"),
+        ("step", "[ ]", "AshLight follows your game through its log file."),
         ("path", None, "Client.txt not found yet. Start the game once."),
         ("button", None, "Allow reading Client.txt"),
         ("step", "[ ]", "Your build: not set, optional"),
@@ -141,7 +141,10 @@ def test_setup_block_rows():
         ("step", "[ ]", "Overlay: not running, optional"),
     ]
     assert b["facts"] == "Read only. Play in Windowed Fullscreen."
-    path = "Games/" + "Steam Library/" * 6 + "logs/Client.txt"
+    # UX-46-P3 (P3-4): the promise line is the one place that says read only
+    told = " ".join([r["text"] for r in b["rows"]] + [b["facts"]]).lower()
+    assert told.count("read only") == 1 and not b["rows"][0]["text"].endswith(":")
+    path ="Games/" + "Steam Library/" * 6 + "logs/Client.txt"
     done = pc.setup_block({"tailer": {"consented": False, "path": path},
                            "build": {"loaded": True},
                            "diag": {"checks": [_check("web_data", "pass"),

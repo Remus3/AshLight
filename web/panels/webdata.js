@@ -80,6 +80,11 @@
       var note = $("webdata-contact-note");
       if (clr) { clr.hidden = !v.contact.clear; }
       if (note) { note.textContent = v.contact.note; }
+      // UX-46-P3 (P3-2): a release build shows no field, label or Save
+      ["webdata-contact-label", "webdata-contact", "webdata-contact-save"].forEach(function (id) {
+        var n = $(id);
+        if (n) { n.hidden = !v.contact.input; }
+      });
     }
     if (doc && Array.isArray(doc.leagues)) {
       webDoc = doc;
@@ -177,7 +182,12 @@
       var said = P.contactClearedText(doc);
       if (said === NOT_CLEARED) { failed(said); } else { $("webdata-status").textContent = said; }
       var clr = $("webdata-contact-clear");
-      if (!clr || clr.hidden) { box.focus(); }
+      if (!clr || clr.hidden) {
+        // UX-46-P3: with no field (release build) focus goes to the switch;
+        // box.hidden is that signal (set by fillWebData from contactView.input)
+        var row = $("webdata-contact-row");
+        ((row && row.hidden) || box.hidden ? $("webdata-on") : box).focus();
+      }
       renderPrice(getSnap() ? getSnap().price : null, true);
       loadRates();
     }).catch(function () {

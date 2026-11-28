@@ -313,7 +313,7 @@
   function emptyText(consented) {
     return consented
       ? "Nothing yet. Zones, level-ups, deaths and whispers show up here as you play."
-      : "Nothing yet. Allow reading Client.txt above, then zones, level-ups, deaths and whispers show up here.";
+      : "Nothing yet. Once AshLight may read Client.txt, zones, level-ups, deaths and whispers show up here.";
   }
 
   /* UX-U9 (design 0001 rule 9: empty states say what will appear and

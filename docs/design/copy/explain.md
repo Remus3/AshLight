@@ -38,7 +38,7 @@ changed template is edited in both places together.
     the item first, then press the key.`
   - error (fail): `The item check stopped with an error.`; fix
     (`PRESS_FIX`): `Press the key again. If it keeps failing, copy this
-    report and send it to the project.`
+    report and add it to a new issue on the AshLight issues page.`
 - calc in use (`LABEL_CALC` `Calc in use`; `FALLBACK` `Item checks use
   your stat weights meanwhile.`):
   - ok (pass): `Working. The last calculation took <sec> s.` (no time
@@ -69,6 +69,8 @@ changed template is edited in both places together.
   - fail (`RESTARTS_TEXT`): `AshLight restarted its core <n> times in
     the last 24 hours, last at <HH:MM> (<reason words>).`; fix
     (`RESTARTS_FIX`): `AshLight keeps running by itself. To help find
-    the cause, copy this report and send it to the project.`
+    the cause, copy this report and add it to a new issue on the AshLight
+    issues page.`
 
-- setup card facts line (`SETUP_PROMISE`, web/setupcard.js the same): `Read only. Play in Windowed Fullscreen.` One row, at most 52 characters; it drops with the promise line where the setup budget is tight. Replaces "Read only. AshLight never touches the game."; the no-touch promise lives in the ask line (SETUP_ASK), the README and About.
+- setup card facts line (`SETUP_PROMISE`, web/setupcard.js the same): `Read only. Play in Windowed Fullscreen.` One row, at most 52 characters; it drops with the promise line where the setup budget is tight. Replaces "Read only. AshLight never touches the game."; the no-touch promise lives in the README and About.
+- setup card ask line (`SETUP_ASK`, server/al/playcards.py and web/setupcard.js the same): `AshLight follows your game through its log file.` No colon and no "read": the promise line is the one place that says read only (UX-46-P3, review P3-4). Replaces "Let AshLight read the game's log, read only:".
