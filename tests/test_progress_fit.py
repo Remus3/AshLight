@@ -1,4 +1,4 @@
-"""PROGRESSION-VIEW (decision 0088): the Progression view keeps the
+"""PROGRESSION-VIEW (decision 0092): the Progression view keeps the
 no-scroll fit at every cockpit size (design 0001 section 4, G4, N7).
 
 Modelled on the KINDLER-FIT-MEASURE part of tests/test_play_fit.py: a
@@ -113,21 +113,21 @@ _JS = r"""
     Array.prototype.forEach.call(doc.querySelectorAll("[data-region]"), function (r) {
       r.setAttribute("data-fit", "yes");
     });
-    var snap = { progression: sum, eval: null };
+    /* the first paint shows the item card; a level-up (after the 20 s
+       hold of a fresh item check) shows the progression by itself */
+    var ev = kind === "play-eval" ? { id: 7 } : null;
+    var snap = { progression: sum, eval: ev, now: 1000 };
     var P = window.ALProgression;
     var ctx = { api: function () { return Promise.resolve(model); },
                 getSnap: function () { return snap; } };
     P.wire(doc, ctx);
-    if (kind === "play-eval") {
-      snap = { progression: sum, eval: { id: 7 } };
-      P.paint(doc, snap);
-      snap = { progression: Object.assign({}, sum, { level: sum.level + 1 }), eval: { id: 7 } };
-    }
+    P.paint(doc, snap);
+    snap = { progression: Object.assign({}, sum, { level: sum.level + 1 }), eval: ev, now: 1030 };
     P.paint(doc, snap);
     window.addEventListener("load", function () {
       try {
         if (kind === "build") { P.setOpen(doc, true, false); }
-        P.paint(doc, snap);
+        P.paint(doc, Object.assign({}, snap));
         var de = doc.documentElement;
         var shown = function (e) { return e.getClientRects().length > 0 &&
           getComputedStyle(e).visibility !== "hidden"; };
@@ -187,6 +187,7 @@ _JS = r"""
           out.elements = count + 1;
           out.words = (host.innerText || "").split(/\s+/).filter(Boolean).length;
           out.button = shown(doc.getElementById("pg-mini-item"));
+          out.heading = doc.getElementById("play-i-h").textContent;
           out.region = { h: Math.round(region.getBoundingClientRect().height) };
         }
         send(out);
@@ -376,6 +377,8 @@ def test_every_size_and_kind_was_measured(measures):
         # every tree view is one svg of at most 10 parts (decision 0002 budget)
         for sv in m["svg"]:
             assert sv["kids"] <= 10, (key, sv)
+        if not key.endswith(" build"):
+            assert m["heading"] == "Next up", key
         if key.endswith(" play-eval"):
             assert m["button"], key
         elif key.endswith(" play"):

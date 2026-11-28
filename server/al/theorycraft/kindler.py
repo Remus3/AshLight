@@ -170,7 +170,7 @@ class Sources:
                 "pin": pob_pin(self._pins)}
 
     def gems(self):
-        """PROGRESSION-VIEW (decision 0088): the cached gems snapshot's
+        """PROGRESSION-VIEW (decision 0092): the cached gems snapshot's
         index (archetypes.gem_index) or None, the same watch inputs() reads."""
         return self._gems.get()
 

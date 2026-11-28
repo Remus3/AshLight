@@ -1,4 +1,4 @@
-/* PROGRESSION-VIEW (decision 0088): the Progression view of
+/* PROGRESSION-VIEW (decision 0092): the Progression view of
    web/panels/progression.js and the tree drawing of web/panels/tree.js.
    Linked by the al:panels marker (server/al/webpage.py), after
    web/app.css. Colours only from the kit tokens (design 0001 C3); the
@@ -16,8 +16,10 @@
 
    Build and items: the card spans the card grid like the Kindler card
    (grid rows 2 and 3 under the Builds row) while the Pasted build cells
-   are not drawn; three columns in the cockpit (tree, next up and skills,
-   ascendancy and points), one in the flow class. */
+   are not drawn; two columns in the cockpit (the tree; next up, skills,
+   ascendancy and points stacked), one in the flow class. Skill and point
+   rows wrap. Unplanned nodes use the control edge tone, their links the
+   border tone (context, named in the legend). */
 
 /* --- the tree drawing (web/panels/tree.js) --- */
 .pg-svg { display: block; width: 100%; min-width: 0; }
@@ -27,12 +29,13 @@
 .tv-edge-h { stroke: var(--fk-accent); stroke-width: 2.5; }
 .tv-edge-d { stroke: var(--fk-status-warn); stroke-width: 2; stroke-dasharray: 4 3; }
 .tv-node { stroke-width: 1.5; }
-.tv-node-o { fill: var(--fk-border); stroke: none; }
+.tv-node-o { fill: var(--al-control-edge); stroke: none; }
 .tv-node-l { fill: var(--fk-surface); stroke: var(--fk-text-muted); }
 .tv-node-h { fill: var(--fk-accent); stroke: var(--fk-text); }
 .tv-node-d { fill: var(--fk-surface); stroke: var(--fk-status-warn); stroke-width: 2.5; stroke-dasharray: 3 2; }
 .tv-ring { fill: none; stroke: var(--fk-text-muted); stroke-width: 1.5; }
 .tv-fresh { fill: none; stroke: var(--fk-status-warn); stroke-width: 2; }
+.pg-mini-tree .tv-node-d { stroke-width: 3; }
 
 /* --- Play, region I --- */
 #play-i { position: relative; }
@@ -63,6 +66,9 @@
 /* --- Build and items, the Progression card --- */
 .kindler-bar #pg-open { margin-left: auto; flex: none; white-space: nowrap; }
 #pg-open[aria-pressed="true"] { font-weight: 600; border-color: var(--fk-accent); }
+/* while the card shows, Pasted build does not look picked (design review PG-10) */
+#panel-build[data-view="progress"]:not([data-sub]) #kindler-pasted[aria-current="true"] {
+  border-bottom-color: transparent; font-weight: 400; }
 #panel-build > .pg-card { grid-column: 1 / -1; }
 #panel-build[data-view="progress"]:not([data-sub]) > .col { display: none; }
 #panel-build[data-sub] > .pg-card { display: none; }
@@ -81,6 +87,7 @@
 .pg-list { list-style: none; padding: 0; display: flex; flex-direction: column; min-width: 0; }
 .pg-list li { color: var(--al-text-body); }
 .pg-skill .iteminfo-name { margin-right: var(--al-space-1); }
+.pg-wrap { overflow-wrap: anywhere; }
 .pg-tree { height: 18rem; border: 1px solid var(--fk-border); border-radius: var(--al-radius-control);
   background: var(--fk-surface); }
 .pg-asc { height: 8rem; border: 1px solid var(--fk-border); border-radius: var(--al-radius-control);
@@ -89,7 +96,9 @@
 @media (min-width: 64em) and (min-height: 43.75em) {
   #panel-build > .pg-card { grid-row: 2 / span 2; min-height: 0; overflow: hidden; }
   .pg-head .pg-source { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .pg-body { flex: 1 1 auto; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr); }
+  .pg-body { flex: 1 1 auto; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); }
+  .pg-col-side { overflow: hidden; }
+  .pg-col-side .pg-asc { flex: none; }
   .pg-col-tree .pg-tree { flex: 1 1 0; height: auto; min-height: 0; }
 }
 [data-text-spacing="user"] #panel-build > .pg-card { grid-row: auto; overflow: visible; }

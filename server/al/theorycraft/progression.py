@@ -1,4 +1,4 @@
-"""PROGRESSION-VIEW (decision 0088): the one Progression view model.
+"""PROGRESSION-VIEW (decision 0092): the one Progression view model.
 
 The character's progression in one compact document: the passive tree
 (drawn by the page from the export's own positions), the ascendancy tree,
@@ -7,7 +7,7 @@ ascendancy, Spirit and weapon-set points when the build states them, the
 guide's point books) and the next-up strip of at most NEXT_MAX steps due
 at the current level.
 
-Sources, only the permitted ones, never a guess (decision 0088 point 2):
+Sources, only the permitted ones, never a guess (decision 0092 point 2):
 - the pasted Path of Building build (theorycraft.model.Build): the spec
   node ids, the skill groups and gem levels, PoB's own Spirit stats and
   weapon-set node lists;
@@ -60,7 +60,7 @@ NAME_CHARS = 60
 MAX_BYTES = 160 * 1024  # the whole model, as JSON
 DUE_MAX = 3
 NEXT_MAX = 3
-STEP_CHARS = 60       # one strip step (about 11 words; region I holds 60)
+STEP_CHARS = 52       # one strip step (the region I row budget; design review PG-11)
 MAX_SKILLS = 8
 MAX_SUPPORTS = 6
 PAD = 600              # export units around the framed nodes
@@ -546,8 +546,9 @@ def _points(source, main, asc, level, build, spec, trial, guide_books):
         lines.append(words.PASSIVES_NO_LEVEL.format(have=have))
     else:
         lines.append(words.PASSIVES.format(have=have, level=level))
-    if level is not None:
-        budget = archetypes.point_budget(level)
+    budget = archetypes.point_budget(level) if level is not None else None
+    # left out when it would only repeat the planned count (review PG-15)
+    if budget is not None and not (source == "kindler" and have == budget):
         lines.append(words.PASSIVES_BUDGET.format(
             budget=budget, points=words.plural(budget, "point", "points"), level=level))
     a_have = sum(1 for s in asc.values() if s == "h")

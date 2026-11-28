@@ -24,7 +24,7 @@ still accepted. The pseudo node `root` has no skill and a non-numeric key,
 so it is skipped. Unknown fields are ignored; a malformed node is skipped,
 never an error.
 
-Drawing fields (PROGRESSION-VIEW, decision 0088; checked against the
+Drawing fields (PROGRESSION-VIEW, decision 0092; checked against the
 cached export 2026-11-27): each node also carries `x` / `y` (its position
 in the export's own units, about -22600 to 21800 wide; the ascendancy
 trees sit apart from the main tree), `group` / `orbit` / `orbitIndex`
@@ -98,7 +98,7 @@ class Node:
     class_start: tuple = ()  # class names that start on this node
     gid: str = None  # the export's string `id` slug (TC-BUILDFILE), None when null
     asc_start: bool = False  # `isAscendancyStart` (TC-TREE-URL)
-    # PROGRESSION-VIEW (decision 0088): the export's own drawing position
+    # PROGRESSION-VIEW (decision 0092): the export's own drawing position
     # (`x` / `y`, None when the node has none), its links (`out` and `in`,
     # numeric ids only, so the pseudo node `root` is left out) and
     # `isMastery`; not part of to_dict

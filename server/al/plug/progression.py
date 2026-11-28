@@ -1,4 +1,4 @@
-"""PROGRESSION-VIEW (decision 0088): the Progression view through the plug
+"""PROGRESSION-VIEW (decision 0092): the Progression view through the plug
 seam (decision 0056).
 
 attach(core) makes one Holder per core (core.progression) and adds the
@@ -21,8 +21,10 @@ the model is the one the tick last built.
 
 TC-SPEC-FOLLOW integration point: spec_picker(core) below is the one
 place that hands progression.pick_specs its `picker(build, level) -> spec
-index or None`. It answers None today (the active spec is shown); the
-TC-SPEC-FOLLOW package returns its own chooser here.
+index or None`: specfollow.pick() over the build's specs with PoB's own
+active spec as the fallback (decision 0089), so the shown spec is the one
+the level follows and the next band's spec's new nodes are due. Without
+theorycraft/specfollow.py it answers None (the active spec, nothing due).
 
 The Kindler source reads the planner with busy=True, so a read never
 starts a PoB focus run (decision 0081 point 4: nothing regenerates by
@@ -38,10 +40,35 @@ ORDER = 120  # after plug/kindler.py (ORDER 110) made core.kindler
 FULL_EVERY_S = 2.0
 
 
+def _specfollow():
+    """theorycraft.specfollow (TC-SPEC-FOLLOW, decision 0089), or None while
+    the tree holds no such module."""
+    try:
+        from ..theorycraft import specfollow
+    except ImportError:
+        return None
+    return specfollow if callable(getattr(specfollow, "pick", None)) else None
+
+
 def spec_picker(core):
-    """TC-SPEC-FOLLOW wires its spec chooser here: a callable(build, level)
-    -> spec index or None. None shows the build's active spec."""
-    return None
+    """The TC-SPEC-FOLLOW chooser: a callable(build, level) -> spec index.
+
+    The loaded build already follows the level (specfollow.follow sets its
+    active spec, the build view's spec_follow.index), so the chooser asks
+    specfollow.pick() with PoB's own active spec (Build.pob_spec_index) as
+    the fallback: at the current level it answers the followed spec, and
+    pick_specs() asks it for the levels above to find the next band's spec,
+    whose new nodes read as due. None (the active spec, nothing due) while
+    the module is not there."""
+    sf = _specfollow()
+    if sf is None:
+        return None
+
+    def pick(build, level):
+        pob = getattr(build, "pob_spec_index", build.active_spec_index)
+        idx, _by_level = sf.pick(build.specs, pob, level)
+        return idx
+    return pick
 
 
 class Holder:

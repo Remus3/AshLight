@@ -1,5 +1,5 @@
 /* AshLight dashboard: the passive tree renderer (PROGRESSION-VIEW,
-   decision 0088; design docs/design/tree-view.md).
+   decision 0092; design docs/design/tree-view.md).
 
    Draws one tree view of the core's Progression model (GET
    /api/progression: {box, n: [[id, x, y, kind, state]], e: [[i, j,
@@ -49,10 +49,13 @@
   var RADIUS = { s: 40, n: 62, k: 90, j: 50, c: 75, a: 75 };
   var MIN_PX = { s: 2, n: 3.5, k: 5, j: 3, c: 4.5, a: 4.5 };
   var MAX_PX = { s: 6, n: 9, k: 12, j: 7, c: 10, a: 10 };
+  // the Play mini-tree is read at a glance: larger floors (design review PG-7)
+  var MIN_PX_MINI = { s: 4, n: 6, k: 8, j: 5, c: 6, a: 6 };
+  var MAX_PX_MINI = { s: 7, n: 10, k: 13, j: 8, c: 11, a: 11 };
   var DIAMOND = { k: true, j: true };
   var RING = { c: true, a: true };
   var MINI_SPAN = 1800; // export units: the Play mini-tree's smallest box
-  var MINI_NEAR = 900;  // planned nodes this close to a due node join its frame
+  var MINI_NEAR = 500;  // a due node's nearest planned node this close joins the frame
   var PAD = 300;
   var HIT_PX = 10;
 
@@ -79,19 +82,23 @@
     return [x0, y0, x1 - x0, y1 - y0];
   }
 
-  /* The export-unit box to show. "mini": the due nodes plus the planned
-     nodes within MINI_NEAR of one; with nothing due, the model's box. */
+  /* The export-unit box to show. "mini": the due nodes plus, for each, its
+     nearest planned node when that is within MINI_NEAR; with nothing due,
+     the model's box. */
   function frame(view, mode) {
     if (!goodView(view)) { return null; }
     if (mode !== "mini") { return view.box.slice(); }
     var due = view.n.filter(function (r) { return r[4] === "d"; });
     if (!due.length) { return view.box.slice(); }
-    var near = view.n.filter(function (r) {
-      if (r[4] !== "h") { return false; }
-      return due.some(function (d) {
-        var dx = d[1] - r[1], dy = d[2] - r[2];
-        return dx * dx + dy * dy <= MINI_NEAR * MINI_NEAR;
+    var planned = view.n.filter(function (r) { return r[4] === "h"; });
+    var near = [];
+    due.forEach(function (d) {
+      var best = null, bestD = MINI_NEAR * MINI_NEAR;
+      planned.forEach(function (r) {
+        var dx = d[1] - r[1], dy = d[2] - r[2], dd = dx * dx + dy * dy;
+        if (dd <= bestD) { bestD = dd; best = r; }
       });
+      if (best) { near.push(best); }
     });
     return padBox(bounds(due.concat(near)), PAD, MINI_SPAN);
   }
@@ -106,9 +113,18 @@
     return f;
   }
 
-  function radius(kind, k) {
+  function radius(kind, k, mini) {
     var key = RADIUS[kind] ? kind : "s";
-    return Math.max(MIN_PX[key], Math.min(MAX_PX[key], RADIUS[key] * k));
+    var lo = mini ? MIN_PX_MINI : MIN_PX, hi = mini ? MAX_PX_MINI : MAX_PX;
+    return Math.max(lo[key], Math.min(hi[key], RADIUS[key] * k));
+  }
+
+  /* Whether the segment a-b can cross the w x h area (its bounding box
+     overlaps the area grown by m px), so a link that runs through the
+     frame with both ends outside is kept (design review PG-14). */
+  function crosses(a, b, w, h, m) {
+    return Math.max(a[0], b[0]) >= -m && Math.min(a[0], b[0]) <= w + m &&
+      Math.max(a[1], b[1]) >= -m && Math.min(a[1], b[1]) <= h + m;
   }
 
   function r1(v) { return Math.round(v * 10) / 10; }
@@ -123,8 +139,9 @@
   }
 
   /* {edges: {state: d}, nodes: {state: d}, fresh: d, rings: d} for a view
-     shown in a w x h px area; nodes outside the area are left out. */
-  function paths(view, box, w, h, fresh) {
+     shown in a w x h px area; nodes outside the area are left out, and
+     links that cannot cross it. `mini` uses the Play size floors. */
+  function paths(view, box, w, h, fresh, mini) {
     var out = { edges: { o: "", l: "", h: "", d: "" }, nodes: { o: "", l: "", h: "", d: "" },
                 fresh: "", rings: "" };
     if (!goodView(view) || !box || !(w > 0) || !(h > 0)) { return out; }
@@ -135,7 +152,7 @@
     var shown = function (p) { return p[0] >= -8 && p[1] >= -8 && p[0] <= w + 8 && p[1] <= h + 8; };
     (view.e || []).forEach(function (e) {
       var a = pos[e[0]], b = pos[e[1]];
-      if (!a || !b || (!shown(a) && !shown(b))) { return; }
+      if (!a || !b || !crosses(a, b, w, h, 8)) { return; }
       var st = out.edges[e[2]] !== undefined ? e[2] : "o";
       out.edges[st] += "M" + r1(a[0]) + " " + r1(a[1]) + "L" + r1(b[0]) + " " + r1(b[1]);
     });
@@ -143,7 +160,7 @@
       var p = pos[i];
       if (!shown(p)) { return; }
       var st = out.nodes[r[4]] !== undefined ? r[4] : "o";
-      var rad = radius(r[3], map.k);
+      var rad = radius(r[3], map.k, mini);
       if (RING[r[3]]) { out.rings += shape(p[0], p[1], r[3], rad); }
       out.nodes[st] += shape(p[0], p[1], RING[r[3]] ? "s" : r[3], RING[r[3]] ? rad * 0.55 : rad);
       if (isNew[r[0]]) { out.fresh += shape(p[0], p[1], r[3], rad + 3.5); }
@@ -192,7 +209,7 @@
     var parts = ensure(doc, svg);
     var vb = "0 0 " + w + " " + h;
     if (svg.getAttribute("viewBox") !== vb) { svg.setAttribute("viewBox", vb); }
-    var p = paths(view, box, w, h, o.fresh);
+    var p = paths(view, box, w, h, o.fresh, o.mode === "mini");
     STATES.forEach(function (st) { setD(parts.edges[st], p.edges[st]); setD(parts.nodes[st], p.nodes[st]); });
     setD(parts.rings, p.rings);
     setD(parts.fresh, p.fresh);
@@ -234,6 +251,7 @@
 
   return {
     NS: NS, STATES: STATES, RADIUS: RADIUS, MIN_PX: MIN_PX, MAX_PX: MAX_PX, radius: radius,
+    MIN_PX_MINI: MIN_PX_MINI, MINI_NEAR: MINI_NEAR, crosses: crosses,
     MINI_SPAN: MINI_SPAN, KIND_WORDS: KIND_WORDS,
     STATE_WORDS: STATE_WORDS, frame: frame, mapper: mapper, paths: paths, render: render,
     hit: hit, label: label, counts: counts

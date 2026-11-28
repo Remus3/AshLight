@@ -1,4 +1,4 @@
-"""PROGRESSION-VIEW (decision 0088): web/panels/tree.js and
+"""PROGRESSION-VIEW (decision 0092): web/panels/tree.js and
 web/panels/progression.js under node, plus their static rules.
 
 The renderer draws every node of a state into one path (decision 0002
@@ -77,7 +77,8 @@ process.stdin.on("end", () => {
     hit: T.hit(v, full, 500, 400, at[0] + 1, at[1]), due: due,
     miss: T.hit(v, full, 500, 400, -50, -50),
     label: T.label(v, due), empty: T.paths(null, null, 1, 1).nodes.h,
-    small: T.radius("s", 0.001), big: T.radius("k", 10)
+    small: T.radius("s", 0.001), big: T.radius("k", 10), miniSmall: T.radius("s", 0.001, true),
+    through: T.crosses([-50, 10], [600, 20], 500, 400, 8)
   }));
 });
 """
@@ -96,42 +97,66 @@ def test_the_renderer_draws_each_state_in_one_path(model):
     assert out["hit"] == out["due"] and out["miss"] == -1
     assert "(take next)" in out["label"]
     assert out["empty"] == ""
-    assert out["small"] == 2 and out["big"] == 12
+    assert out["small"] == 2 and out["big"] == 12 and out["miniSmall"] == 4
+    assert out["through"] is True
 
 
 DECIDE_JS = r"""
 const P = require("./web/panels/progression.js");
+const doc = { getElementById: () => null };
 const sum = (level, line) => ({ key: "k" + level, level: level, source_line: line || "a",
                                 tree: true, next: [] });
-const st = { mode: null, lastEval: null, lastLevel: undefined, lastLine: null };
 const out = [];
-function step(s, ev) {
-  const mode = P.decide(st, s, ev);
-  out.push(mode);
-  st.mode = P.hasContent(s) ? mode : st.mode;
-  st.lastEval = ev;
-  if (s) { st.lastLevel = s.level; st.lastLine = s.source_line; }
+function push(s, ev, now) {
+  P.step(doc, { progression: s, eval: ev ? { id: ev } : null, now: now });
+  const st = P.state();
+  out.push(st.mode + (st.pending ? "*" : ""));
 }
-step(sum(10), "");        // first paint, no check: progress
-step(sum(10), "7");       // a new item check: item
-step(sum(10), "7");       // nothing moved: item stays
-step(sum(11), "7");       // a level-up: progress by itself
-step(sum(11), "7");       // stays
-step(sum(11), "8");       // another check: item
-step(sum(11, "b"), "8");  // a build change: progress
-step(null, "8");          // nothing to show: item
-process.stdout.write(JSON.stringify({ out: out,
-  first: P.decide({ mode: null }, sum(3), "5"), words: P.WORDS }));
+push(sum(10), "", 0);          // first paint: the item card (PG-12)
+push(sum(11), "", 10);         // a level-up: progress by itself
+push(sum(11), "7", 100);       // a new item check: item
+push(sum(12), "7", 105);       // a level-up 5 s after the check: held (PG-1)
+push(sum(12), "7", 115);       // still under 20 s: held
+push(sum(12), "7", 121);       // the first push after the hold: progress
+push(sum(12), "8", 130);       // another check: item
+P.state().resync = true;       // the page was hidden meanwhile
+push(sum(13), "8", 200);       // what moved while hidden is no news
+push(sum(null), "8", 210);     // a core restart: level unknown
+push(sum(13), "8", 230);       // null to a level: no move
+push(sum(14), "8", 240);       // a real level-up: progress
+push(sum(14, "b"), "8", 250);  // stays
+push(null, "8", 260);          // nothing to show: item
+process.stdout.write(JSON.stringify({ out: out }));
 """
 
 
 def test_region_i_swaps_by_itself():
     got = run(DECIDE_JS, {})
-    assert got["out"] == ["progress", "item", "item", "progress", "progress", "item",
-                          "progress", "item"]
-    # a first paint with an item check keeps the card
-    assert got["first"] == "item"
+    assert got["out"] == ["item", "progress", "item", "item*", "item*", "progress", "item",
+                          "item", "item", "item", "progress", "progress", "item"]
 
+
+FAILS_JS = r"""
+const P = require("./web/panels/progression.js");
+let calls = 0;
+const doc = { hidden: false, getElementById: () => null };
+const ctx = { api: () => { calls += 1; return Promise.reject(new Error("x")); },
+              getSnap: () => null };
+P.reset(); P.wire({ getElementById: () => null }, ctx);
+const s1 = { progression: { key: "a", level: 1, tree: true, next: [] } };
+const tick = (s) => new Promise((r) => { P.paint(doc, Object.assign({}, s)); setImmediate(r); });
+(async () => {
+  for (let i = 0; i < 5; i++) { await tick(s1); }
+  const first = calls;
+  await tick({ progression: { key: "b", level: 2, tree: true, next: [] } });
+  process.stdout.write(JSON.stringify({ first: first, after: calls }));
+})();
+"""
+
+
+def test_a_failing_read_stops_after_two_tries_per_key():
+    got = run(FAILS_JS, {})
+    assert got == {"first": 2, "after": 3}
 
 def test_the_view_files_keep_the_page_rules():
     for path in (TREE, VIEW):

@@ -1,7 +1,8 @@
-# 0088 - Progression view: own-drawn passive tree, gems and next-up strip
+# 0092 - Progression view: own-drawn passive tree, gems and next-up strip
 
 Status: accepted 2026-11-27 (operator order 2026-11-27, widened the same
-day: the whole character progression, not only the passive tree).
+day: the whole character progression, not only the passive tree); design
+review PG-1 to PG-15 applied 2026-11-28 (renumbered from 0088 at merge).
 Design: [docs/design/tree-view.md](../design/tree-view.md). Copy sheet:
 [docs/design/copy/progression.md](../design/copy/progression.md).
 
@@ -45,13 +46,17 @@ Design: [docs/design/tree-view.md](../design/tree-view.md). Copy sheet:
    chosen spec through one picker(build, level) -> spec index or None,
    falling back to the active spec; the next spec is the picker's first
    other answer within 25 levels. server/al/plug/progression.py
-   spec_picker(core) is the one integration point (None until
-   TC-SPEC-FOLLOW wires its chooser there). This package does not touch
-   the spec-selection code.
+   spec_picker(core) is the one integration point: it answers
+   theorycraft/specfollow.py pick() (decision 0089) over the build's specs
+   with PoB's own active spec (Build.pob_spec_index) as the fallback, so
+   the shown spec is the one the level follows (the build view's
+   spec_follow.index) and the next band's spec's new nodes are due; None
+   while specfollow.py is absent. This package does not touch the
+   spec-selection code.
 6. Next-up hook: progression.add_next_source(name, fn, order) adds steps
    ({kind, text}, ASCII, at most 120 characters) from a later package
    (TC-UNCUT-GEM, TC-GEM-UNLOCK); built-in kinds use orders 10 to 40,
-   hooks default to 100; the strip is cut to 3 steps of at most 60
+   hooks default to 100; the strip is cut to 3 steps of at most 52
    characters. A failing source is skipped.
 7. Delivery (decision 0056): the plug server/al/plug/progression.py adds
    one core tick that rebuilds the model only when the build object, the
@@ -65,16 +70,28 @@ Design: [docs/design/tree-view.md](../design/tree-view.md). Copy sheet:
    only when the published key changes. The Kindler planner is read with
    busy=True, so a read never starts a PoB run (decision 0081 point 4).
 8. Placement. Play: region I (the item check region) shows a compact
-   "Next up" view (the strip over a mini-tree framed on the due nodes)
-   by itself when the progression moves on (a level, build, tree or plan
-   change) and no newer item check came in; a new item check gives the
-   region back to the item card, and while the view shows with an item
-   check present one "Item check" button does the same. The view sits
+   "Next up" view (the strip in 20 px rows over a mini-tree framed on the
+   due nodes and each one's nearest planned node, with larger node size
+   floors). The first paint shows the item card; the view takes the
+   region by itself when the progression moves on (a level-up between two
+   known levels, or a change between two known builds or trees) and no
+   newer item check came in. An item check under 20 s old holds the swap
+   until the first push after the hold (no timer); what moved while the
+   page was hidden, or a level that comes back after a core restart, is no
+   move. A new item check gives the region back to the item card, and
+   while the view shows with an item check present one "Item check"
+   button does the same. The swap is decided in the page's push hook
+   before the regions paint, so the item card's live region is shown
+   again before it changes; region I's screen-reader heading reads "Next
+   up" or "Item check". The view sits
    inside region I's fixed track (absolute in the cockpit classes, 1.25rem
    foot slack), so the 7 regions, their tracks and the no-scroll rule
    are unchanged. Build and items: a "Progression" button at the end of
    the Builds row opens the full card, which spans the card grid as the
-   Kindler card does; "Back to build" or a build sub-tab closes it. Gem
+   Kindler card does (two columns: the tree; next up, skills, ascendancy
+   and points stacked; skill and point rows wrap and leave for a "+n
+   more" line when the column is full); while it shows Pasted build does
+   not look picked; "Back to build" or a build sub-tab closes it. Gem
    names open the shared item info popover; a tree node is read on one
    hover line under the tree. The overlay is not changed (2 HUD lines
    plus one card).
@@ -83,7 +100,9 @@ Design: [docs/design/tree-view.md](../design/tree-view.md). Copy sheet:
    out motion on the dashboard, so a newly due node gets a steady outer
    ring and the fit is immediate. Each svg is redrawn at its new size by
    one ResizeObserver (event-driven, no timer); a hidden page paints
-   nothing (RUN-FEED-TRUTH).
+   nothing (RUN-FEED-TRUTH). While a new key loads the last tree stays
+   drawn; a key whose read failed twice is not read again until the next
+   key.
 10. Budget (decision 0002): a whole tree is one svg of 10 paths (4 link
    states, 1 ring, 4 node states, 1 new) whatever its size, so the page
    stays under the 1,500 element cap; the model is built in a few ms and

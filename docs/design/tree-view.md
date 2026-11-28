@@ -2,7 +2,7 @@
 
 Package PROGRESSION-VIEW (operator order 2026-11-27, widened the same day
 to the whole character progression). Decision:
-[0088](../decisions/0088-progression-view.md). Copy sheet:
+[0092](../decisions/0092-progression-view.md). Copy sheet:
 [copy/progression.md](copy/progression.md). Rules that bind every part:
 [0001-design-system.md](0001-design-system.md).
 
@@ -82,32 +82,47 @@ Kindler result or a zone with a point book all reach the view with no
 click and no page timer. Kindler stages follow the published values only
 (kindlerplan.current_stage), never a claim of progress.
 
-TC-SPEC-FOLLOW wires its spec chooser in `spec_picker(core)` of
-server/al/plug/progression.py; until then the active spec shows.
+TC-SPEC-FOLLOW (decision 0089) is wired in `spec_picker(core)` of
+server/al/plug/progression.py: specfollow.pick() over the build's specs
+with PoB's own active spec as the fallback, so the shown spec is the one
+the level follows and the next band's spec's new nodes are due; without
+theorycraft/specfollow.py the active spec shows and nothing is due.
 TC-UNCUT-GEM and TC-GEM-UNLOCK add next-up steps with
 `progression.add_next_source(name, fn, order)`.
 
 ## 5. Placement and fit
 
 - Play, region I: the "Next up" view (head "Next up" and the level, the
-  strip, the mini-tree framed on the due nodes and their planned
-  neighbours, the legend and, with an item check present, one "Item
-  check" button). It shows when the progression moves on (level, build,
-  source) and no newer check came in; a new check shows the item card.
-  In the cockpit classes it is absolute inside region I's box with a
-  1.25rem foot (the I slack of 16 / 6 px at s = 1), so the region's track
-  never changes. Measured (tests/test_progress_fit.py, worst-case model):
-  slack 20 px at s = 1 (25 at s = 1.25), no clip, 21 to 22 visible
-  elements and 45 to 47 words against the region I caps of 60 words; the
-  mini-tree is 174 to 247 px tall at s = 1.
+  strip in 20 px rows, the mini-tree framed on the due nodes and each
+  one's nearest planned node within 500 units, with larger node floors
+  and a 3 px due ring, the legend and, with an item check present, one
+  "Item check" button). The first paint shows the item card; the view
+  takes the region when the progression moves on (a level-up between two
+  known levels, a change between two known builds or trees) and no newer
+  check came in, held while an item check is under 20 s old until the
+  first push after that; a new check shows the item card. The swap is
+  decided in the page's push hook before the regions paint (the item
+  card's live region is shown again before it changes) and the region's
+  screen-reader heading follows it. In the cockpit classes the view is
+  absolute inside region I's box with a 1.25rem foot (the I slack of 16 /
+  6 px at s = 1), so the region's track never changes. Measured
+  (tests/test_progress_fit.py, worst-case model, 2026-11-28): slack 20 px
+  at s = 1 (25 at s = 1.25), no clip, 21 to 22 visible elements and 43 to
+  45 words against the region I cap of 60; the mini-tree is 162 to 235 px
+  tall at s = 1.
 - Build and items: the Progression card spans the card grid (rows 2 and
-  3 under the Builds row) like the Kindler card: three columns in the
-  cockpit (tree with its hover line and legend; next up and skills;
-  ascendancy and points), one in the flow class. Measured: card slack 4
-  to 5 px, no column clips, tree 388 x 430 px at 1024x700 and 749 x 615
-  px at 1920x950.
+  3 under the Builds row) like the Kindler card: two columns in the
+  cockpit (1.6fr: the tree with its hover line and legend; 1fr: next up,
+  skills and supports, ascendancy at 8rem and points stacked), one in the
+  flow class. Skill and point rows wrap; when the column is full the last
+  rows leave for a "+n more" line (skills first, then points). While the
+  card shows Pasted build does not look picked. Measured: card slack 4 to
+  5 px, no column clips, tree 587 x 426 px at 1024x700 and 1128 x 635 px
+  at 1920x950.
 - Flow class: everything stacks, the trees take fixed heights (12rem
   mini, 18rem full, 8rem ascendancy), no horizontal scroll at 320 px.
+- Unplanned nodes use the control edge tone (3:1 on the surfaces),
+  their links the border tone, named "Grey lines: context" in the legend.
 
 ## 6. Self-review against design 0001 (2026-11-27)
 
@@ -132,4 +147,4 @@ TC-UNCUT-GEM and TC-GEM-UNLOCK add next-up steps with
 - S2: the three buttons are 24 px; S3: 320 px without horizontal scroll;
   S4: native buttons, focus ring of the page; the trees are role="img"
   with a label and every fact on them is also in text (strip, points).
-- Motion: none (principle 3); see decision 0088 point 9.
+- Motion: none (principle 3); see decision 0092 point 9.

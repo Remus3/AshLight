@@ -44,7 +44,7 @@ ALLOWED = {
     ("web/app.css", ".edge-warn"):
         "a spare edge tone: no markup or script gives an element this class; "
         "an element that takes it must carry a word (notice.css tones do)",
-    # PROGRESSION-VIEW (decision 0088): svg paths of the own-drawn tree; the
+    # PROGRESSION-VIEW (decision 0092): svg paths of the own-drawn tree; the
     # state is carried by the line style (dashed ring, outer ring) and the
     # legend words beside the tree, the warn tone only reinforces it
     ("web/panels/progression.css", ".tv-edge-d"):

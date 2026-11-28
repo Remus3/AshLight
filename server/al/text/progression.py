@@ -1,4 +1,4 @@
-"""Progression view words (PROGRESSION-VIEW, decision 0088).
+"""Progression view words (PROGRESSION-VIEW, decision 0092).
 
 The server-composed words of the one Progression view: the next-up strip
 steps, the source line, the point lines and the honest "unknown" words.
@@ -16,17 +16,18 @@ SOURCE_POB = "From your pasted build"
 SOURCE_POB_SPEC = "From your pasted build, tree {title}"
 SOURCE_KINDLER = "From Kindler tab {label}"
 SOURCE_NONE = "No build yet. Paste one on Build and items."
-NO_TREE = "Passive tree data isn't on this computer yet."
-NO_IDS = "This build's passives don't match the saved tree data."
+NO_TREE = ("Passive tree data isn't on this computer yet. Turn on web data in "
+           "Settings, Reading and web data.")
+NO_IDS = "This build's passives don't match the saved tree data. Paste the build again."
 
 # the next-up strip (at most 3 steps, in this order of kinds)
 TAKE_NEXT = "Take next: {names}"
-TAKE_NEXT_MORE = "Take next: {names} (+{n} more)"
+TAKE_NEXT_MORE = "Take next (+{n}): {names}"
 NEXT_BAND = "Next tree: {n} more {passives}"
 GEM_NOW = "{kind} ready: {name}"
 GEM_LATER = "{kind} at level {level}: {name}"
-ASC_TRIAL = "After trial {trial}: {names}"
-ASC_TRIAL_MORE = "After trial {trial}: {names} (+{n} more)"
+ASC_TRIAL = "After ascendancy trial {trial}: {names}"
+ASC_TRIAL_MORE = "After ascendancy trial {trial} (+{n}): {names}"
 BOOK_HERE = "Here: {text}"
 GEM_WORD = "Gem"
 SUPPORT_WORD = "Support"

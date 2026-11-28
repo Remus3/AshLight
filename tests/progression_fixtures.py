@@ -1,4 +1,4 @@
-"""PROGRESSION-VIEW (decision 0088): invented demo data for the
+"""PROGRESSION-VIEW (decision 0092): invented demo data for the
 Progression tests, the fit harness and the screenshot.
 
 A helper module, not a test (tests/test_test_layout.py rule 2). Nothing

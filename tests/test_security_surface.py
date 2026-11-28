@@ -84,7 +84,7 @@ ROUTES = {
     ("GET", "/api/iteminfo"): (HEADER, None),
     # UI-CARD-COLLAPSE: the plug route (server/al/plug/uilayout.py, decision 0082)
     ("GET", "/api/ui/layout"): (HEADER, None),
-    # PROGRESSION-VIEW: the plug route (server/al/plug/progression.py, decision 0088)
+    # PROGRESSION-VIEW: the plug route (server/al/plug/progression.py, decision 0092)
     ("GET", "/api/progression"): (HEADER, None),
     ("GET", "/events"): (QUERY, None),
     # token POST (21)

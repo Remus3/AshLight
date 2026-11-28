@@ -1,4 +1,4 @@
-"""PROGRESSION-VIEW (decision 0088): the Progression view model, its plug
+"""PROGRESSION-VIEW (decision 0092): the Progression view model, its plug
 and its words.
 
 Invented demo data only (tests/progression_fixtures.py). Covers: the
@@ -90,6 +90,8 @@ def test_kindler_states_follow_the_level_budget(tree):
     assert [states[i] for i in order[28:31]] == ["d"] * 3
     assert all(states[i] == "l" for i in order[31:])
     assert m["counts"] == {"have": 28, "due": 3, "later": 29, "asc_have": 0, "asc_due": 2}
+    # the budget line only repeats the planned count here: left out (PG-15)
+    assert not any("not counting books" in p for p in m["points"])
 
 
 def test_a_level_up_moves_the_due_nodes_and_lists_the_new_ones(tree):
@@ -115,7 +117,7 @@ def test_the_ascendancy_view_has_its_own_box_and_trial_states(tree):
     assert st[5001] == st[5002] == "d" and st[5003] == "l"
     assert {r[3] for r in asc["n"]} >= {"a"}
     assert asc["box"][0] < -19000  # framed on the ascendancy, apart from the main tree
-    assert any(s["kind"] == "ascendancy" and s["text"].startswith("After trial 1: ")
+    assert any(s["kind"] == "ascendancy" and s["text"].startswith("After ascendancy trial 1: ")
                for s in m["next"])
     # with follow off (no stage) nothing is planned or due, all later
     off = kmodel(tree, 29, stage=None)
@@ -360,9 +362,33 @@ def test_the_tick_publishes_only_on_a_change(tree):
     assert holder.tick() is True and core.state.snapshot()["progression"] is None
 
 
-def test_the_spec_picker_hook_answers_none_today():
+def test_the_spec_picker_is_none_without_specfollow(monkeypatch):
+    monkeypatch.setattr(plug, "_specfollow", lambda: None)
     assert plug.spec_picker(object()) is None
     assert plug.ROUTES == {("GET", "/api/progression"): plug.get_progression}
+
+
+def test_the_spec_picker_follows_specfollow_pick(tree, monkeypatch):
+    """TC-SPEC-FOLLOW (decision 0089): the chooser is specfollow.pick() with
+    PoB's own active spec as the fallback; the next band's new nodes are
+    due."""
+    asked = []
+
+    class SF:
+        @staticmethod
+        def pick(specs, active_index, level):
+            asked.append((active_index, level))
+            return (0 if level <= 20 else 1 if level <= 40 else 2), True
+    monkeypatch.setattr(plug, "_specfollow", lambda: SF)
+    nodes = pf.path_from_start(tree, 40)
+    b = pf.model.parse(pf.build_xml(tree, nodes, specs=[("Level 1-20", nodes[:15]),
+                                                        ("Level 21-40", nodes[:30]),
+                                                        ("Level 41-60", nodes)]))
+    picker = plug.spec_picker(object())
+    assert picker(b, 25) == 1 and asked[0] == (0, 25)
+    m = progression.build_model(build=b, tree=tree, level=25, picker=picker)
+    assert m["counts"]["have"] == 30 and m["counts"]["due"] == 10
+    assert m["next"][0]["text"] == "Next tree: 10 more passives"
 
 
 def test_the_route_answers_the_last_model(tree):
@@ -391,12 +417,12 @@ def test_the_words_are_pinned_exactly():
     assert words.NEXT_BAND == "Next tree: {n} more {passives}"
     assert words.GEM_NOW == "{kind} ready: {name}"
     assert words.GEM_LATER == "{kind} at level {level}: {name}"
-    assert words.ASC_TRIAL == "After trial {trial}: {names}"
+    assert words.ASC_TRIAL == "After ascendancy trial {trial}: {names}"
     assert words.BOOK_HERE == "Here: {text}"
     assert words.NOTHING_NEXT == "Nothing new is due at this level."
     assert words.SOURCE_NONE == "No build yet. Paste one on Build and items."
     assert words.names_line(["A", "A", "B", "C"], 2, words.TAKE_NEXT_MORE,
-                            words.TAKE_NEXT) == "Take next: A (2), B (+1 more)"
+                            words.TAKE_NEXT) == "Take next (+1): A (2), B"
     assert words.names_line(["A"], 2, words.TAKE_NEXT_MORE, words.TAKE_NEXT) == "Take next: A"
     for name in dir(words):
         v = getattr(words, name)
@@ -412,5 +438,5 @@ def test_the_copy_sheet_lists_every_template():
             assert f"`{v}`" in sheet, name
     js = (ROOT / "web" / "panels" / "progression.js").read_text(encoding="ascii")
     for word in ("Next up", "Item check", "Progression", "Back to build",
-                 "Skills and supports", "Point at a node to read it."):
+                 "Skills and supports", "Hover a node to read it."):
         assert word in js and f"`{word}`" in sheet, word
