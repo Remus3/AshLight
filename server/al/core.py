@@ -52,6 +52,7 @@ from . import jsonfile  # RUN-DURABLE-STORES (F-014): .bak, Saver
 from . import overlayview  # OVL-CARD-SLOT (F-118)
 from . import playernotes  # PLAY-F-186A (decision 0074)
 from . import plug  # RUN-SEAMS (decision 0056)
+from .text import webdata as webdata_text  # UX-WEBDATA-SENTENCE-TRUE
 from . import diag_data, leagues  # DATA-DIAG-SEAM, DATA-LEAGUE-PICKER-API
 from . import pricerefresh  # DATA-PRICE-REFRESH-CORE (F-036)
 from . import summary as summary_mod
@@ -1255,6 +1256,13 @@ class Core:
         (contact()), else the project's issues page; None when neither."""
         return webfetch.effective_contact(self._config().get(webfetch.CONTACT_KEY),
                                           self._contact_default)
+
+    def web_data_sentence(self):
+        """UX-WEBDATA-SENTENCE-TRUE: the web-data opt-in sentence for this
+        copy (server/al/text/webdata.py), picked by the rates client's
+        release gate (decision 0072: an installed copy asks poe.ninja for
+        nothing while RELEASE_POLLING is off; unknown counts as installed)."""
+        return webdata_text.sentence(self.rates.release_blocked())
 
     def web_blocked_reason(self):
         """Why poe.ninja fetches are off now ("web data off",

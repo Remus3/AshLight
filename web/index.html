@@ -821,14 +821,11 @@
           <span id="webdata-league-note" class="row-meta muted"></span>
         </span>
       </form>
-      <!-- TC-LINK-RECOVER: the one opt-in sentence (web/tc.js WEB_DATA_OPT_IN, the same
-           text the build link recovery shows before its confirm click) -->
-      <p id="webdata-sentence" class="row-meta muted">Off unless you turn it on. When on, AshLight asks for three things only.
-        It fetches currency and item prices from poe.ninja about once an hour. It opens a build link you
-        paste, once. It checks GitHub once a day for a new AshLight; a new version downloads by itself
-        and installs at a later start. It never asks the trade site anything; the trade link after an
-        item check opens only when you click it. It sends no account, password or cookie, and never
-        touches the game.</p>
+      <!-- TC-LINK-RECOVER / UX-WEBDATA-SENTENCE-TRUE: the one opt-in sentence, picked by
+           the core per copy kind (server/al/text/webdata.py) and filled from GET
+           /api/web-data "sentence" (web/panels/webdata.js); the build link recovery
+           shows the same text before its confirm click. Empty here, so no copy drifts. -->
+      <p id="webdata-sentence" class="row-meta muted"></p>
       <p class="row-meta set-row"><span class="muted">Price book</span>
         <span id="book-state" class="badge" data-state="pending"><span class="glyph"
           aria-hidden="true">[ ]</span> <span class="word">currency values not loaded yet</span></span></p>

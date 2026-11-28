@@ -355,6 +355,9 @@ function fakePost(answers) {
 }
 
 const tick = () => new Promise((r) => setImmediate(r));
+// UX-WEBDATA-SENTENCE-TRUE: the core's sentence, as the web data panel read it
+const SAID = "Off unless you turn it on. (the core's sentence)";
+const said = () => SAID;
 
 test("link recover: the web-data refusal carries the button; others do not", () => {
   const r = v.pasteResult(422, { web_data: false });
@@ -369,11 +372,11 @@ test("link recover: the web-data refusal carries the button; others do not", () 
 
 test("link recover: the first click posts nothing and shows the opt-in sentence", async () => {
   const f = fakePost({});
-  const rec = v.linkRecover("https://pobb.in/abc", f.post);
+  const rec = v.linkRecover("https://pobb.in/abc", f.post, said);
   assert.equal(rec.step(), "offer");
   assert.equal(rec.confirm(), null); // no confirm before the sentence is shown
   const shown = rec.open();
-  assert.equal(shown.sentence, v.WEB_DATA_OPT_IN);
+  assert.equal(shown.sentence, SAID);
   assert.equal(shown.confirm, "Turn on web data");
   assert.equal(shown.cancel, "Not now");
   assert.equal(rec.step(), "confirm");
@@ -386,11 +389,29 @@ test("link recover: the first click posts nothing and shows the opt-in sentence"
   assert.deepEqual(f.calls, []);
 });
 
+test("link recover: with no sentence from the core nothing opens", async () => {
+  for (const g of [undefined, () => "", () => " ", () => null, () => 3]) {
+    const f = fakePost({});
+    const rec = v.linkRecover("https://pobb.in/abc", f.post, g);
+    assert.equal(rec.open(), null);
+    assert.equal(rec.step(), "offer"); // the page may read the setting and try again
+    assert.equal(rec.confirm(), null);
+    await tick();
+    assert.deepEqual(f.calls, []);
+  }
+  // once the sentence is read, the same controller opens it
+  let s = "";
+  const rec = v.linkRecover("https://pobb.in/abc", fakePost({}).post, () => s);
+  assert.equal(rec.open(), null);
+  s = SAID;
+  assert.equal(rec.open().sentence, SAID);
+});
+
 test("link recover: the confirm click posts the opt-in, then the same code once", async () => {
   const f = fakePost({ "/api/web-data": { status: 200, body: { web_data: true } },
                        "/api/build-code": { status: 200,
                          body: { loaded: true, build: { class_name: "Monk", level: 87 } } } });
-  const rec = v.linkRecover("https://pobb.in/abc", f.post);
+  const rec = v.linkRecover("https://pobb.in/abc", f.post, said);
   rec.open();
   const going = rec.confirm();
   assert.equal(rec.confirm(), null); // a second click while busy does nothing
@@ -410,7 +431,7 @@ test("link recover: the confirm click posts the opt-in, then the same code once"
 test("link recover: a refused load after the opt-in is not offered again", async () => {
   const f = fakePost({ "/api/web-data": { status: 200, body: { web_data: true } },
                        "/api/build-code": { status: 422, body: { web_data: false } } });
-  const rec = v.linkRecover("https://pobb.in/abc", f.post);
+  const rec = v.linkRecover("https://pobb.in/abc", f.post, said);
   rec.open();
   const out = await rec.confirm();
   assert.equal(out.result.offer, "");
@@ -422,7 +443,7 @@ test("link recover: no code is posted unless the opt-in is saved", async () => {
   for (const ans of [{ status: 500, body: null }, { status: 200, body: { web_data: false } },
                      new Error("offline")]) {
     const f = fakePost({ "/api/web-data": ans });
-    const rec = v.linkRecover("https://pobb.in/abc", f.post);
+    const rec = v.linkRecover("https://pobb.in/abc", f.post, said);
     rec.open();
     const out = await rec.confirm();
     assert.equal(out.saved, false);
@@ -434,11 +455,12 @@ test("link recover: no code is posted unless the opt-in is saved", async () => {
   }
 });
 
-test("link recover: the opt-in sentence is one constant, and index.html holds it", () => {
+test("link recover: index.html holds no copy of the core's opt-in sentence", () => {
   const html = web.source("index.html", "ascii");
   const m = /<p id="webdata-sentence"[^>]*>([\s\S]*?)<\/p>/.exec(html);
   assert.ok(m, "Settings sentence #webdata-sentence");
-  assert.equal(m[1].replace(/\s+/g, " ").trim(), v.WEB_DATA_OPT_IN);
+  assert.equal(m[1].trim(), ""); // UX-WEBDATA-SENTENCE-TRUE: filled from the core
+  assert.equal(v.WEB_DATA_OPT_IN, undefined);
   // the button labels in the page are the controller's labels
   for (const [id, label] of [["link-offer", v.LINK_OFFER], ["link-yes", v.LINK_CONFIRM],
                              ["link-no", v.LINK_CANCEL]]) {

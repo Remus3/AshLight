@@ -138,19 +138,21 @@
 
   /* TC-LINK-RECOVER (F-117, decision 0013): the one web-data opt-in
      sentence. The Settings card (web/index.html, #webdata-sentence) and the
-     link-recovery confirm both show exactly this text, so a player turns on
+     link-recovery confirm both show exactly the core's text, so a player turns on
      only what they have read in full. */
   /* REL-UPDATE-NOTICE-UI (decisions 0013, 0065; ruling Q-21): the sentence
      names the daily update check and the automatic apply; ticking the
      Settings box beside it acknowledges this wording (web/panels/webdata.js
      sends the wording version as "ack"). */
-  var WEB_DATA_OPT_IN = "Off unless you turn it on. When on, AshLight asks for three " +
-    "things only. It fetches currency and item prices from poe.ninja about once an " +
-    "hour. It opens a build link you paste, once. It checks GitHub once a day for a " +
-    "new AshLight; a new version downloads by itself and installs at a later start. " +
-    "It never asks the trade site anything; the trade link after an item check opens " +
-    "only when you click it. It sends no account, password or cookie, and never " +
-    "touches the game.";
+  /* UX-WEBDATA-SENTENCE-TRUE (review 2026-11-28 P1-2): the core picks the
+     sentence by copy kind (server/al/text/webdata.py) and GET / POST
+     /api/web-data publish it as "sentence"; the page holds no copy, so the
+     two cannot drift. optInSentence gives that text, or "" when the answer
+     has none (nothing is shown then, never a guessed list). */
+  function optInSentence(doc) {
+    var s = doc && doc.sentence;
+    return typeof s === "string" && s.trim() ? s : "";
+  }
   /* The offer names the switch it turns on (floor audit L3), not only the link. */
   var LINK_OFFER = "Turn on web data and load this link";
   var LINK_CONFIRM = "Turn on web data";
@@ -204,15 +206,21 @@
      click on that sentence: it saves the opt-in, then posts the same code
      once. Each step runs at most once; a failed opt-in save may be
      confirmed again, and nothing is loaded without it. */
-  function linkRecover(code, post) {
+  /* getSentence() returns the core's opt-in sentence (optInSentence of the
+     last web-data answer); while it gives none, open() shows nothing and
+     stays on the offer step, so the page can read the setting and try
+     again. */
+  function linkRecover(code, post, getSentence) {
     var step = "offer"; // offer -> confirm -> busy -> done
     function failed(text) { return { saved: false, web: null, result: { ok: false, offer: "", text: text } }; }
     return {
       step: function () { return step; },
       open: function () {
         if (step !== "offer") { return null; }
+        var said = typeof getSentence === "function" ? getSentence() : "";
+        if (typeof said !== "string" || !said.trim()) { return null; }
         step = "confirm";
-        return { sentence: WEB_DATA_OPT_IN, confirm: LINK_CONFIRM, cancel: LINK_CANCEL };
+        return { sentence: said, confirm: LINK_CONFIRM, cancel: LINK_CANCEL };
       },
       cancel: function () {
         if (step === "confirm") { step = "offer"; }
@@ -463,7 +471,7 @@
 
   return { buildView: buildView, pasteResult: pasteResult, evalView: evalView,
            statRowText: statRowText,
-           linkRecover: linkRecover, WEB_DATA_OPT_IN: WEB_DATA_OPT_IN,
+           linkRecover: linkRecover, optInSentence: optInSentence,
            LINK_OFFER: LINK_OFFER, LINK_CONFIRM: LINK_CONFIRM, LINK_CANCEL: LINK_CANCEL,
            buildFileView: buildFileView,
            weightRows: weightRows, weightsDoc: weightsDoc, changedCount: changedCount,

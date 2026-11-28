@@ -860,6 +860,9 @@ class Handler(BaseHTTPRequestHandler):
                 # the page posts back as "ack"; an opt-in given before it
                 # makes no update request until acknowledged once
                 "wording_version": updates.WORDING_VERSION,
+                # UX-WEBDATA-SENTENCE-TRUE: the opt-in sentence of that
+                # wording for this copy kind; the page shows it as it is
+                "sentence": core.web_data_sentence(),
                 "acked": acked,
                 "ack_needed": on and not acked,
                 # UA-CONTACT: rates also need the contact (config/local.json
