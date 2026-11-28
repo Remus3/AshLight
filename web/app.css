@@ -663,7 +663,6 @@ button.bar-word:hover { background: var(--fk-surface); }
    replaced hid), so the region it names draws the 3px accent ring inside
    its edge while the heading holds focus, for a mouse click too. */
 .region:has(> .region-h:focus) { outline: 3px solid var(--fk-accent); outline-offset: -3px; }
-.region > .region-h:focus { outline: none; }
 #play-g { --region-pad: var(--al-space-1); }
 #play-c, #play-i { --region-pad: var(--al-space-3); }
 #play-t { --region-pad: var(--al-space-1); }
