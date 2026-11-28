@@ -1841,6 +1841,61 @@ def test_the_kindler_editor_card_fits_at_compact_and_full_size(kindler_measures)
     assert not fails, "\n".join(fails[:40]) + "\n\n" + "\n".join(kindler_figures(kindler_measures))
 
 
+# UX-SETTINGS-STATUS-WRAP (review docs/reviews/ux/2026-11-28.md P2-4; design
+# 0001 section 9 rule 6): a dashboard sentence outside Play wraps, never
+# truncates, so no -status / -said element outside #panel-play carries the
+# one-line class (nowrap plus ellipsis in the cockpit classes).
+_VOID_TAGS = frozenset("area base br col embed hr img input link meta source track wbr".split())
+
+
+def one_line_status_outside_play(text):
+    from html.parser import HTMLParser
+
+    class _Walk(HTMLParser):
+        def __init__(self):
+            super().__init__(convert_charrefs=True)
+            self.stack, self.found = [], []
+
+        def handle_starttag(self, tag, attrs):
+            a = dict(attrs)
+            el_id = a.get("id") or ""
+            in_play = any(i == "panel-play" for _t, i in self.stack) or el_id == "panel-play"
+            if (not in_play and re.search(r"-(status|said)$", el_id)
+                    and "one-line" in (a.get("class") or "").split()):
+                self.found.append(el_id)
+            if tag not in _VOID_TAGS:
+                self.stack.append((tag, el_id))
+
+        def handle_startendtag(self, tag, attrs):
+            self.handle_starttag(tag, attrs)
+            if tag not in _VOID_TAGS:
+                self.stack.pop()
+
+        def handle_endtag(self, tag):
+            for k in range(len(self.stack) - 1, -1, -1):
+                if self.stack[k][0] == tag:
+                    del self.stack[k:]
+                    break
+
+    walk = _Walk()
+    walk.feed(text)
+    walk.close()
+    return walk.found
+
+
+def test_one_line_status_check_catches_a_cut_status():
+    page = ('<div id="panel-play"><span id="play-said" class="one-line"></span></div>'
+            '<div id="panel-settings"><input id="x"><p><span id="webdata-status" '
+            'class="row-meta one-line muted"></span></p><span id="ok-said" class="muted"></span></div>')
+    assert one_line_status_outside_play(page) == ["webdata-status"]
+
+
+def test_no_status_sentence_outside_play_is_one_line():
+    text = (ROOT / "web" / "index.html").read_text(encoding="utf-8")
+    found = one_line_status_outside_play(text)
+    assert not found, "these status spans must wrap (drop one-line): " + ", ".join(found)
+
+
 if __name__ == "__main__":
     if "--kindler" in sys.argv[1:]:
         _browser = find_browser()
