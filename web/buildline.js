@@ -15,8 +15,12 @@
    state of this region, never a card in a queue.
 
    The button shows the tab that holds #build-paste (Build and items) and
-   focuses the paste box. The build stays user-pasted text (decision
-   0004): no clipboard read, no timer, no network, no live region.
+   focuses the paste box. ACTIVE-BUILD-PICK (decision 0096): in its place,
+   when the core composes one (play.build.switch), one switch button,
+   "Use Kindler plan" or "Use pasted build", posts the player's click to
+   POST /api/build-source (ctx.api); the next state push repaints B. The build stays user-pasted text (decision
+   0004): no clipboard read, no timer, no live region, and no request but
+   the switch's one POST through ctx.api.
 
    Registers {name: buildline, region: b, retires: [b-alert]} with
    web/regions.js. UMD like web/tabs.js: CommonJS for node --test,
@@ -41,6 +45,8 @@
   var PASTE_ID = "build-paste";
   var PASTE_LABEL = "Paste a build";
   var FALLBACK_TAB = "build";
+  var SOURCE_PATH = "/api/build-source"; // ACTIVE-BUILD-PICK (decision 0096)
+  var SWITCH_FAILED = "The build didn't switch. Try again.";
   // the four states of design 0001 section 6 (the kit word stale is not used for Old build)
   var STATES = {
     fits: { glyph: "[+]", word: "Build fits", tone: "neutral" },
@@ -68,7 +74,12 @@
       word: str(b.word) || row.word,
       name: key === "none" ? "" : str(b.row1),
       row2: str(b.row2),
-      canPaste: b.can_paste === true
+      canPaste: b.can_paste === true,
+      // ACTIVE-BUILD-PICK: the one switch between the pasted build and a
+      // Kindler plan ({label, use, id}), composed by the core, or null
+      switchTo: isObj(b.switch) && str(b.switch.label) &&
+        (b.switch.use === "pasted" || b.switch.use === "kindler")
+        ? { label: str(b.switch.label), use: b.switch.use, id: str(b.switch.id) } : null
     };
   }
 
@@ -106,8 +117,22 @@
   }
 
   // the region's nodes, made once by wire() (or the first paint)
-  var nodes = { doc: null, root: null, word: null, name: null, button: null, row2: null };
-  var wired = { tabs: null };
+  var nodes = { doc: null, root: null, word: null, name: null, button: null, row2: null,
+    swap: null };
+  var wired = { tabs: null, api: null, want: null };
+
+  /* ACTIVE-BUILD-PICK: the switch's act, one POST /api/build-source; the
+     next state push repaints B. A refusal is said on the page's polite
+     line when the page has one. */
+  function useSource(want) {
+    if (!want || typeof wired.api !== "function") { return null; }
+    var body = want.use === "kindler" ? { use: "kindler", id: want.id } : { use: "pasted" };
+    return wired.api("POST", SOURCE_PATH, body).then(function (r) { return r; }, function () {
+      var t = wired.tabs;
+      if (t && typeof t.say === "function") { t.say(nodes.doc, SWITCH_FAILED); }
+      return null;
+    });
+  }
 
   function build(doc) {
     if (nodes.doc === doc && nodes.root) { return nodes; }
@@ -127,16 +152,22 @@
     button.setAttribute("type", "button");
     button.textContent = PASTE_LABEL;
     button.hidden = true;
+    var swap = el(doc, "button", "bl-swap secondary btn-28", "bl-swap");
+    swap.setAttribute("type", "button");
+    swap.hidden = true;
     var r2 = el(doc, "p", "bl-row2 row-body muted one-line", "bl-row2");
     r1.appendChild(word);
     r1.appendChild(name);
     r1.appendChild(button);
+    r1.appendChild(swap);
     root.appendChild(r1);
     root.appendChild(r2);
     if (typeof button.addEventListener === "function") {
       button.addEventListener("click", function () { showPaste(doc, wired.tabs); });
+      swap.addEventListener("click", function () { useSource(wired.want); });
     }
-    nodes = { doc: doc, root: root, word: word, name: name, button: button, row2: r2 };
+    nodes = { doc: doc, root: root, word: word, name: name, button: button, row2: r2,
+      swap: swap };
     return nodes;
   }
 
@@ -160,6 +191,9 @@
     setAttr(n.name, "title", m.name);
     n.name.hidden = !m.name;
     n.button.hidden = !m.canPaste;
+    wired.want = m.switchTo;
+    if (m.switchTo) { setText(n.swap, m.switchTo.label); }
+    n.swap.hidden = !m.switchTo || m.canPaste;
     setText(n.row2, m.row2);
     setAttr(n.row2, "title", m.row2);
     n.row2.hidden = !m.row2;
@@ -169,13 +203,17 @@
 
   function wire(doc, ctx) {
     wired.tabs = ctx && ctx.tabs ? ctx.tabs : null;
+    wired.api = ctx && typeof ctx.api === "function" ? ctx.api : null;
     build(doc);
   }
 
   /* Tests only: forget the nodes made for an earlier document. */
   function reset() {
-    nodes = { doc: null, root: null, word: null, name: null, button: null, row2: null };
+    nodes = { doc: null, root: null, word: null, name: null, button: null, row2: null,
+      swap: null };
     wired.tabs = null;
+    wired.api = null;
+    wired.want = null;
   }
 
   var spec = {
@@ -189,6 +227,7 @@
   return {
     NAME: NAME, REGION: REGION, RETIRES: RETIRES, STATES: STATES, PASTE_LABEL: PASTE_LABEL,
     model: model, pasteTab: pasteTab, showPaste: showPaste, paint: paint, wire: wire,
+    useSource: useSource, SOURCE_PATH: SOURCE_PATH,
     reset: reset, spec: spec
   };
 }));

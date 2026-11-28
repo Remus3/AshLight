@@ -19,6 +19,7 @@
 #play-b .bl[data-tone="warn"] .bl-word { color: var(--fk-status-warn); }
 #play-b .bl-name { flex: 0 1 auto; }
 #play-b .bl-paste { flex: 0 0 auto; margin-left: auto; }
+#play-b .bl-swap { flex: 0 0 auto; margin-left: auto; } /* ACTIVE-BUILD-PICK */
 #play-b .bl [hidden] { display: none; }
 /* B pads 4 px top and bottom (--al-space-1, not 8): the rows keep 8 to 10
    px of slack, so a fractional region top never eats the 2 px minimum (G4) */

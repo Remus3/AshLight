@@ -13,7 +13,9 @@ the league, the toggle values (TOGGLES, each tri-state with "unsure" =
 no constraint; DEFENCE for the defence toggle), the chosen template id,
 the follow flag (point 17, on by default), the candidate count and a
 result summary (template id, PoB headline numbers, time, partial,
-scored, stale; set only by the engine through set_result). Never item
+scored, stale; set only by the engine through set_result; decision 0096
+adds the best row's stage id and variant, optional, so a restart can
+restore the plan with no Generate). Never item
 text, a path or a name of another player. The order is the list order
 (point 11): move() swaps a tab with its neighbour; nothing is dragged.
 
@@ -52,7 +54,9 @@ TOGGLE_KEYS = TOGGLES + ("defence",)
 RESULT_NUMBERS = ("dps", "ehp")
 TAB_FIELDS = ("id", "label", "class", "league", "toggles", "template", "follow",
               "candidates", "result")
-RESULT_FIELDS = ("template", "at", "dps", "ehp", "partial", "scored", "stale", "key")
+RESULT_FIELDS = ("template", "at", "dps", "ehp", "partial", "scored", "stale", "key",
+                 "stage", "variant")
+MAX_VARIANT = 7  # decision 0096: the best row's main skill index (0-based)
 
 # Player words (design 0001: plain, no jargon)
 FULL_TEXT = "You can keep 6 Kindler tabs. Close one to add another."
@@ -185,6 +189,17 @@ def clean_result(raw, strict=False):
         _bad(strict)
         key = ""
     out["key"] = key
+    # decision 0096: the best row's stage id and variant (optional; an old
+    # file without them restores the last stage and variant 0)
+    stage = _template(raw.get("stage"), strict)
+    if stage:
+        out["stage"] = stage
+    variant = raw.get("variant")
+    if variant is not None:
+        if isinstance(variant, bool) or not isinstance(variant, int)                 or not 0 <= variant <= MAX_VARIANT:
+            _bad(strict)
+        else:
+            out["variant"] = variant
     if not out["scored"]:  # decision 0081 points 5, 12: no number with the calc off
         out["dps"] = out["ehp"] = None
     return out

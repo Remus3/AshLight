@@ -34,6 +34,7 @@ UNSAVED_WORDS = {
     "summary": "session summary",
     "genbuilds": "Kindler tabs",  # KINDLER-STORE (plug/genbuilds.py)
     "uilayout": "card layout",  # UI-CARD-COLLAPSE (plug/uilayout.py)
+    "buildsource": "build choice",  # ACTIVE-BUILD-PICK (plug/buildsource.py)
 }
 
 # file name -> (noun phrase, plural) for the restore note; the config file

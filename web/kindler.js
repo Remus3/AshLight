@@ -47,6 +47,12 @@
    step was done. While Path of Building ranks the item focus ("pending")
    the plan is re-read on the page's timer, at most PLAN_MAX times.
 
+   ACTIVE-BUILD-PICK (decision 0096): a "Use this plan for Play" chip on the plan
+   card (pressed while that tab's plan is the build in use; a second click
+   goes back to the pasted build) and one on the Pasted build's Build card
+   (#build-use, shown only while there is a choice) post the player's click
+   to POST /api/build-source; their state is the snapshot's build_source.
+
    UMD: CommonJS for node (tests/test_kindler_tabs_ui.py,
    tests/test_kindler_result_ui.py), window.ALKindler
    in the page, where it registers itself with window.ALApp
@@ -62,7 +68,7 @@
       root.ALApp.register({
         name: api.NAME,
         order: api.ORDER,
-        paint: function (snap) { api.paintLeagues(); api.follow(snap); },
+        paint: function (snap) { api.paintLeagues(); api.follow(snap); api.useSource(snap); },
         wire: function () {
           var host = root.ALApp.host;
           var store = null;
@@ -121,6 +127,18 @@
     slow: "Still generating. The result shows here when it is done.",
     stale: "Your choices changed. Press Generate to update.",
     partial: " Time ran out, so this is the best of the builds scored so far."
+  };
+
+  /* ACTIVE-BUILD-PICK (decision 0096): the build Play uses, per
+     character: the pasted build or one Kindler tab's plan. The snapshot's
+     build_source says which; a "Use ... for Play" chip (aria-pressed) on the
+     plan card and one on the Pasted build's Build card post the player's
+     click to POST /api/build-source. */
+  var SOURCE_PATH = "/api/build-source";
+  var USE_WORDS = {
+    use: "Use this plan for Play",
+    pasted: "Use pasted build for Play",
+    notSaved: "Not saved. Try again."
   };
 
   /* KINDLER-UI-RESULT (decision 0081 points 10 and 14 to 17): the plan
@@ -369,7 +387,8 @@
       doc: doc, ctl: ctl, $: $, model: view(null), sub: PASTED, reads: {},
       chain: Promise.resolve(), poll: null, buttons: {}, leagueKey: "",
       mode: "tools", here: null, plans: {}, planKeys: {}, planSeq: 0, planLeft: 0,
-      stageAt: {}, page: PLAN_PAGES[0][0], bodyKey: "", part: 0, parts: 1, partAt: ""
+      stageAt: {}, page: PLAN_PAGES[0][0], bodyKey: "", part: 0, parts: 1, partAt: "",
+      useSrc: null
     };
     S = s;
     try {
@@ -944,7 +963,9 @@
       "aria-labelledby": "kindler-plan-title", hidden: true }, [
       h(d, "div", { "class": "kindler-head" }, [
         h(d, "h2", { id: "kindler-plan-title", "class": "one-line" }, "Plan"),
-        h(d, "span", { id: "kindler-plan-name", "class": "row-meta muted one-line" })]),
+        h(d, "span", { id: "kindler-plan-name", "class": "row-meta muted one-line" }),
+        h(d, "button", { id: "kindler-use", type: "button", "class": "chip",
+          "aria-pressed": "false", "data-label": USE_WORDS.use }, USE_WORDS.use)]),
       h(d, "div", { "class": "kindler-row" }, [
         h(d, "button", { id: "kindler-follow", type: "button", "class": "chip",
           "aria-pressed": "true", "data-label": PLAN_WORDS.follow,
@@ -977,6 +998,7 @@
   function wirePlan(s) {
     var $ = s.$;
     on($("kindler-follow"), "click", function () { setFollow(s); });
+    on($("kindler-use"), "click", function () { useForPlay(s, "kindler"); });
     on($("kindler-stage-prev"), "click", function () { moveStage(s, -1); });
     on($("kindler-stage-next"), "click", function () { moveStage(s, 1); });
     on($("kindler-part-prev"), "click", function () { movePart(s, -1); });
@@ -1143,6 +1165,7 @@
     if (!$("kindler-plan") || !tab || !tab.result) { return; }
     var follow = $("kindler-follow");
     if (follow) { follow.setAttribute("aria-pressed", tab.follow ? "true" : "false"); }
+    paintUse(s);
     setText($("kindler-follow-why"), tab.follow ? PLAN_WORDS.followOn : PLAN_WORDS.followOff);
     var pv = s.plans[tab.id];
     var ok = !!(pv && pv.plan);
@@ -1246,6 +1269,71 @@
     });
   }
 
+  /* ACTIVE-BUILD-PICK: the two chips from the snapshot's build_source. The
+     plan chip is pressed while the shown tab's plan is in use, the Pasted
+     build chip while the pasted build is; the Pasted build chip shows only
+     when there is a choice (a Kindler plan in use or one to use). */
+  function sourceOf(snap) {
+    var v = obj(snap) ? obj(snap.build_source) : null;
+    return v ? { use: v.use === "kindler" ? "kindler" : "pasted", tab: str(v.tab),
+      offer: obj(v.offer) } : null;
+  }
+
+  function paintUse(s) {
+    var src = s.useSrc;
+    var $ = s.$;
+    var tab = shownTab(s);
+    var plan = $("kindler-use");
+    if (plan) {
+      var mine = !!(src && tab && src.use === "kindler" && src.tab === tab.id);
+      plan.setAttribute("aria-pressed", mine ? "true" : "false");
+      plan.hidden = !src;
+    }
+    var pasted = $("build-use");
+    if (pasted) {
+      pasted.setAttribute("aria-pressed", src && src.use === "pasted" ? "true" : "false");
+      pasted.hidden = !(src && (src.use === "kindler" || src.offer));
+    }
+  }
+
+  function useSource(s, snap) {
+    var src = sourceOf(snap);
+    if (!src) { return; }
+    s.useSrc = src;
+    paintUse(s);
+  }
+
+  /* One click: "kindler" uses the shown tab's plan (a second click on the
+     pressed chip goes back to the pasted build); "pasted" uses the pasted
+     build (nothing to do while it is already in use). */
+  function useForPlay(s, which) {
+    var src = s.useSrc;
+    var body;
+    if (which === "kindler") {
+      var tab = shownTab(s);
+      if (!tab) { return Promise.resolve(false); }
+      body = src && src.use === "kindler" && src.tab === tab.id
+        ? { use: "pasted" } : { use: "kindler", id: tab.id };
+    } else {
+      if (src && src.use === "pasted") { return Promise.resolve(false); }
+      body = { use: "pasted" };
+    }
+    return s.ctl.request("POST", SOURCE_PATH, body).then(function (r) {
+      if (r.status === 200 && r.body) {
+        s.useSrc = sourceOf({ build_source: r.body });
+        paintUse(s);
+        if (r.body.saved === false && s.ctl.say) { s.ctl.say(USE_WORDS.notSaved); }
+        return true;
+      }
+      var text = r.body && typeof r.body.error === "string" ? r.body.error : USE_WORDS.notSaved;
+      if (s.ctl.say) { s.ctl.say(text); }
+      return false;
+    }, function () {
+      if (s.ctl.say) { s.ctl.say(WORDS.noReach); }
+      return false;
+    });
+  }
+
   /* The snapshot paint: the Play guidance the follow flag tracks. */
   function followPlay(s, snap) {
     var here = hereOf(snap);
@@ -1289,6 +1377,7 @@
 
   function wire(s) {
     var $ = s.$;
+    on($("build-use"), "click", function () { useForPlay(s, "pasted"); });
     on($("kindler-bar"), "click", function (e) {
       var b = e.target && e.target.closest ? e.target.closest("button") : e.target;
       if (!b) { return; }
@@ -1384,6 +1473,9 @@
     planView: planView, triggerText: triggerText, gemStep: gemStep, ordinal: ordinal,
     hereOf: hereOf,
     follow: function (snap) { if (S) { followPlay(S, snap); } },
+    useSource: function (snap) { if (S) { useSource(S, snap); } },
+    useForPlay: function (which) { return useForPlay(S, which); },
+    sourceOf: sourceOf, USE_WORDS: USE_WORDS,
     setFollow: function () { return setFollow(S); },
     stage: function (dir) { moveStage(S, dir); },
     part: function (dir) { movePart(S, dir); },

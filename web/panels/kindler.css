@@ -111,7 +111,10 @@ button.subtab::after { display: block; height: 0; overflow: hidden; visibility: 
   #kindler-new { flex: none; white-space: nowrap; }
   .kindler-head h2 { flex: 0 1 auto; min-width: 0; }
   .kindler-head .row-meta { flex: none; white-space: nowrap; }
+  /* ACTIVE-BUILD-PICK: the plan name shrinks before the chip does */
+  .kindler-head #kindler-plan-name { flex: 0 1 auto; min-width: 0; }
 }
+.kindler-head #kindler-use { flex: 0 0 auto; margin-left: auto; align-self: center; }
 @media (min-width: 64em) and (min-height: 43.75em) and (not ((min-width: 75em) and (min-height: 47.5em))) {
   #panel-build.panel-cards[data-sub="kindler"]:has(> #kindler-plan:not([hidden])) {
     grid-template-columns: repeat(2, minmax(0, 1fr)); }

@@ -243,7 +243,8 @@ def test_no_broken_part_notice_while_reading_is_down():
 def test_build_line_states():
     assert pv.build_view(_snap(build={"loaded": False})) == {
         "state": "none", "kit": "pending", "glyph": "[ ]", "word": "No build", "row1": "",
-        "row2": "Copy a PoB code, press the item key.", "can_paste": True}
+        "row2": "Copy a PoB code, press the item key.", "can_paste": True,
+        "switch": None}  # ACTIVE-BUILD-PICK: nothing to switch to
     fits = pv.build_view(_snap(sources={"calc_on": True},
                                build={"loaded": True, "class_name": "Ranger",
                                       "ascendancy": "Deadeye", "level": 92}))

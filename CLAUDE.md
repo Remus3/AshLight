@@ -1932,3 +1932,19 @@ of the HALT check.
   hides needed steps, gem level requirements change so the snapshot
   misleads, the level-up line changes, or players want the steps for a
   Kindler plan.
+- ACTIVE-BUILD-PICK: one active build source per character, the pasted
+  PoB build (default) or one Kindler tab's plan, set only by the player's
+  click (Play region B "Use Kindler plan" / "Use pasted build", "Use ...
+  for Play" chips on the plan card and the Build card) through token-gated
+  GET / POST /api/build-source; kept in ops/runtime/build/source.json
+  (Kindler choices only, 12 characters, one .bak, Saver retry, not
+  exported); while a plan is in use the plug composes its stage's PoB XML
+  (follow flag: the Play stage) into the build store in place of the
+  pasted build, whose file is never touched, so item check, Play and the
+  Build card follow and Progression uses the tab's Kindler path; the tab
+  summary keeps stage / variant so a restart restores the plan with no
+  calc or Generate; a new paste (or a pasted file newer than the choice)
+  makes the pasted build active again (decision 0096). Reverses if:
+  players want both builds side by side, a composed no-items build
+  misleads the item check in play, a restored summary differs from a
+  fresh result, or the operator rules plans must not feed the item check.

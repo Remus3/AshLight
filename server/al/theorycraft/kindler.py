@@ -454,10 +454,38 @@ def summary(doc, at):
     if not best:
         return None
     scored = bool(doc.get("scored"))
-    return {"template": best["template"], "at": int(at),
-            "dps": best.get("dps") if scored else None,
-            "ehp": best.get("ehp") if scored else None,
-            "partial": bool(doc.get("partial")), "scored": scored, "key": doc["key"]}
+    out = {"template": best["template"], "at": int(at),
+           "dps": best.get("dps") if scored else None,
+           "ehp": best.get("ehp") if scored else None,
+           "partial": bool(doc.get("partial")), "scored": scored, "key": doc["key"]}
+    # decision 0096: the best row's stage and variant, so a restart can
+    # restore the plan from the summary (from_summary) with no Generate
+    if isinstance(best.get("stage"), str):
+        out["stage"] = best["stage"]
+    variant = best.get("variant")
+    if isinstance(variant, int) and not isinstance(variant, bool)             and 0 <= variant <= genstore.MAX_VARIANT:
+        out["variant"] = variant
+    return out
+
+
+def from_summary(summ, templates):
+    """ACTIVE-BUILD-PICK (decision 0096): the result document a restart
+    restores from a tab's stored summary (genstore clean_result), with no
+    calc and no Generate: the best row only, no number, marked "restored";
+    None when the summary is gone or its template left the table."""
+    if not isinstance(summ, dict) or not summ.get("template"):
+        return None
+    t = next((x for x in templates if x["id"] == summ["template"]), None)
+    if t is None:
+        return None
+    stage = summ.get("stage")
+    if not any(st["id"] == stage for st in t["stages"]):
+        stage = t["stages"][-1]["id"] if t["stages"] else None
+    row = {"template": t["id"], "label": t["label"], "variant": summ.get("variant") or 0,
+           "skill": None, "stage": stage}
+    return {"key": summ.get("key") or "", "band": None, "scored": bool(summ.get("scored")),
+            "partial": bool(summ.get("partial")), "candidates": [row], "best": row,
+            "note": "", "restored": True}
 
 
 # --- the engine: one run at a time, results kept per key -------------------------
@@ -498,6 +526,18 @@ class Engine:
     def running(self):
         with self._lock:
             return self._running
+
+    def restore(self, tab_id, doc):
+        """ACTIVE-BUILD-PICK (decision 0096): set the tab's last result to
+        `doc` (from_summary) when this core holds none yet; never a calc,
+        never a Generate. True when it was set."""
+        if doc is None:
+            return False
+        with self._lock:
+            if tab_id in self._last or self._running == tab_id:
+                return False
+            self._last[tab_id] = doc
+            return True
 
     def generate(self, tab_id, wait=False):
         """Start one Generate for the tab. ("running", None) while one is in

@@ -29,6 +29,7 @@ import time
 from . import acts
 from . import playcards
 from . import statuswords
+from .text import buildsource as source_words
 
 # -- caps (plan 03 section 3.4, character budgets [D]) -----------------------
 CAP_EVENT_SENTENCE = 38
@@ -92,6 +93,14 @@ BUILD_WORDS = {
 BUILD_FIX = "Copy a PoB code, press the item key."
 BUILD_CALC_ON = "Checks use Path of Building numbers."
 BUILD_CALC_OFF = "Checks use your stat weights."
+# ACTIVE-BUILD-PICK (decision 0096): the build in use and the one switch
+# (words in server/al/text/buildsource.py, copy sheet buildsource.md)
+BUILD_KINDLER_NAME = source_words.KINDLER_NAME
+BUILD_SRC_KINDLER = source_words.SRC_KINDLER
+BUILD_SRC_PASTED = source_words.SRC_PASTED
+BUILD_USE_KINDLER = source_words.USE_KINDLER
+BUILD_USE_PASTED = source_words.USE_PASTED
+BUILD_PASTE_TOO = source_words.PASTE_TOO
 
 EVENT_TAGS = {"death": "Death", "level": "Level", "zone": "Zone"}
 
@@ -555,19 +564,37 @@ def build_view(snap):
     else:
         state = "fits"
     kit, word = BUILD_WORDS[state]
+    src = _dict(snap.get("build_source"))
+    kindler = src.get("use") == "kindler" and state != "none"
+    offer = _dict(src.get("offer"))
     row1 = ""
     if state != "none":
         name = _name(build.get("ascendancy")) or _name(build.get("class_name")) or "Build"
+        if kindler:
+            name = BUILD_KINDLER_NAME + (_name(src.get("label")) or BUILD_SRC_KINDLER)
         lvl = _int(build.get("level"))
         row1 = f"{name}, level {lvl}" if lvl is not None else name
-    if state == "fits":
+    # ACTIVE-BUILD-PICK (decision 0096): one switch between the pasted
+    # build and a Kindler plan, hidden when there is nothing to switch to
+    switch = None
+    if kindler and src.get("pasted") is True:
+        switch = {"label": BUILD_USE_PASTED, "use": "pasted", "id": None}
+    elif not kindler and isinstance(offer.get("id"), str):
+        switch = {"label": BUILD_USE_KINDLER, "use": "kindler", "id": offer["id"]}
+    if state == "fits" and kindler:
+        row2 = BUILD_SRC_KINDLER
+    elif state == "fits" and switch is not None:
+        row2 = BUILD_SRC_PASTED
+    elif state == "fits":
         calc = _dict(snap.get("sources")).get("calc_on") is True
         row2 = BUILD_CALC_ON if calc else BUILD_CALC_OFF
+    elif state == "none" and switch is not None:
+        row2 = BUILD_PASTE_TOO
     else:
         row2 = BUILD_FIX
     return {"state": state, "kit": kit, "glyph": _glyph(kit), "word": word,
             "row1": row1, "row2": clip(row2, CAP_BUILD_ROW),
-            "can_paste": state == "none"}
+            "can_paste": state == "none" and switch is None, "switch": switch}
 
 
 # -- the block -----------------------------------------------------------------

@@ -86,7 +86,7 @@
 
   /* BUILD-LIVE (decision 0045): where the build came from and how old it is */
   var SOURCE_WORDS = { paste: "Pasted", press: "Loaded with the item key",
-    ggg_api: "Loaded from your account" };
+    ggg_api: "Loaded from your account", kindler: "Kindler plan (generated)" };
 
   function sourceLine(doc) {
     var word = SOURCE_WORDS[doc && doc.source] || "Loaded";

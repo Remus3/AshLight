@@ -75,6 +75,7 @@ ROUTES = {
     ("GET", "/api/verdicts"): (HEADER, None),
     # KINDLER-STORE: the plug route (server/al/plug/genbuilds.py)
     ("GET", "/api/gen-builds"): (HEADER, None),
+    ("GET", "/api/build-source"): (HEADER, None),  # ACTIVE-BUILD-PICK plug route
     # RUN-METRICS-CORE: the plug route (server/al/plug/debug.py, decision 0067)
     ("GET", "/api/debug"): (HEADER, None),
     # RUN-VERDICTS-UI (folded RUN-REPORT-ROUTE): the plug route
@@ -102,6 +103,7 @@ ROUTES = {
     ("POST", "/api/verdicts"): (HEADER, 4096),  # RUN-VERDICTS-CORE plug route
     ("POST", "/api/character"): (HEADER, 4096),  # RUN-CHARACTER-PIN plug route
     ("POST", "/api/gen-builds"): (HEADER, 4096),  # KINDLER-STORE plug route
+    ("POST", "/api/build-source"): (HEADER, 4096),  # ACTIVE-BUILD-PICK plug route
     ("POST", "/api/kindler-generate"): (HEADER, 4096),  # KINDLER-ENGINE plug route
     ("POST", "/api/wear"): (HEADER, 256 * 1024),  # TC-WORN-WIRE: the eval body cap
     ("POST", "/api/hotkeys"): (HEADER, 4096),  # HOTKEYS-LIVE (OVL-KEYS-CORE)
@@ -356,9 +358,9 @@ def test_route_table_matches_http_py():
     counts = {}
     for (method, _), (rule, _) in ROUTES.items():
         counts[(method, rule)] = counts.get((method, rule), 0) + 1
-    assert counts == {("GET", NONE): 5, ("GET", PROOF): 1, ("GET", HEADER): 20,
+    assert counts == {("GET", NONE): 5, ("GET", PROOF): 1, ("GET", HEADER): 21,
                       ("GET", QUERY): 1,
-                      ("POST", HEADER): 21, ("PUT", HEADER): 2,
+                      ("POST", HEADER): 22, ("PUT", HEADER): 2,
                       ("DELETE", REFUSED): 1, ("PATCH", REFUSED): 1,
                       ("OPTIONS", REFUSED): 1}
     # the token rule in the source is the one the table assumes

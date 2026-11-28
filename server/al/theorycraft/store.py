@@ -120,6 +120,16 @@ class BuildStore:
         # TC-PRESS-BUILD: whether the last load_code replaced another build
         # (its bytes are the undo copy)
         self.replaced = False
+        # ACTIVE-BUILD-PICK (decision 0096): a Kindler plan stage in use in
+        # place of the pasted build (use_override); the pasted file is never
+        # touched. paste_wins: callable(character, mtime) -> bool, asked when
+        # the pasted file changes on disk while the override is on (None:
+        # the new paste wins); on_paste: callable(character), told when a
+        # paste or a newer pasted file takes over
+        self.override = None
+        self.override_label = ""
+        self.paste_wins = None
+        self.on_paste = None
         self._file_key = None
         self._lock = threading.RLock()
         self._listeners = []
@@ -218,6 +228,8 @@ class BuildStore:
             return None, str(e), (key, digest)
 
     def _reload(self):
+        self.override = None
+        self.override_label = ""
         build, err, key = self._read_file(self.active_path())
         self._file_key = key
         self.build = self._follow(build)
@@ -323,6 +335,12 @@ class BuildStore:
                 self.load_error = err
                 log.warning("changed build file not loaded: %s", err)
             return None
+        if self.override is not None:
+            if not self._paste_takes_over(key[0][0] / 1e9 if key else None):
+                self.load_error = None
+                return None  # the Kindler plan stays in use (decision 0096)
+            self.override = None
+            self.override_label = ""
         self.build = self._follow(build)
         self.load_error = None
         self.source = "paste"
@@ -347,12 +365,61 @@ class BuildStore:
             jsonfile.write_bytes(path, data)
             self.replaced = replaced
             self._file_key = self._read_key(path)
+            self.override = None
+            self.override_label = ""
             self.build = build = self._follow(build)
             self.load_error = None
             self.source = source
             self.loaded_at = time.time()
+        self._told_paste()  # decision 0096: a new paste is the build in use
         self._fire(build)
         return build
+
+    # -- ACTIVE-BUILD-PICK (decision 0096): the Kindler plan in use
+    def _paste_takes_over(self, mtime):
+        fn = self.paste_wins
+        if not callable(fn):
+            return True
+        try:
+            wins = bool(fn(self.character, mtime))
+        except Exception:  # noqa: BLE001 - a broken hook keeps the choice
+            return False
+        if wins:
+            self._told_paste()
+        return wins
+
+    def _told_paste(self):
+        fn = self.on_paste
+        if callable(fn):
+            try:
+                fn(self.character)
+            except Exception:  # noqa: BLE001 - must never cost the load
+                log.exception("build source hook failed")
+
+    def use_override(self, build, label=""):
+        """Put `build` (a composed Kindler plan stage) in use for the
+        character being played, in place of the pasted build, whose file
+        stays as it is; the listeners fire (item check, build view)."""
+        with self._lock:
+            self.override = build
+            self.override_label = label or ""
+            self.build = out = self._follow(build)
+            self.load_error = None
+            self.source = "kindler"
+            self.loaded_at = time.time()
+        self._fire(out)
+        return out
+
+    def clear_override(self):
+        """Back to the pasted build (read again from its file). True when an
+        override was on."""
+        with self._lock:
+            if self.override is None:
+                return False
+            self._reload()
+            out = self.build
+        self._fire(out)
+        return True
 
     @staticmethod
     def undo_path(path):
@@ -434,6 +501,10 @@ class BuildStore:
                 # BUILD-LIVE (decision 0045): whose build this is, where it
                 # came from, and the build sources a later import can use
                 "character": self.character, "source": self.source if b else None,
+                # ACTIVE-BUILD-PICK (decision 0096): the Kindler tab's label
+                # while its plan is in use, else ""
+                "source_label": self.override_label if b is not None and
+                self.override is not None else "",
                 "loaded_at": self.loaded_at if b else None,
                 "providers": [p.status() for p in self.providers],
                 "characters_with_builds": (self.characters_with_builds()

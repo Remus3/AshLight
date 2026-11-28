@@ -208,3 +208,45 @@ test("the page holds the paste box inside the Build panel and pre-links the file
   assert.match(HTML, /<script src="\/web\/buildline\.js" defer><\/script>/);
   assert.match(HTML, /<link rel="stylesheet" href="\/web\/buildline\.css">/);
 });
+
+/* ACTIVE-BUILD-PICK (decision 0096): one switch between the pasted build
+   and a Kindler plan, composed by the core (play.build.switch). */
+test("the switch shows the core's words and posts the player's click", async () => {
+  BL.reset();
+  const doc = makeDoc();
+  const calls = [];
+  BL.wire(doc, { tabs: Tabs, api: (m, p, b) => { calls.push([m, p, b]); return Promise.resolve({}); } });
+  const kin = Object.assign({}, FITS, { row1: "Kindler: Plan, level 21",
+    row2: "Kindler plan (generated)", switch: { label: "Use pasted build", use: "pasted", id: null } });
+  BL.paint(doc, snapWith(kin));
+  const swap = doc.getElementById("bl-swap");
+  assert.equal(swap.hidden, false);
+  assert.equal(swap.textContent, "Use pasted build");
+  assert.equal(swap.getAttribute("type"), "button");
+  assert.equal(doc.getElementById("bl-paste").hidden, true, "one button only");
+  swap.click();
+  await Promise.resolve();
+  assert.deepEqual(calls, [["POST", "/api/build-source", { use: "pasted" }]]);
+  const pasted = Object.assign({}, FITS, { row2: "Pasted build",
+    switch: { label: "Use Kindler plan", use: "kindler", id: "k1" } });
+  BL.paint(doc, snapWith(pasted));
+  assert.equal(swap.textContent, "Use Kindler plan");
+  swap.click();
+  assert.deepEqual(calls[1], ["POST", "/api/build-source", { use: "kindler", id: "k1" }]);
+  BL.paint(doc, snapWith(FITS));
+  assert.equal(swap.hidden, true, "nothing to switch to: no button");
+});
+
+test("a failed switch is said on the polite line, never thrown", async () => {
+  BL.reset();
+  const doc = makeDoc();
+  const said = [];
+  const tabs = { say: (d, t) => said.push(t) };
+  BL.wire(doc, { tabs, api: () => Promise.reject(new Error("HTTP 400")) });
+  BL.paint(doc, snapWith(Object.assign({}, FITS,
+    { switch: { label: "Use Kindler plan", use: "kindler", id: "k1" } })));
+  await BL.useSource({ use: "kindler", id: "k1" });
+  assert.deepEqual(said, ["The build didn't switch. Try again."]);
+  assert.equal(BL.model(snapWith({ state: "fits", switch: { label: "", use: "pasted" } })).switchTo,
+    null, "no words, no switch");
+});

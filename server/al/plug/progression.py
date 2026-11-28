@@ -26,6 +26,11 @@ active spec as the fallback (decision 0089), so the shown spec is the one
 the level follows and the next band's spec's new nodes are due. Without
 theorycraft/specfollow.py it answers None (the active spec, nothing due).
 
+ACTIVE-BUILD-PICK (decision 0096): while the player has put a Kindler
+plan in use (plug/buildsource.py), that tab is the source even with a
+pasted build loaded (the build store then holds the plan's composed
+stage, which is not drawn as a pasted build).
+
 The Kindler source reads the planner with busy=True, so a read never
 starts a PoB focus run (decision 0081 point 4: nothing regenerates by
 itself). Nothing is sent to the game or anywhere else.
@@ -156,8 +161,16 @@ class Holder:
             return False
         self._quick = quick
         self._next_full = now + FULL_EVERY_S
+        # ACTIVE-BUILD-PICK (decision 0096): a Kindler plan the player put in
+        # use is the source, whatever the pasted build; else, as before, the
+        # first Kindler result only while no build is loaded
+        picker = getattr(self.core, "build_source", None)
+        chosen = picker.kindler_tab() if picker is not None else None
+        if chosen is not None:
+            build = None
         tree = self._tree(build)
-        tab = self._kindler_tab() if build is None else None
+        tab = chosen if chosen is not None else (
+            self._kindler_tab() if build is None else None)
         gems = self._gems()
         guide = getattr(st, "zone_guide", None)
         sig = (quick, id(tree), tab, id(gems), id(guide))
