@@ -12,7 +12,8 @@
 // "push_task_ms", "pushes", "task_ms_per_push", "heap_bytes", "issues"}.
 // Node's global WebSocket (Node 22+) is the only client; no npm package.
 import { spawn } from "node:child_process";
-import { appendFileSync, readFileSync } from "node:fs";
+import { appendFileSync, readFileSync, rmSync } from "node:fs";
+import path from "node:path";
 
 const [chromePath, profile, url, logPath, pushesPath] = process.argv.slice(2);
 const blocks = JSON.parse(readFileSync(pushesPath, "utf8"));
@@ -22,20 +23,40 @@ const CI = process.env.AL_CI === "1";
 const IDLE_MS = 5000;     // the idle window (B14: task time per idle second)
 const PUSH_GAP_MS = 600;  // above the feed's 4 frames a second (B8)
 const SETTLE_MS = 1500;   // after the page is live, before any window
-const port = 9500 + Math.floor(Math.random() * 400);
+// TEST-CDP-OS-PORT: the OS picks the DevTools port (--remote-debugging-port=0,
+// read back from this profile's DevToolsActivePort, as play_fit.mjs does).
+// A random port of a range shared with dash_console.mjs let two drivers of a
+// parallel suite pick one port; the second browser could not bind it and
+// its driver attached to the first driver's page.
+const portFile = path.join(profile, "DevToolsActivePort");
+try { rmSync(portFile, { force: true }); } catch { /* none yet */ }
 const chrome = spawn(chromePath, ["--headless=new", "--disable-gpu", "--in-process-gpu",
   "--no-first-run", "--no-default-browser-check", "--disable-extensions",
-  `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, "about:blank"],
+  "--remote-debugging-port=0", `--user-data-dir=${profile}`, "about:blank"],
   { stdio: "ignore" });
 const killer = setTimeout(() => { chrome.kill(); process.exit(3); }, CI ? 180000 : 60000);
 
+// the OS-chosen port of this driver's own browser (never another one's)
+let port = 0;
 let targets = null;
 for (let i = 0; i < 100 && !targets; i++) {
-  try { targets = await (await fetch(`http://127.0.0.1:${port}/json`)).json(); }
-  catch { await sleep(100); }
+  if (chrome.exitCode !== null) { break; }
+  if (!port) {
+    try {
+      const first = readFileSync(portFile, "utf8").split(/\r?\n/)[0].trim();
+      if (/^\d{1,5}$/.test(first) && Number(first) > 0) { port = Number(first); }
+    } catch { /* not written yet */ }
+  }
+  if (port) {
+    try { targets = await (await fetch(`http://127.0.0.1:${port}/json`)).json(); }
+    catch { targets = null; }
+  }
+  if (!targets) { await sleep(100); }
 }
 if (!targets) { chrome.kill(); console.log(JSON.stringify({ error: "no DevTools endpoint" })); process.exit(2); }
-const page = targets.find((t) => t.type === "page");
+const page = targets.find((t) => t.type === "page" &&
+  String(t.webSocketDebuggerUrl).startsWith(`ws://127.0.0.1:${port}/`));
+if (!page) { chrome.kill(); console.log(JSON.stringify({ error: "no page target" })); process.exit(2); }
 const ws = new WebSocket(page.webSocketDebuggerUrl);
 await new Promise((r) => ws.addEventListener("open", r));
 let seq = 0;

@@ -27,6 +27,8 @@
 // The page is a loopback test core; nothing is sent to the game, no
 // clipboard or screen is read and nothing is captured.
 import { spawn } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
 import { createInterface } from "node:readline";
 
 const [chromePath, profile] = process.argv.slice(2);
@@ -37,11 +39,17 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const CI = process.env.AL_CI === "1";
 const MAX_STOPS = 300;
 const out = (o) => process.stdout.write(JSON.stringify(o) + "\n");
-const port = 9100 + Math.floor(Math.random() * 380);
+// TEST-CDP-OS-PORT: the OS picks the DevTools port (--remote-debugging-port=0,
+// read back from this profile's DevToolsActivePort, as play_fit.mjs does).
+// A random port of a range shared with play_fit.mjs let two drivers of a
+// parallel suite pick one port; the second browser could not bind it and
+// its driver attached to the first driver's page.
+const portFile = path.join(profile, "DevToolsActivePort");
+try { fs.rmSync(portFile, { force: true }); } catch { /* none yet */ }
 const chrome = spawn(chromePath, ["--headless=new", "--disable-gpu", "--in-process-gpu",
   "--no-first-run", "--no-default-browser-check", "--disable-extensions",
   "--hide-scrollbars", "--force-device-scale-factor=1",
-  `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, "about:blank"],
+  "--remote-debugging-port=0", `--user-data-dir=${profile}`, "about:blank"],
   { stdio: "ignore" });
 let chromeExit = null;
 // a clean 0 exit may be a hand-off to a running browser: keep polling then
@@ -56,17 +64,30 @@ const killer = setTimeout(() => { out({ error: `watchdog: ${CI ? 540 : 180} s` }
 // and 46079475413 attempt 1, about 35 s into the suite). The poll widens
 // 3x under AL_CI only, and stops at once if Chrome has failed.
 const ENDPOINT_POLLS = CI ? 450 : 150;
+// the OS-chosen port of this driver's own browser (never another one's)
+let port = 0;
 let targets = null;
 for (let i = 0; i < ENDPOINT_POLLS && !targets && chromeExit === null; i++) {
-  try { targets = await (await fetch(`http://127.0.0.1:${port}/json`)).json(); }
-  catch { await sleep(100); }
+  if (!port) {
+    try {
+      const first = fs.readFileSync(portFile, "utf8").split(/\r?\n/)[0].trim();
+      if (/^\d{1,5}$/.test(first) && Number(first) > 0) { port = Number(first); }
+    } catch { /* not written yet */ }
+  }
+  if (port) {
+    try { targets = await (await fetch(`http://127.0.0.1:${port}/json`)).json(); }
+    catch { targets = null; }
+  }
+  if (!targets) { await sleep(100); }
 }
 if (!targets) {
   out({ error: "no DevTools endpoint" + (chromeExit === null
     ? ` after ${ENDPOINT_POLLS} polls` : ` (browser exited: ${chromeExit})`) });
   quit(2);
 }
-const page = targets.find((t) => t.type === "page");
+const page = targets.find((t) => t.type === "page" &&
+  String(t.webSocketDebuggerUrl).startsWith(`ws://127.0.0.1:${port}/`));
+if (!page) { out({ error: "no page target" }); quit(2); }
 const ws = new WebSocket(page.webSocketDebuggerUrl);
 await new Promise((r) => ws.addEventListener("open", r));
 let seq = 0;

@@ -87,6 +87,19 @@ class _Stack:
         pytest.fail(f"timed out waiting for {what}")
 
 
+@pytest.mark.parametrize("which", ["driver", "hidden"])
+def test_the_driver_owns_its_browser(which):
+    """TEST-CDP-OS-PORT: dash_perf.mjs (and the hidden-page script below)
+    drew the same random DevTools port range as dash_console.mjs, so two
+    parallel drivers could attach to one browser; the OS picks the port,
+    read from the driver's own profile."""
+    text = SCRIPT.read_text(encoding="utf-8") if which == "driver" else HIDDEN_SCRIPT
+    assert "--remote-debugging-port=0" in text
+    assert "DevToolsActivePort" in text
+    assert "Math.random" not in text
+    assert "startsWith(`ws://127.0.0.1:${port}/`)" in text
+
+
 @pytest.fixture
 def stack(tmp_path):
     rt = tmp_path / "rt"
@@ -182,24 +195,41 @@ def test_dashboard_elements_task_time_and_heap(stack, tmp_path):
 # protocol client as app/test/cdp/dash_perf.mjs.
 HIDDEN_SCRIPT = r"""
 import { spawn } from "node:child_process";
-import { appendFileSync, readFileSync } from "node:fs";
+import { appendFileSync, readFileSync, rmSync } from "node:fs";
+import path from "node:path";
 const [chromePath, profile, url, logPath, pushesPath] = process.argv.slice(2);
 const blocks = JSON.parse(readFileSync(pushesPath, "utf8"));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const CI = process.env.AL_CI === "1";
-const port = 9500 + Math.floor(Math.random() * 400);
+// TEST-CDP-OS-PORT: the OS picks the DevTools port, read back from this
+// profile's DevToolsActivePort (as app/test/cdp/dash_perf.mjs does).
+const portFile = path.join(profile, "DevToolsActivePort");
+try { rmSync(portFile, { force: true }); } catch { /* none yet */ }
 const chrome = spawn(chromePath, ["--headless=new", "--disable-gpu", "--in-process-gpu",
   "--no-first-run", "--no-default-browser-check", "--disable-extensions",
-  `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, "about:blank"],
+  "--remote-debugging-port=0", `--user-data-dir=${profile}`, "about:blank"],
   { stdio: "ignore" });
 const killer = setTimeout(() => { chrome.kill(); process.exit(3); }, CI ? 180000 : 60000);
+let port = 0;
 let targets = null;
 for (let i = 0; i < 100 && !targets; i++) {
-  try { targets = await (await fetch(`http://127.0.0.1:${port}/json`)).json(); }
-  catch { await sleep(100); }
+  if (chrome.exitCode !== null) { break; }
+  if (!port) {
+    try {
+      const first = readFileSync(portFile, "utf8").split(/\r?\n/)[0].trim();
+      if (/^\d{1,5}$/.test(first) && Number(first) > 0) { port = Number(first); }
+    } catch { /* not written yet */ }
+  }
+  if (port) {
+    try { targets = await (await fetch(`http://127.0.0.1:${port}/json`)).json(); }
+    catch { targets = null; }
+  }
+  if (!targets) { await sleep(100); }
 }
 if (!targets) { chrome.kill(); console.log(JSON.stringify({ error: "no DevTools endpoint" })); process.exit(2); }
-const page = targets.find((t) => t.type === "page");
+const page = targets.find((t) => t.type === "page" &&
+  String(t.webSocketDebuggerUrl).startsWith(`ws://127.0.0.1:${port}/`));
+if (!page) { chrome.kill(); console.log(JSON.stringify({ error: "no page target" })); process.exit(2); }
 const ws = new WebSocket(page.webSocketDebuggerUrl);
 await new Promise((r) => ws.addEventListener("open", r));
 let seq = 0;

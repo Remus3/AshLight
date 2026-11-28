@@ -44,6 +44,17 @@ SCRIPT = ROOT / "app" / "test" / "cdp" / "dash_console.mjs"
 TOKEN = "c" * 48
 
 
+def test_the_driver_owns_its_browser():
+    """TEST-CDP-OS-PORT: dash_console.mjs and dash_perf.mjs drew one random
+    DevTools port range, so two parallel drivers could attach to one
+    browser; the OS picks the port, read from the driver's own profile."""
+    text = SCRIPT.read_text(encoding="utf-8")
+    assert "--remote-debugging-port=0" in text
+    assert "DevToolsActivePort" in text
+    assert "Math.random" not in text
+    assert "startsWith(`ws://127.0.0.1:${port}/`)" in text
+
+
 @pytest.fixture
 def stack(tmp_path):
     rt = tmp_path / "rt"

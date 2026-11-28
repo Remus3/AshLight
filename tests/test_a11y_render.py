@@ -414,6 +414,18 @@ def _audit(page, tab="play"):
     return {"theme": "dark", "size": list(AUDIT_SIZE), "tabs": {tab: page}}
 
 
+def test_the_driver_owns_its_browser():
+    """TEST-CDP-OS-PORT: a random DevTools port from a shared range let two
+    parallel drivers pick one port and attach to the other's browser; the
+    OS picks the port, read from this driver's own profile, and only a page
+    target on that port is driven."""
+    text = SCRIPT.read_text(encoding="utf-8")
+    assert "--remote-debugging-port=0" in text
+    assert "DevToolsActivePort" in text
+    assert "Math.random" not in text
+    assert "startsWith(`ws://127.0.0.1:${port}/`)" in text
+
+
 def test_a_clean_page_has_no_failure():
     assert audit_failures(_audit(_page())) == []
 
