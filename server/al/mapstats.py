@@ -21,7 +21,10 @@ import statistics
 from . import num
 from .text import mapstats as text
 
-MAX_AREAS = 30  # table rows, the most recently opened map first
+# table rows, the most recently opened map first; 20 keeps the snapshot's
+# maps key under its 8 KB budget (tests/test_budget_snapshot.py) with one
+# table published (publish_once)
+MAX_AREAS = 20
 MAX_COUNT = 9999
 MAX_NAME = 48
 
@@ -87,6 +90,21 @@ def table(rows, title):
     return {"areas": areas,
             "text": text.head_text(len(by), title) if areas else "",
             "empty_text": "" if areas else text.EMPTY_TEXT}
+
+
+def publish_once(maps):
+    """The snapshot `maps` part with one per-map table: while the
+    all-sessions ladder carries its by_map (run history on), this
+    session's copy is left out, as every reader (here(), web/runs.js
+    byMap) takes the all-sessions table first. Returns a new dict."""
+    if not isinstance(maps, dict):
+        return maps
+    lad, every = maps.get("ladder"), maps.get("ladder_all")
+    if (isinstance(lad, dict) and "by_map" in lad and isinstance(every, dict)
+            and isinstance(every.get("by_map"), dict)):
+        lad = {k: v for k, v in lad.items() if k != "by_map"}
+        return dict(maps, ladder=lad)
+    return maps
 
 
 def here(maps, area_id):

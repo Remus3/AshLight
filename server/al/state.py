@@ -13,6 +13,7 @@ import time
 from . import acts as acts_mod
 from . import campaign as campaign_mod
 from . import langguard as langguard_mod
+from . import mapstats as mapstats_mod
 from . import overlayview as overlayview_mod
 from . import parser as parser_mod
 from . import pace as pace_mod
@@ -755,8 +756,9 @@ class SessionState(CardsMixin, TradesMixin, CharsMixin, IdleMixin, ViewsMixin):
                 "upgrades": cards["upgrades"],
                 "acts": acts_mod.view(self.acts, self.zone_table, self.area_id,
                                       self.zone, now),
-                "maps": dict(self.maps.view(now),
-                             ladder_all=views["ladder_all"]),
+                # UTIL-MAP-STATS: one per-map table (mapstats.publish_once)
+                "maps": mapstats_mod.publish_once(
+                    dict(self.maps.view(now), ladder_all=views["ladder_all"])),
                 # UTIL-UNDERLEVEL (ruling B): log area level minus player level
                 "underlevel": underlevel_mod.view(
                     self.level, self.area_level, self.area_id, self.zone,

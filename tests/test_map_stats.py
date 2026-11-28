@@ -111,6 +111,9 @@ def test_fixture_log_of_two_maps_run_twice_each(tmp_path):
         assert [(a["area_id"], a["runs"], a["deaths"]) for a in all_st["areas"]] == [
             ("MapBog", 2, 2), ("MapCrypt", 2, 1)]
         assert all_st["text"].startswith("All saved sessions: 2 maps.")
+        # one table in the snapshot: the session copy is left out
+        # (mapstats.publish_once, the 8 KB maps key budget)
+        assert "by_map" not in snap["maps"]["ladder"]
         # the map context card shows this map's line, from the saved table
         block = playcards.context_view(snap)["map"]
         texts = [r["text"] for r in block["rows"]]
