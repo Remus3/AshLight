@@ -920,7 +920,14 @@ of the HALT check.
   User-Agent; GGG is read only at the API Reference and Data Exports
   pages; no agent or tool reads GGG's forum (decision 0050, ruling Q-07).
   Reverses if: the operator amends the floor or GGG documents the forum
-  as a permitted source.
+  as a permitted source. Addendum 2026-11-27 (adjudicator ruling):
+  tools/webfetch.py also reads github.com only at
+  /<owner>/<repo>/wiki[/<page>] and raw.githubusercontent.com only at
+  /<owner>/<repo>/<ref>/<path> ending in .md or .txt; GET, no query, GGG
+  owners refused, encoded and dot segments refused. Reverses if: GitHub
+  asks tools not to read wiki or raw pages automatically, a dive reads a
+  non-docs file through the raw host, or the operator limits dives to the
+  API again.
 - Private runtime files: the core gives its runtime dir and config/local.json an
   explicit ACL (the player, SYSTEM, the local admins group (SID S-1-5-32-544);
   inheritance off) through System32 icacls by absolute path, setup.ps1 does the
@@ -1793,3 +1800,48 @@ of the HALT check.
   queries or pinned versions are needed (then one codeql.yml with amended
   permission rules), or a real non-provider secret leaks past the leak
   sweep (then turn the patterns on).
+- UTIL-SALES-TALLY: the session summary card counts sales, a trade
+  accepted that closed an open trade card by the decision 0019 pairing
+  (cancels and accepts with no open card are not sales), and adds up the
+  closed cards' listed prices per currency (at most 4; a bad currency word
+  or amount is counted but not summed), one line made by text/events.py
+  sales_line and labelled an estimate; the tally is in memory on the play
+  stretch and the saved card keeps counts and sums only, never an item,
+  sender or whisper text, within the existing 20-card bound; no request,
+  file, route or tick (decision 0088, research 0064 G8). Reverses if: a
+  log line names the counterparty or the item (then pair exactly, drop the
+  estimate label), the tally counts purchases or misses sales in normal
+  play, decision 0019 reverses, or the operator rules the line unwanted.
+- TC-SPEC-FOLLOW: a pasted PoB build's tree spec follows the decision 0038
+  character level: specfollow.title_band reads one level band per spec
+  title by a fixed text rule ("Level 30", "lvl 1-30", "70+"; no level, two
+  levels or outside 1 to 100 is no band), the band holding the level with
+  the highest start wins, and no match, no level or a tie without PoB's
+  active spec keeps PoB's active spec (never a guess); the followed XML
+  differs only in <Tree activeSpec> (re-parsed to check), so the tree
+  view, tree link, .build download and calc follow through PoB's own
+  unmodified load (TreeTab:Load SetActiveSpec), bridge.lua and its
+  lockdown unchanged; the share code stays the pasted XML; tick_build
+  returns "spec" on a level-up that moves it; no request, no picker
+  (decision 0089). Reverses if: PoB stops selecting the spec from
+  activeSpec at load (then a bridge command through SetActiveSpec), real
+  guide exports title specs in a shape the rule misreads, players want
+  PoB's active spec kept, or decision 0038's level source changes.
+- REVIEW-GH (decision 0090, operator order 2026-11-27): the upstream
+  watcher source github-page (tools/watch_sources/github_page.py) runs
+  once per 7 days from the main checkout's tick through the dependabot
+  source's gh path and web_data gate, makes four metadata reads (repo,
+  releases, the README commit list, /community/profile; METADATA_TAILS
+  gains only /community/profile; /readme content stays refused) and files
+  REVIEW-GH-<YYYYMMDD>, a review-lane row (not BLOCKED), from
+  ops/loop/watch_rows/github-page.json asking for a six-lens review
+  (UI/UX, visual, readability, comprehension, ease of use, ease of setup)
+  of README.md, docs/guide/, the .github templates, SECURITY.md and
+  CONTRIBUTING.md by the design-reviewer agent, fixed within the README
+  test facts and recorded in docs/reviews/github/<date>.md; the page
+  snapshot rides in the row as short-word tokens, the drift is named, and
+  a quiet week files nothing while an earlier REVIEW-GH row is open.
+  Reverses if: GitHub treats the community profile as non-metadata or
+  drops it, gh leaves the dev host, the weekly rows crowd out row work or
+  are mostly empty (then drift only), or the operator changes the cadence
+  or the lenses.

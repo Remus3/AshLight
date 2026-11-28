@@ -11,6 +11,9 @@ but no file maps an augment to the stat it grants, its value or the slot
 it grants it in. "No permitted source" stands for the repoe-fork route,
 and TC-AUGMENT-WHATIF stays BLOCKED.
 
+Update 2026-11-27: decision 0091 admits PoB-PoE2 src/Data/ModRunes.lua as a
+pinned text source (adjudicator ruling 2026-11-27; row DATA-AUGMENT-POB-TEXT).
+
 One candidate outside that route was seen (section 4): the pinned,
 MIT-licensed Path of Building PoE2 checkout holds `src/Data/ModRunes.lua`,
 which has exactly the missing table. It is not an admitted source today.

@@ -262,6 +262,9 @@ its code (license notes: 0006).
   level, uncut gem advice on the press and gem unlock cards; nine
   proposed rows; refused hosts listed. Verified 2026-11-27
   ([0064-companion-landscape.md](0064-companion-landscape.md))
+- 0065 Augment data source (RES-AUGMENT-DATA) - no permitted repoe-fork
+  source; PoB-PoE2 ModRunes.lua seen, not admitted
+  ([0065-augment-data.md](0065-augment-data.md))
 
 ## Open research (feeds ROADMAP)
 
