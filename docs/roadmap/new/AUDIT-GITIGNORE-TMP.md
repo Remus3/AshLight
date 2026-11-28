@@ -1,1 +1,0 @@
-- [ ] AUDIT-GITIGNORE-TMP (build) Ignore jsonfile temp leftovers of config/local.json (config/local.json.* or *.tmp) and assert with git check-ignore on a synthetic config/local.json.1.ab.tmp. Why: docs/reviews/audit/2026-11-28.md P2-2. ACCEPT: python -m pytest -q tests/test_sidecar_paths.py passes with the new case. ZERO-CLICK: a .gitignore line plus a suite assert.

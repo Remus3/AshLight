@@ -1,1 +1,0 @@
-- [ ] REL-46-P3 (build) Research 0066 P3 hardening: REL-UPDATE-AUTO-IDLE (F4), REL-DOWNLOAD-RESUME (F1), REL-DISK-PRECHECK (F2), REL-DIGEST-PARTIAL (F5), REL-ZIP-BUDGET-WARN (G3), REL-APPLY-WAITING-NOTE (F16), REL-INSTALL-SUMS-PRINT (F6). ACCEPT: each item fixed with its named test, or split into its own row. ZERO-CLICK: see research 0066 section 3.
