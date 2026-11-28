@@ -1,0 +1,1 @@
+ -- done 2026-11-28 (loop; refute 0/3 RULED (session 44 adjudicate: foreign red, merged by hand))

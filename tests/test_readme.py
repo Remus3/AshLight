@@ -66,21 +66,61 @@ def test_sections_present_in_order():
     assert idx[-1] < heads.index("Quick start (Windows)")
 
 
+MARKER = "al-version-stamp"
+
+
+def _fenced_lines(text):
+    """Every line inside a ``` fence (the fence lines themselves left out)."""
+    out, inside = [], False
+    for ln in text.splitlines():
+        if ln.lstrip().startswith("```"):
+            inside = not inside
+            continue
+        if inside:
+            out.append(ln)
+    return out
+
+
 def test_install_pasted_line_is_stamped_with_version():
     sec = _section(_text(README), "Install (Windows)")
     version, repo = _version(), _repo()
-    lines = [ln for ln in sec.splitlines() if "al-version-stamp" in ln]
-    assert len(lines) == 1, lines
-    line = lines[0]
+    lines = sec.splitlines()
+    marks = [i for i, ln in enumerate(lines) if MARKER in ln]
+    assert len(marks) == 1, marks
+    # README-STAMP-HIDDEN (GH-5): the marker is an HTML comment on its own
+    # line above the fence, so the pasted line carries no dev comment
+    mark = lines[marks[0]]
+    assert re.fullmatch(r"<!--\s*" + MARKER + r"\b[^>]*-->", mark), mark
+    assert lines[marks[0] + 1] == "```powershell", lines[marks[0] + 1]
+    line = lines[marks[0] + 2]
     assert line.startswith("irm -UserAgent 'AshLight/%s (installer)' " % version), line
     assert "https://github.com/%s/releases/" % repo in line
-    assert line.split("#")[0].rstrip().endswith("/install.ps1 | iex"), line
-    assert re.search(r"#\s*al-version-stamp\s*$", line), line
+    assert line.endswith("/install.ps1 | iex"), line
+    assert "#" not in line and MARKER not in line, line
     # the stamp check of DEP-03 holds this line to VERSION
     assert re.search(r"(?<![\w.-])" + re.escape(version) + r"(?![\w-]|\.\d)", line)
     # every version in the line is VERSION, so release.py bump swaps them all
     found = re.findall(r"\d+\.\d+\.\d+(?:-rc\.\d+)?", line)
     assert found and set(found) == {version}, found
+
+
+def test_no_fenced_readme_line_holds_the_stamp_marker():
+    fenced = _fenced_lines(_text(README))
+    assert fenced
+    assert [ln for ln in fenced if MARKER in ln] == []
+
+
+def test_release_tool_finds_the_install_line_by_the_marker_above():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "rel_version_readme", str(ROOT / "tools" / "rel_version.py"))
+    rv = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(rv)
+    hits = [(n, ln) for rel, n, ln in rv.stamp_lines(ROOT) if rel == "README.md"]
+    assert len(hits) == 1, hits
+    n, line = hits[0]
+    assert line.startswith("irm -UserAgent 'AshLight/"), line
+    assert _text(README).split("\n")[n - 1] == line
 
 
 def test_install_names_the_verified_zip_route():

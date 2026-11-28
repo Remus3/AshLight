@@ -234,6 +234,17 @@ def test_stamp_marker_lines_must_hold_the_version():
         ra.stamp_installer(b"$v = '1.2.2'  # " + marker + b"\n", "1.2.3")
 
 
+def test_stamp_marker_line_above_points_at_the_next_line():
+    # README-STAMP-HIDDEN: a whole-line marker comment stamps the next line
+    marker = b"al-version-" + b"stamp"  # split: rel_version scans tracked files
+    good = b"# " + marker + b": the line below\n\n$v = '1.2.3'\n"
+    assert ra.stamp_installer(good, "1.2.3") == good
+    with pytest.raises(ra.AssetError, match="does not hold 1.2.3"):
+        ra.stamp_installer(b"# " + marker + b"\n$v = '1.2.2'\n", "1.2.3")
+    with pytest.raises(ra.AssetError, match="points at no line"):
+        ra.stamp_installer(b"$v = 1\n# " + marker + b"\n", "1.2.3")
+
+
 # --- notes and SBOM --------------------------------------------------------
 
 def test_notes_equal_the_docs_releases_file(tmp_path):

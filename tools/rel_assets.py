@@ -226,14 +226,22 @@ def runtime_pins(runtime_data, electron_data):
 def stamp_installer(data, version):
     """The bootstrap bytes with VERSION_TOKEN replaced by the version. A
     bootstrap without the token must carry stamp lines (tools/rel_version.py
-    marker) that already hold the version; one with neither refuses."""
+    marker, on the line itself or as a whole-line comment above it) that
+    already hold the version; one with neither refuses."""
     try:
         text = data.decode("ascii")
     except UnicodeDecodeError:
         raise AssetError("%s is not ASCII" % INSTALLER_REL)
     if VERSION_TOKEN in text:
         return text.replace(VERSION_TOKEN, version).encode("ascii")
-    stamps = [ln for ln in text.split("\n") if _STAMP_LINE.search(ln)]
+    if not _STAMP_LINE.search(text):
+        raise AssetError("%s has no version stamp point (%s or a %s line)"
+                         % (INSTALLER_REL, VERSION_TOKEN, STAMP_MARKER))
+    # the one stamp rule, including a marker line above its target
+    try:
+        stamps = [ln for _n, ln in _load("rel_version").stamp_targets(text)]
+    except ValueError as exc:
+        raise AssetError("%s: %s" % (INSTALLER_REL, exc))
     if not stamps:
         raise AssetError("%s has no version stamp point (%s or a %s line)"
                          % (INSTALLER_REL, VERSION_TOKEN, STAMP_MARKER))

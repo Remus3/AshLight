@@ -20,8 +20,12 @@ The one source is VERSION in server/al/__init__.py. Version-bearing places:
     stamped lines               every tracked line carrying the stamp marker
                                 (MARKER below) as a comment, right after its
                                 opener (<!--, #, // or ;); the line must hold
-                                VERSION. Any other mention of the marker is
-                                prose, not a stamp.
+                                VERSION. A line that is only the marker
+                                comment stamps the next line that is not
+                                blank or a code fence instead (the README
+                                install line, README-STAMP-HIDDEN). Any
+                                other mention of the marker is prose, not
+                                a stamp.
 
 A bump also writes the notes stub docs/releases/X.Y.Z.md carrying STUB_MARK
 (the folder is made on first bump). Versions are SemVer X.Y.Z with an
@@ -51,6 +55,42 @@ _INIT_LINE = re.compile(r'^VERSION = "([^"]*)"$', re.M)
 _TOP_VERSION = re.compile(r'^  "version": "([^"]*)",?$', re.M)
 _ROOT_PKG_VERSION = re.compile(r'^      "version": "([^"]*)",?$', re.M)
 _STAMP_RE = re.compile(r"(?:<!--|#|//|;)[ \t]*" + re.escape(MARKER) + r"(?![\w-])")
+# README-STAMP-HIDDEN: a line that is only the marker comment points at the
+# next line that is not blank and not a code fence (``` or ~~~).
+_POINTER_RE = re.compile(r"^[ \t]*(?:<!--[ \t]*" + re.escape(MARKER)
+                         + r"(?![\w-])[^>]*-->|(?:#|//|;)[ \t]*"
+                         + re.escape(MARKER) + r"(?![\w-])[^\n]*)[ \t]*$")
+_FENCE_RE = re.compile(r"^[ \t]*(?:```|~~~)")
+
+
+def stamp_targets(text):
+    """[(1-based line number, line text)] of every stamped line in `text`.
+
+    A line carrying the marker after a comment opener is stamped itself. A
+    line that is only the marker comment (README-STAMP-HIDDEN) stamps the
+    next line that is not blank and not a fence line instead, so a pasted
+    command needs no trailing dev comment. Raises VersionError("line <n>:
+    stamp marker points at no line") when nothing follows a marker line.
+    """
+    lines = text.split("\n")
+    hits, seen = [], set()
+    for i, line in enumerate(lines):
+        if not _STAMP_RE.search(line):
+            continue
+        j = i
+        if _POINTER_RE.match(line):
+            j, fences = i + 1, 0
+            while j < len(lines) and (not lines[j].strip()
+                                      or _FENCE_RE.match(lines[j])):
+                fences += 1 if lines[j].strip() else 0
+                j += 1
+            if j >= len(lines) or fences > 1:
+                raise VersionError("line %d: stamp marker points at no line"
+                                   % (i + 1))
+        if j not in seen:
+            seen.add(j)
+            hits.append((j + 1, lines[j]))
+    return hits
 
 
 class VersionError(ValueError):
@@ -162,9 +202,11 @@ def stamp_lines(root=ROOT):
         if MARKER.encode("ascii") not in data:
             continue
         text = data.decode("utf-8", "replace")
-        for n, line in enumerate(text.split("\n"), 1):
-            if is_stamp_line(line):
-                hits.append((rel, n, line))
+        try:
+            targets = stamp_targets(text)
+        except VersionError as exc:
+            raise VersionError("%s:%s" % (rel, str(exc)[len("line "):]))
+        hits.extend((rel, n, line) for n, line in targets)
     return hits
 
 

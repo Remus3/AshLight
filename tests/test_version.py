@@ -134,6 +134,46 @@ def test_stamp_scan_and_prose_mentions(tmp_path):
     assert rv.check(repo)
 
 
+def test_marker_line_above_a_fence_stamps_the_fenced_line(tmp_path):
+    # README-STAMP-HIDDEN: a whole-line marker comment points at the next
+    # line that is not blank or a fence, so the pasted line stays clean
+    marker = rv.MARKER
+    version = rv.source_version(ROOT)
+    readme = ("intro\n<!-- %s: the line below -->\n```powershell\n"
+              "irm -UserAgent 'X/%s (installer)' https://h/install.ps1 | iex\n"
+              "```\nkeep %s here\n" % (marker, version, version))
+    repo = _scratch(tmp_path, {"README.md": readme})
+    hits = rv.stamp_lines(repo)
+    assert [(r, n) for r, n, _ in hits] == [("README.md", 4)]
+    assert marker not in hits[0][2]
+    assert rv.check(repo) == []
+    (repo / "README.md").write_text(readme.replace("X/%s" % version, "X/0.0.9"),
+                                    encoding="utf-8", newline="\n")
+    problems = rv.check(repo)
+    assert problems and "README.md:4" in problems[0], problems
+
+
+def test_marker_line_with_nothing_below_is_a_problem(tmp_path):
+    repo = _scratch(tmp_path, {"README.md": "x\n<!-- %s -->\n\n```\n" % rv.MARKER})
+    problems = rv.check(repo)
+    assert problems and "README.md:2" in problems[0], problems
+
+
+def test_bump_rewrites_the_line_below_the_marker(tmp_path):
+    old = rv.source_version(ROOT)
+    marker = rv.MARKER
+    readme = ("<!-- %s -->\n```powershell\nirm 'X/%s' | iex\n```\nkeep %s\n"
+              % (marker, old, old))
+    repo = _scratch(tmp_path, {"README.md": readme})
+    new = "0.2.0-rc.0"
+    proc = _run("bump", new, "--root", str(repo))
+    assert proc.returncode == 0, proc.stderr
+    assert (repo / "README.md").read_text(encoding="utf-8") == (
+        "<!-- %s -->\n```powershell\nirm 'X/%s' | iex\n```\nkeep %s\n"
+        % (marker, new, old))
+    assert rv.check(repo) == []
+
+
 def test_semver_order():
     assert rv.compare("0.2.0-rc.1", "0.2.0") == -1
     assert rv.compare("0.2.0", "0.2.0-rc.1") == 1

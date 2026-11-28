@@ -131,8 +131,9 @@ The overlay: a small box in the top-left corner of the screen.
 Open Windows PowerShell as yourself (not with "Run as admin") and paste this
 one line:
 
+<!-- al-version-stamp: release.py bump writes the version into the line below -->
 ```powershell
-irm -UserAgent 'AshLight/0.1.0 (installer)' https://github.com/Remus3/AshLight/releases/latest/download/install.ps1 | iex   # al-version-stamp
+irm -UserAgent 'AshLight/0.1.0 (installer)' https://github.com/Remus3/AshLight/releases/latest/download/install.ps1 | iex
 ```
 
 It downloads the small installer of the latest release and runs it. The
