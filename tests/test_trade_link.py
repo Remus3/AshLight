@@ -134,7 +134,8 @@ def test_no_pathofexile_host_in_any_webfetch_allowlist():
         if where == ggg:
             continue
         for h in hosts:
-            assert not str(h).lower().rstrip(".").endswith("pathofexile.com"), (where, h)
+            labels = str(h).lower().rstrip(".").split(".")
+            assert labels[-2:] != ["pathofexile", "com"], (where, h)
     # trade paths stay refused on both hosts, by webfetch and by gggapi
     from server.al import gggapi, webfetch
     client = gggapi.Client("ashlight-test", "contact placeholder",

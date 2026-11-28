@@ -22,7 +22,9 @@ _LINE_RX = re.compile(r"^(FAILED|ERROR) (\S+?)(?: - .*)?\s*$", re.M)
 # the final counts line, with or without the `===` frame of a non -q run
 _FAILED_N_RX = re.compile(r"\b(\d+) failed\b")
 _ERROR_N_RX = re.compile(r"\b(\d+) errors?\b")
-_SUMMARY_RX = re.compile(r"^[= ]*(?:\d+ \w+(?:, )?)+.* in [0-9.]+s\b.*$", re.M)
+# items are joined by ", " so a line splits one way only (CodeQL py/redos)
+_SUMMARY_RX = re.compile(
+    r"^[= ]*\d+ \w+(?:, \d+ \w+)*.* in [0-9.]+s\b.*$", re.M)
 
 
 def _norm(path):

@@ -793,7 +793,7 @@ def test_release_n_to_n1_needs_no_click_and_stays_on_the_github_hosts(
     assert payload.check_manifest(web_home / "app" / VER_N1) == []
     assert homemod.read_marker(web_home)["version"] == VER_N
     hosts = {urllib.parse.urlsplit(u).hostname for u in opener.urls}
-    assert hosts <= GH_HOSTS and "github.com" in hosts
+    assert hosts <= GH_HOSTS and {"github.com"} <= hosts
     assert {h for h, _p, _hd in gh.seen} == hosts
     for _host, _path, headers in gh.seen:
         assert headers["user-agent"] == payload.user_agent()

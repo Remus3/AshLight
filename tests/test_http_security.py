@@ -118,9 +118,12 @@ def test_security_headers_on_dashboard(srv):
 def test_dashboard_has_no_inline_script():
     html = srcpaths.index_html()
     import re
-    for tag in re.findall(r"<script[^>]*>", html):
-        assert "src=" in tag
-    assert re.search(r"<script[^>]*>\s*[^<\s]", html) is None
+    import htmlscan
+    found = htmlscan.scripts(html)
+    assert found, "no script element parsed: the scan is broken"
+    for attrs, body in found:
+        assert attrs.get("src"), attrs
+        assert body.strip() == "", body[:60]
     for tag in re.findall(r"<[^>]+>", html):
         assert re.search(r"\son[a-z]+\s*=", tag) is None, tag
     assert "style=" not in html

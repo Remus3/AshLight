@@ -1,1 +1,1 @@
-{"security_and_analysis": {"secret_scanning": {"status": "enabled"}, "secret_scanning_push_protection": {"status": "enabled"}}}
+{"security_and_analysis": {"secret_scanning": {"status": "enabled"}, "secret_scanning_push_protection": {"status": "enabled"}, "secret_scanning_non_provider_patterns": {"status": "disabled"}, "secret_scanning_validity_checks": {"status": "disabled"}}, "code_scanning_default_setup": {"state": "configured", "query_suite": "default", "languages": ["actions", "javascript-typescript", "python"], "required_check": false, "workflow_file": false}}
