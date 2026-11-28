@@ -952,6 +952,8 @@ class Tick(InboxMixin, MergeMixin, ReviewMixin, WorkMixin):
         for h in skipped:
             if not h.get("reason"):
                 add(h["id"], h["text"], f"{h['skip']}-only, skipped", None)
+        for row in self.dive_skip_rows(listed):  # LOOP-DIVE-OFFLINE-SKIP: one line
+            add(*row)
         return out
 
     def status_parked(self, now):
@@ -1028,10 +1030,8 @@ class Tick(InboxMixin, MergeMixin, ReviewMixin, WorkMixin):
                 work.append(dd)
                 self.step("idle: deep-dive")
                 self.dispatch([dd])
-            elif getattr(self, "dive_backed_off", False):
-                self.step("idle: deep-dive backed off to weekly (3 dives, 0 plans)")
             else:
-                self.step("idle: deep-dive already done today")
+                self.step(self.dive_idle_note())
         loop_steps.lines("post_work", self, rows, work, skipped)
         self.launch_push()
         lines = loop_steps.rows(self, self.checklist(rows, work, skipped))
