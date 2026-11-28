@@ -5,63 +5,29 @@
   <img src="assets/brand/readme-hero-light.png" width="1280" alt="AshLight: a live, glanceable companion for Path of Exile 2">
 </picture>
 
-A second-screen dashboard and quiet overlay for your Path of Exile 2 session.
+AshLight is a free, unofficial second-screen dashboard and small overlay for
+Path of Exile 2 on Windows. It reads the game's own log file (`Client.txt`)
+and shows the zone you are in and your time there, your level, deaths, and
+incoming whispers and trade requests, and it checks items against your Path of
+Building build.
 
-AshLight follows the game's own log file (`Client.txt`) and shows the few things
-worth a glance: the zone you are in and how long you have been there, your
-character level, deaths this session, session time, and incoming whispers and
-trade requests. It also reads your Path of Building build and checks items
-against it. It runs on your own computer, on `127.0.0.1` only.
+It is for players who want a live view on a second screen without any tool
+touching the game. It runs on your own computer, on `127.0.0.1` only, never
+touches the game process and never sends input to the game.
 
-## What AshLight never does
+Status: no release yet. [Install from source](#quick-start-windows) takes
+about 5 minutes. See also [what AshLight never does](#what-ashlight-never-does).
 
-- It never reads or writes game memory, injects anything, hooks graphics, or
-  touches network traffic.
-- It never modifies any game file and never writes into your game folders: a
-  file it makes for the game (a `.build` guide, a loot filter add-on) goes to
-  your browser's downloads, and you move it yourself.
-- It never sends input to the game: no keys, no mouse, no chat, no macros, not
-  even a synthesized copy shortcut. You play; AshLight only reads.
-- It reads `Client.txt` only after you say yes, and shows a visible
-  "reading Client.txt" indicator while it does. You can stop it at any time.
-- It reads the clipboard once each time you press the item check hotkey, never
-  on a timer and never by watching the clipboard. It writes to the clipboard
-  only when you click a Copy button.
-- It never asks for or stores your account, password or session cookie.
+**Links**
 
-## What it shows
-
-On the dashboard (the overlay shows the first three in a small corner box):
-
-- Zone, zone timer, level, deaths and session time, live from the log.
-- Trade requests and whispers, cleared after 10 minutes or when the trade
-  closes.
-- Item check: hover an item, press Ctrl+C, then the item check hotkey
-  (Alt+Shift+E); a verdict against your build for 20 seconds, with editable
-  stat weights, an upgrade search and a trade-site link you open yourself.
-- Price: the item's poe.ninja value and its price against its points (web
-  data on).
-- Act times and zone levels for the campaign, maps run with time and deaths,
-  a death recap, run history with your best act times, and a last-session
-  summary.
-- Recent events: zones, level-ups, deaths and whispers.
-- Build: paste a Path of Building code or share link to see key stats, damage
-  by skill, gear, skills, passive tree and notes; copy the code back, or save a
-  `.build` file the game can load as a guide.
-- Build health: defence and sustain numbers and what to look for next on each
-  slot.
-- Search strings for the in-game stash and vendor search, and a loot filter
-  add-on that enlarges rare drops of your build's item bases.
-- Prices and web data: currency values, price movers this week, and a price
-  watch list (web data on).
-- Tools: overlay position and size, moving settings to another computer, and
-  suggested graphics settings for this computer (you apply them in game).
-
-The source lives at https://github.com/Remus3/AshLight; clone it with
-`git clone https://github.com/Remus3/AshLight.git`.
-
-AshLight releases appear at github.com/Remus3/AshLight/releases. The player guide (download, quick
-start, common issues, FAQ) is in [docs/guide/](docs/guide/download.md).
+- Player guide: [download](docs/guide/download.md),
+  [quick start](docs/guide/quick-start.md),
+  [common issues](docs/guide/common-issues.md) and [FAQ](docs/guide/faq.md).
+- Releases: none yet. AshLight releases appear at
+  github.com/Remus3/AshLight/releases.
+- Source: [github.com/Remus3/AshLight](https://github.com/Remus3/AshLight);
+  security policy in [SECURITY.md](SECURITY.md); how to help in
+  [CONTRIBUTING.md](CONTRIBUTING.md).
 
 <!-- shots:begin -->
 ## Screenshots
@@ -99,11 +65,52 @@ footage, no game art). They follow your light or dark setting.
 </picture>
 <!-- shots:end -->
 
+## What AshLight never does
+
+- It never reads or writes game memory, injects anything, hooks graphics, or
+  touches network traffic.
+- It never modifies any game file and never writes into your game folders: a
+  file it makes for the game (a `.build` guide, a loot filter add-on) goes to
+  your browser's downloads, and you move it yourself.
+- It never sends input to the game: no keys, no mouse, no chat, no macros, not
+  even a synthesized copy shortcut. You play; AshLight only reads.
+- It reads `Client.txt` only after you say yes, and shows a visible
+  "reading Client.txt" indicator while it does. You can stop it at any time.
+- It reads the clipboard once each time you press the item check hotkey, never
+  on a timer and never by watching the clipboard. It writes to the clipboard
+  only when you click a Copy button.
+- It never asks for or stores your account, password or session cookie.
+
+How these promises are checked: [SECURITY.md](SECURITY.md) and
+[Verify your download](#verify-your-download).
+
+## What it shows
+
+- Live: zone, zone timer, level, deaths and session time from the log, plus
+  trade requests and whispers; the overlay shows the first ones in a small
+  corner box.
+- Item check: hover an item, press Ctrl+C, then the item check hotkey
+  (Alt+Shift+E) for a verdict against your build, with an upgrade search and
+  a trade-site link you open yourself.
+- Build: paste a Path of Building code or share link to see key stats, gear,
+  skills and the passive tree, or save a `.build` guide file the game can load.
+- Run: act times and zone levels, maps run, a death recap, run history with
+  your best act times and a last-session summary.
+- Prices (web data on): poe.ninja values for items and currency, price movers
+  and a price watch list.
+
+## Get started
+
+1. Have Windows 10 or 11 and Python (the version is in the quick start);
+   Node.js is optional, for the desktop client and the in-game overlay.
+2. Get the source: `git clone https://github.com/Remus3/AshLight.git`
+3. Run the one setup command in [Quick start (Windows)](#quick-start-windows),
+   then open AshLight from its Start Menu shortcut.
+
 ## Install (Windows)
 
-Releases: none yet, so the line below does not work today. Install from
-source instead (see the quick start below). The steps here apply from the
-first release on.
+Releases: none yet, so the line below does not work today; use
+[Get started](#get-started) until then.
 
 Open Windows PowerShell as yourself (not with "Run as admin") and paste this
 one line:
@@ -157,7 +164,10 @@ without opening AshLight.
 Automatic update is not finished yet. For now, update by hand: paste the
 install line again. It upgrades in place and keeps your settings and data.
 The release-files route above, with the new release's files, does the
-same.
+same. From a source copy, see Update under the quick start.
+
+<details>
+<summary>When automatic update ships</summary>
 
 When automatic update ships, it works only with web data on. An installed
 copy will look for a newer release once a day and download it. It will
@@ -169,7 +179,7 @@ AshLight goes back to the previous one by itself. Test versions
 (pre-releases) are never offered. With web data off, AshLight checks
 nothing.
 
-From a source copy, see Update under the quick start.
+</details>
 
 ## Uninstall
 
@@ -214,6 +224,8 @@ two; `SECURITY.md` says what it does verify.
 
 ## Windows may warn
 
+Only needed once a release exists; a source install shows none of these.
+
 AshLight is not code-signed yet, so Windows may show one of these:
 
 - PowerShell execution policy: the pasted line runs without touching it.
@@ -240,10 +252,11 @@ AshLight is not code-signed yet, so Windows may show one of these:
 
 ## Quick start (Windows)
 
-Needs Python 3.11 or newer (take 3.13 or newer for a new install: python.org
-has no Windows installer for 3.11 or 3.12 any more). Node.js 22.12.0 or newer
-is only needed for the optional overlay. Releases: none yet, so AshLight runs
-from a copy of this repository's source. One command sets it up:
+Needs Python 3.11 or newer. For a new install take 3.13 or newer, because
+python.org has no Windows installer for 3.11 or 3.12 any more.
+Node.js 22.12.0 or newer is only needed for the optional overlay. Releases: none
+yet, so AshLight runs from a copy of this repository's source. One command sets
+it up:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\setup.ps1   # checks, folders, desktop client packages, shortcut
@@ -366,24 +379,24 @@ left in place; delete it too if you no longer want it.
 
 - The first time, the dashboard asks before reading `Client.txt` and names the
   file and what is derived from it. Your answer is stored locally.
-- Apart from the install you start yourself, nothing leaves your computer
-  unless you turn on web data (off by default). With it on, AshLight
-  fetches currency and item prices from poe.ninja at most once an hour and a build share link (pobb.in, pastebin) once when you paste
-  it; every request names AshLight and its version and carries no cookie or
-  account id.
-- Game data (zone levels, item bases and mods, the passive tree) also needs
-  web data. Once it is on, AshLight downloads that data by itself when it
-  starts, and again when the copy is a day old: a small hidden helper at low
-  priority fetches the public community export (repoe-fork) and, with your
-  contact set, GGG's passive tree export into AshLight's own folder on this
-  computer. You do
-  nothing else, and nothing is fetched while web data is off. It never asks the trade site anything: the trade link after an
-  item check opens in your own browser only when you click it.
-- When automatic update ships (see Update), an installed copy with web
-  data on will read the project's latest release on GitHub once a day, to
-  learn whether a newer version is out. It is not made yet. The request
-  will name AshLight and its version and carry no contact, cookie or
-  account id; with web data off it is never made.
+- Apart from the install you start yourself, nothing leaves your computer unless
+  you turn on web data (off by default). With it on, AshLight fetches currency
+  and item prices from poe.ninja at most once an hour and a build share link
+  (pobb.in, pastebin) once when you paste it; every request names AshLight and
+  its version and carries no cookie or account id.
+- Game data (zone levels, item bases and mods, the passive tree) also needs web
+  data. Once it is on, AshLight downloads that data by itself when it starts,
+  and again when the copy is a day old: a small hidden helper at low priority
+  fetches the public community export (repoe-fork) and, with your contact set,
+  GGG's passive tree export into AshLight's own folder on this computer. You do
+  nothing else, and nothing is fetched while web data is off.
+- It never asks the trade site anything: the trade link after an item check
+  opens in your own browser only when you click it.
+- When automatic update ships (see Update), an installed copy with web data on
+  will read the project's latest release on GitHub once a day, to learn whether
+  a newer version is out. It is not made yet. The request will name AshLight and
+  its version and carry no contact, cookie or account id; with web data off it
+  is never made.
 - The server binds `127.0.0.1` only; every API call needs the per-start token;
   the Host and Origin headers are checked; the dashboard runs under a strict
   Content Security Policy.
@@ -392,6 +405,8 @@ left in place; delete it too if you no longer want it.
   kept on this computer only while its box is ticked, and can be cleared.
 
 ## Budgets
+
+For developers: the performance budgets the test suite enforces.
 
 AshLight must never cost you frames. The tested budgets:
 
@@ -403,7 +418,15 @@ AshLight must never cost you frames. The tested budgets:
   changes; hardware acceleration off; idle CPU under 1 percent of one core;
   under 250 MB for all its processes.
 
+## Contributing
+
+Issues are welcome. Pull requests are proposals; nothing is merged on GitHub,
+and the maintainer re-applies accepted changes locally. See
+[CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## How it works
+
+For developers: how the core, the dashboard and the overlay fit together.
 
 The core is a small Python program using only the standard library. A tailer
 polls the size of `Client.txt` four times a second and reads only the new
@@ -449,4 +472,4 @@ Path of Exile is a trademark of Grinding Gear Games.
 
 ## License
 
-Apache-2.0. See `LICENSE` and `NOTICE`.
+Apache-2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
