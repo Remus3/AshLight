@@ -51,7 +51,8 @@ def _stage(out):
     digests["SHA256SUMS.txt"] = sums_sha
     (out / "stage.json").write_text(json.dumps({
         "version": VERSION, "commit": HEAD, "verdict": "PASS",
-        "sums_sha256": sums_sha, "created": "2026-11-21T10:00:00Z"}),
+        "sums_sha256": sums_sha, "created": "2026-11-21T10:00:00Z",
+        "build_python": rp.rb.pinned_python()}),
         encoding="ascii")
     return digests
 

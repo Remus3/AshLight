@@ -110,3 +110,52 @@ pinned Python differs from the staged zip and the payload fits the
 budget stored. The tag rule reverses if the operator wants final
 versions buildable only from a tag (then `stage` builds with a pre-tag
 flag).
+
+## Amendment 2026-11-28 (REL-BUILD-PYTHON-PIN)
+
+Cause: the v0.2.0-rc.1 tag (commit 962437ec) failed CI's release run at
+"compare SHA256SUMS.txt with the tag message sums-sha256" (tag 1fd13235...,
+rebuild 361218b4...). The local stage ran on the dev host's default CPython
+3.14.4, whose zlib is zlib-ng (`zlib.ZLIB_RUNTIME_VERSION` 1.3.1.zlib-ng);
+CI rebuilt on CPython 3.11.9 with stock zlib 1.3.1, so the app zip's deflate
+bytes differed. A local build of the tag on 3.11.9 reproduces CI's sums.
+The tag stays as it is (a tag is never moved or deleted); 0.2.0-rc.2 is the
+next candidate.
+
+Decision: the release build is pinned to one exact CPython version, the
+`python-version:` of .github/workflows/release.yml (the one source;
+rel_build.pinned_python() reads it, tests/test_release_tool.py asserts the
+two agree and tests/test_workflows.py keeps it one exact X.Y.Z).
+`release.py build` on another interpreter re-runs itself under the
+matching `py -X.Y` launcher entry when that entry reports exactly the pin,
+else refuses naming both versions. `release.py stage` keeps its suite and
+node steps on the dev interpreter and runs its two builds (and the round
+trip's N-1 build) on the pin: in process when it is the pin, else as a
+`release.py build` child under `py -X.Y`, else the builds step fails with
+the named refusal. stage.json records `build_python`; publish and the
+pre-push tag check refuse a stage report whose `build_python` is not the
+pin. build() itself carries no guard (tests call it in process), and
+AL_REL_ANY_PYTHON=1 lifts the command-line guard only inside a pytest run.
+
+Alternatives:
+- Stored (uncompressed) entries: refused again; the zip would pass the
+  2 MB max_zip_bytes budget (above), and a format change to dodge a
+  toolchain pin hides the real dependency.
+- A pure-Python deflate in the tool: byte-stable by construction but a
+  large, slow, new piece of code to own; rejected.
+- Pinning on zlib.ZLIB_RUNTIME_VERSION instead of the Python version:
+  narrower, but zipfile's own header and deflate call paths also move
+  between Python versions; the exact interpreter that CI uses is the
+  whole toolchain and is what release.yml already states.
+- Re-running the whole stage under 3.11.9: the dev host's 3.11 has no
+  pytest, and the suite's interpreter is not what the sums depend on.
+
+Why: CI's rebuild is the release's trust anchor; a local stage that
+cannot match it can never publish. One pinned interpreter, read from the
+workflow, makes a mismatch a named refusal before the tag instead of a
+red release run after it.
+
+Reverses if: CI moves to another interpreter (the pin follows release.yml
+by itself), a pure-stdlib deflate becomes byte-stable across CPython
+versions (then drop the pin), or the dev host cannot keep a `py -X.Y`
+entry of the pin (then stage on a CI-built artifact).

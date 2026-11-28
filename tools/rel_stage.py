@@ -16,7 +16,11 @@ first refusal stops the run and every later step reads `skipped`:
                 python tools/suite_run.py
     4 node      npm test --prefix app
     5 builds    two builds of HEAD (tools/rel_build.py build) into two
-                scratch folders; every asset must be byte-identical
+                scratch folders; every asset must be byte-identical. The
+                builds run on the CPython version release.yml pins (in
+                process when this is it, else `py -X.Y` as a child, else
+                the step fails naming both versions; decision 0064
+                amendment 2026-11-28), so the sums match CI's rebuild
     6 sweep     tools/leak_sweep.py over the staged tree as written: every
                 app zip member and every asset, names and bytes
     7 roundtrip plan step (6), REL-STAGE-ROUNDTRIP: a scratch home under
@@ -51,7 +55,8 @@ On PASS the first build's assets move into the release folder
 <sidecar>/Build/release/<version>/ (or --out). Every run, PASS or FAIL,
 writes <out>/stage.json: schema, version, commit, verdict, steps (name,
 status pass | fail | skipped, detail), assets (name, size, sha256),
-sums_sha256 (of SHA256SUMS.txt), created (the injected clock, UTC) and
+sums_sha256 (of SHA256SUMS.txt), build_python (the pinned CPython version
+the builds ran on; null for an injected builder), created (the injected clock, UTC) and
 sandbox ("skipped" without --sandbox, else the sandbox step's status). A FAIL leaves the tree and every release asset as they were: the
 scratch build folders are removed and nothing moves.
 
@@ -214,6 +219,65 @@ def step_builds(ctx):
     ctx["staged"] = first
     ctx["zip_name"] = results[0]["zip"].name
     return "two identical builds, %d asset(s)" % len(first)
+
+
+def child_build(exe):
+    """A build() stand-in that runs `release.py build` under `exe` (the
+    pinned CPython) at below-normal priority; same refusals as BuildError."""
+    def run_build(root=ROOT, out=None, ref=None, tag=None):
+        argv = [exe, str(TOOLS / "release.py"), "build", "--root", str(root),
+                "--out", str(out)]
+        if ref is not None:
+            argv += ["--ref", ref]
+        if tag is not None:
+            argv += ["--tag", tag]
+        env = dict(os.environ)
+        env[rb.REEXEC_ENV] = "1"
+        kw = {"cwd": str(ROOT), "env": env, "capture_output": True,
+              "text": True, "stdin": subprocess.DEVNULL, "check": False}
+        if sys.platform == "win32":
+            kw["creationflags"] = BELOW_NORMAL
+        try:
+            proc = subprocess.run(argv, **kw)
+        except OSError as exc:
+            raise rb.BuildError("the pinned Python could not start: %s" % exc)
+        if proc.returncode != 0:
+            lines = [ln for ln in (proc.stderr or "").splitlines() if ln.strip()]
+            text = lines[-1] if lines else "exit %s" % proc.returncode
+            if text.startswith("build: refused: "):
+                text = text[len("build: refused: "):]
+            raise rb.BuildError(text)
+        try:
+            doc = json.loads((Path(out) / "release.json").read_text(encoding="utf-8"))
+            version = doc["version"]
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            raise rb.BuildError("the child build wrote no readable "
+                                "release.json: %s" % exc)
+        return {"version": version, "out": Path(out),
+                "zip": Path(out) / rb.zip_name(version)}
+    return run_build
+
+
+def pinned_build():
+    """(build callable, pinned version or None): rel_build.build when this
+    interpreter is the release.yml pin, a child build under `py -X.Y` when
+    that is the pin, else a builder that refuses naming both versions."""
+    try:
+        pin = rb.pinned_python()
+    except rb.BuildError as exc:
+        reason = str(exc)
+        pin = None
+    else:
+        if rb.python_matches(pin):
+            return rb.build, pin
+        exe = rb.find_python(pin)
+        if exe is not None:
+            return child_build(exe), pin
+        reason = rb.python_refusal(pin)
+
+    def refuse(**_kw):
+        raise rb.BuildError(reason)
+    return refuse, pin
 
 
 def staged_tree(assets, zip_name):
@@ -1174,9 +1238,12 @@ def stage(version, sandbox=False, run=None, now=None, root=ROOT, out=None,
     flag, else that step's status."""
     root = Path(root)
     out = Path(out) if out is not None else rb.default_out(version)
+    build_python = None
+    if build is None:
+        build, build_python = pinned_build()
     ctx = {
         "root": root, "version": version, "sandbox": bool(sandbox),
-        "run": run or default_run, "build": build or rb.build,
+        "run": run or default_run, "build": build,
         "owner": owner or os.environ.get(OWNER_ENV) or DEFAULT_OWNER,
         "scratch": out / SCRATCH_NAME, "notes": [], "staged": None,
         "zip_name": None, "roundtrip": roundtrip or default_roundtrip,
@@ -1215,7 +1282,8 @@ def stage(version, sandbox=False, run=None, now=None, root=ROOT, out=None,
     report = {
         "schema": SCHEMA, "version": version, "commit": commit,
         "verdict": verdict, "steps": rows, "assets": assets,
-        "sums_sha256": sums_sha, "created": created_text(clock()),
+        "sums_sha256": sums_sha, "build_python": build_python,
+        "created": created_text(clock()),
         "sandbox": _sandbox_status(sandbox, rows), "notes": list(ctx["notes"]),
     }
     _write_atomic(out / STAGE_NAME,

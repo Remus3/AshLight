@@ -11,6 +11,7 @@ import importlib.util
 import json
 import os
 import random
+import re
 import socket
 import subprocess
 import sys
@@ -388,7 +389,8 @@ def test_both_ref_and_tag_is_a_refusal(tmp_path):
 
 
 def _cli(repo, tmp_path, *args):
-    env = dict(os.environ, AL_SIDECAR_ROOT=str(tmp_path / "sidecar"))
+    env = dict(os.environ, AL_SIDECAR_ROOT=str(tmp_path / "sidecar"),
+               AL_REL_ANY_PYTHON="1")
     return subprocess.run(
         [sys.executable, str(RELEASE), "build", "--root", str(repo), *args],
         cwd=str(ROOT), env=env, capture_output=True, text=True, check=False)
@@ -417,3 +419,76 @@ def test_default_out_is_the_sidecar_build_release_folder(tmp_path, monkeypatch):
     monkeypatch.setenv("AL_SIDECAR_ROOT", str(tmp_path / "sc"))
     assert rb.default_out("1.2.3") == (tmp_path / "sc").resolve() / "Build" / \
         "release" / "1.2.3"
+
+
+# --- the build interpreter pin (decision 0064 amendment 2026-11-28) --------
+
+def test_pinned_python_is_release_yml_python_version():
+    """One source: the build pin is the exact python-version of release.yml."""
+    text = (ROOT / ".github" / "workflows" / "release.yml").read_text(
+        encoding="utf-8")
+    vals = re.findall(r'(?m)^\s*python-version:\s*"([^"]*)"\s*$', text)
+    assert vals == [rb.pinned_python()]
+    assert re.fullmatch(r"\d+\.\d+\.\d+", rb.pinned_python())
+
+
+@pytest.mark.parametrize("body", [
+    "", '      python-version: "3.11"\n',
+    '      python-version: "3.11.9"\n      python-version: "3.11.9"\n'])
+def test_pinned_python_refuses_a_loose_or_missing_pin(tmp_path, body):
+    wf = tmp_path / ".github" / "workflows"
+    wf.mkdir(parents=True)
+    (wf / "release.yml").write_text("jobs:\n" + body, encoding="ascii")
+    with pytest.raises(rb.BuildError):
+        rb.pinned_python(tmp_path)
+
+
+def _fake_py(out, rc=0):
+    class Proc:
+        returncode = rc
+        stdout = out
+    calls = []
+
+    def run(argv, **_kw):
+        calls.append(list(argv))
+        return Proc()
+    return run, calls
+
+
+def test_find_python_takes_only_the_exact_launcher_version():
+    exe = sys.executable
+    good = "cpython\n9.9.9\n%s\n"
+    run, calls = _fake_py(good % exe)
+    assert rb.find_python("9.9.9", run=run) == exe
+    assert calls[0][:2] == ["py", "-9.9"]
+    for out in ("cpython\n9.9.8\n%s\n" % exe, "pypy\n9.9.9\n%s\n" % exe,
+                "", good % (ROOT / "no-such.exe")):
+        run, _calls = _fake_py(out)
+        assert rb.find_python("9.9.9", run=run) is None
+    run, _calls = _fake_py(good % exe, rc=1)
+    assert rb.find_python("9.9.9", run=run) is None
+
+
+def test_any_python_is_lifted_only_inside_pytest():
+    assert not rb.any_python_allowed({"AL_REL_ANY_PYTHON": "1"})
+    assert not rb.any_python_allowed({"PYTEST_CURRENT_TEST": "x"})
+    assert rb.any_python_allowed({"AL_REL_ANY_PYTHON": "1",
+                                  "PYTEST_CURRENT_TEST": "x"})
+
+
+def test_cli_refuses_another_python_naming_both_versions(tmp_path):
+    pin = rb.pinned_python()
+    if rb.python_matches(pin):
+        pytest.skip("this interpreter is the pin")
+    repo = _scratch(tmp_path)
+    env = dict(os.environ, AL_SIDECAR_ROOT=str(tmp_path / "sidecar"),
+               AL_REL_PY_REEXEC="1")
+    env.pop("AL_REL_ANY_PYTHON", None)
+    proc = subprocess.run(
+        [sys.executable, str(RELEASE), "build", "--root", str(repo),
+         "--out", str(tmp_path / "o")],
+        cwd=str(ROOT), env=env, capture_output=True, text=True, check=False)
+    assert proc.returncode == 1
+    assert "needs CPython %s" % pin in proc.stderr
+    assert rb.running_python() in proc.stderr
+    assert not (tmp_path / "o").exists()

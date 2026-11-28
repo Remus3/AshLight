@@ -25,7 +25,9 @@ A refusal changes nothing. A failed push deletes the local tag again.
                config/public_repo.json (the one address source); with none
                the gate refuses with 'no remote'
     stage      <out>/stage.json exists, verdict PASS, the asked version, HEAD
-               as its commit, created at most 24 h ago, a sums_sha256
+               as its commit, created at most 24 h ago, a sums_sha256,
+               build_python equal to release.yml's CPython pin (decision
+               0064 amendment 2026-11-28)
     tree       the tree is clean (tracked changes and untracked files)
     notes      docs/releases/<version>.md exists without its STUB mark and
                CHANGELOG.md is current (tools/rel_notes.py)
@@ -289,9 +291,10 @@ def load_stage(folder):
     return _read_json(Path(folder) / STAGE_NAME)
 
 
-def check_stage(rep, version, commit, now=None):
+def check_stage(rep, version, commit, now=None, pin=None):
     """Refuse unless rep is a PASS stage report of version at commit; with
-    now (epoch seconds) it must also be at most 24 h old."""
+    now (epoch seconds) it must also be at most 24 h old; with pin (the
+    release.yml CPython version) its builds must have run on it."""
     if not isinstance(rep, dict):
         raise Refuse("no stage report (run release.py stage %s)" % version)
     if rep.get("verdict") != "PASS":
@@ -308,12 +311,20 @@ def check_stage(rep, version, commit, now=None):
         raise Refuse("the stage report is older than 24 h (or undated)")
     if not _HEX64.match(str(rep.get("sums_sha256") or "")):
         raise Refuse("the stage report has no sums_sha256")
+    if pin is not None and rep.get("build_python") != pin:
+        raise Refuse("the stage builds ran on Python %s, release.yml pins %s "
+                     "(CI's rebuild would not match the sums); re-run the "
+                     "stage" % (rep.get("build_python"), pin))
     return rep
 
 
 def gate_stage(ctx):
+    try:
+        pin = rb.pinned_python()
+    except rb.BuildError as exc:
+        raise Refuse(str(exc))
     rep = check_stage(load_stage(ctx["out"]), ctx["version"], _head(ctx),
-                      ctx["now"]())
+                      ctx["now"](), pin=pin)
     ctx["stage"] = rep
     return "PASS %s at %s, created %s" % (rep["version"], rep["commit"][:12],
                                          rep["created"])
@@ -596,7 +607,9 @@ def prepush_check(lines, stage_dir, git):
         commit = out.strip() if rc == 0 else ""
         rep = load_stage(stage_dir(version))
         try:
-            check_stage(rep, version, commit)
+            check_stage(rep, version, commit, pin=rb.pinned_python())
+        except rb.BuildError as exc:
+            refusals.append("%s: %s" % (remote_ref, exc))
         except Refuse as exc:
             refusals.append("%s: %s" % (remote_ref, exc))
     return refusals

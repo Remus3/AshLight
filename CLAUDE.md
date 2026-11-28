@@ -1223,6 +1223,11 @@ of the HALT check.
   actions pinned by full SHA; tests/test_workflows.py pins the three
   scopes. Reverses if: GitHub changes those scopes, a run writes anything
   beyond release assets, or the operator rules CI must not publish.
+  Amended 2026-11-28 (REL-BUILD-PYTHON-PIN, after the v0.2.0-rc.1 sums
+  mismatch): release builds run only on the exact CPython of release.yml's
+  python-version (build re-runs under `py -X.Y` or refuses; the stage's
+  builds use it; stage.json build_python; publish refuses another). Reverses
+  if: a stdlib deflate proves byte-stable across CPython versions.
 - Versioning and release trigger: SemVer 0.y.z, tag = v + VERSION; a
   release only from a REL-PREP milestone row or an explicit version
   request, published only on the operator's phrase `release X.Y.Z`

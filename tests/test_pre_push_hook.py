@@ -8,6 +8,7 @@ ever used. Each case asserts the push return code and the bare repo's refs.
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -22,8 +23,12 @@ HOOK = ROOT / ".githooks" / "pre-push"
 HOOK_FILES = ("ops/fleet_kit/fleet_identity.py", "tools/leak_sweep.py",
               "tools/push_guard.py", "tools/release.py", "tools/rel_publish.py",
               "tools/rel_build.py", "tools/rel_version.py", "tools/rel_readback.py",
-              "server/al/paths.py")
+              "server/al/paths.py", ".github/workflows/release.yml")
 OPERATOR = ("Op Erator", "op@example.com")
+# the release build's CPython pin (decision 0064 amendment 2026-11-28)
+PIN = re.search(r'(?m)^\s*python-version:\s*"(\d+\.\d+\.\d+)"\s*$',
+                (ROOT / ".github/workflows/release.yml").read_text(
+                    encoding="utf-8")).group(1)
 REFUSED = "pre-push: refused"
 # Synthetic needles only; the hook test never spells a real one.
 NEEDLES = ["Zorblax Quux", "acct-0000-fake"]
@@ -92,7 +97,8 @@ class World:
         self.git("remote", "add", "origin", str(self.bare))
         # the hook runs the copies from the work tree; they are never committed
         (self.work / ".git" / "info" / "exclude").write_text(
-            "/.githooks/\n/ops/\n/tools/\n/config/\n", encoding="ascii", newline="\n")
+            "/.githooks/\n/.github/\n/ops/\n/tools/\n/config/\n", encoding="ascii",
+            newline="\n")
         self.cfg = self.work / "config" / "leak_needles.json"
         self.cfg.parent.mkdir()
         self.cfg.write_text('{"needles": ["%s", "%s"]}\n' % tuple(NEEDLES), encoding="ascii",
@@ -105,7 +111,8 @@ class World:
         d.mkdir(parents=True, exist_ok=True)
         rep = {"verdict": "PASS", "version": version,
                "commit": self.rev(ref + "^{commit}"),
-               "created": "2026-01-01T00:00:00Z", "sums_sha256": "a" * 64}
+               "created": "2026-01-01T00:00:00Z", "sums_sha256": "a" * 64,
+               "build_python": PIN}
         (d / "stage.json").write_text(json.dumps(rep), encoding="ascii", newline="\n")
 
     def git_in(self, cwd, *args, env=None, check=True):
@@ -521,5 +528,8 @@ def test_branch_push_ignores_the_stage_check(world):
 
 def test_dependabot_fixture_copies_the_same_hook_files():
     text = (ROOT / "tests" / "test_dependabot_reapply.py").read_text(encoding="utf-8")
-    missing = [rel for rel in HOOK_FILES if '"%s"' % rel not in text]
+    # release.yml feeds only the tag stage check (its CPython pin); the
+    # dependabot fixture pushes main only and owns its own .github tree
+    missing = [rel for rel in HOOK_FILES if '"%s"' % rel not in text
+               and rel != ".github/workflows/release.yml"]
     assert not missing, "tests/test_dependabot_reapply.py Repo fixture lacks %s" % missing

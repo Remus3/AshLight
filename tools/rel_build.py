@@ -33,6 +33,16 @@ shipped path that is unsafe, not a plain file blob, collides with a
 generated name, matches a cache_deny pattern or carries the bytes of a file
 in the sidecar Cache; a zip over the ship list's max_zip_bytes.
 
+Interpreter pin (decision 0064 amendment 2026-11-28, REL-BUILD-PYTHON-PIN):
+the zip's deflate bytes depend on the interpreter's zlib (CPython 3.14 on
+Windows ships zlib-ng, 3.11 stock zlib), so the command line builds only on
+the exact CPython version that .github/workflows/release.yml pins
+(`python-version:`, the one source; pinned_python()). On another
+interpreter it re-runs itself under the matching `py -X.Y` launcher entry,
+else refuses naming both versions. build() itself has no guard (tests call
+it in process); AL_REL_ANY_PYTHON=1 lifts the command-line guard only
+inside a pytest run.
+
 Reproducible: nothing reads the clock, the host name or a random source.
 It never uploads, tags, commits or pushes; no network. Stdlib only.
 """
@@ -71,6 +81,76 @@ _MAX_PATH = 200
 
 class BuildError(Exception):
     """A refusal; nothing has been written."""
+
+
+# --- the build interpreter pin (decision 0064 amendment 2026-11-28) --------
+
+RELEASE_WF_REL = ".github/workflows/release.yml"
+ANY_PYTHON_ENV = "AL_REL_ANY_PYTHON"
+REEXEC_ENV = "AL_REL_PY_REEXEC"
+_PY_VERSION_LINE = re.compile(r'(?m)^\s*python-version:\s*"(\d+\.\d+\.\d+)"\s*$')
+
+
+def pinned_python(root=ROOT):
+    """The exact CPython version release.yml builds with ("3.11.9")."""
+    try:
+        text = (Path(root) / RELEASE_WF_REL).read_text(encoding="utf-8")
+    except OSError as exc:
+        raise BuildError("cannot read %s: %s" % (RELEASE_WF_REL, exc))
+    found = _PY_VERSION_LINE.findall(text)
+    if len(found) != 1:
+        raise BuildError("%s must pin one exact python-version X.Y.Z"
+                         % RELEASE_WF_REL)
+    return found[0]
+
+
+def running_python():
+    return "%d.%d.%d" % tuple(sys.version_info[:3])
+
+
+def python_matches(pin):
+    return sys.implementation.name == "cpython" and running_python() == pin
+
+
+def any_python_allowed(env=None):
+    """The guard is lifted only by AL_REL_ANY_PYTHON=1 inside a pytest run."""
+    env = os.environ if env is None else env
+    return env.get(ANY_PYTHON_ENV) == "1" and bool(env.get("PYTEST_CURRENT_TEST"))
+
+
+def find_python(pin, run=None):
+    """The path of a local CPython of exactly `pin`: this interpreter, else
+    the `py -X.Y` launcher entry when it reports that exact version; None
+    when there is none."""
+    if python_matches(pin):
+        return sys.executable
+    run = run or subprocess.run
+    major_minor = ".".join(pin.split(".")[:2])
+    probe = ("import sys;print(sys.implementation.name);"
+             "print('%d.%d.%d' % tuple(sys.version_info[:3]));"
+             "print(sys.executable)")
+    try:
+        proc = run(["py", "-" + major_minor, "-I", "-c", probe],
+                   capture_output=True, text=True, timeout=60,
+                   stdin=subprocess.DEVNULL, check=False)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    lines = (proc.stdout or "").split()
+    if proc.returncode != 0 or len(lines) < 3:
+        return None
+    if lines[0] != "cpython" or lines[1] != pin:
+        return None
+    exe = (proc.stdout or "").splitlines()[2].strip()
+    return exe if exe and Path(exe).is_file() else None
+
+
+def python_refusal(pin):
+    return ("the release build needs CPython %s (the python-version of %s; "
+            "the zip's deflate bytes depend on the interpreter's zlib), this "
+            "is %s %s and no 'py -%s' launcher entry of %s was found; install "
+            "Python %s" % (pin, RELEASE_WF_REL, sys.implementation.name,
+                           running_python(), ".".join(pin.split(".")[:2]),
+                           pin, pin))
 
 
 def _load_tool(name):
@@ -591,6 +671,21 @@ def main(command, argv):
     except SystemExit as exc:
         return 0 if exc.code == 0 else 2
     try:
+        pin = pinned_python()
+    except BuildError as exc:
+        print("build: refused: %s" % exc, file=sys.stderr)
+        return 1
+    if not python_matches(pin) and not any_python_allowed():
+        exe = None if os.environ.get(REEXEC_ENV) else find_python(pin)
+        if exe is None:
+            print("build: refused: %s" % python_refusal(pin), file=sys.stderr)
+            return 1
+        print("build: re-running under CPython %s (%s)" % (pin, exe))
+        env = dict(os.environ)
+        env[REEXEC_ENV] = "1"
+        return subprocess.call([exe, str(TOOLS / "release.py"), "build"]
+                               + list(argv), env=env)
+    try:
         res = build(root=args.root, ref=args.ref, tag=args.tag, out=args.out)
     except BuildError as exc:
         print("build: refused: %s" % exc, file=sys.stderr)
@@ -598,6 +693,7 @@ def main(command, argv):
     print("build: %s %s (%d files) -> %s" % (res["version"], res["commit"][:12],
                                              res["files"], res["out"]))
     print("build: sha256 %s  %s" % (res["sha256"], res["zip"].name))
+    print("build: python %s" % running_python())
     return 0
 
 

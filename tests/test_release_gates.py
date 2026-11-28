@@ -145,7 +145,8 @@ def _tree(tmp_path, notes="## [%s] - 2026-11-21\n\nNotes.\n" % VERSION,
 def _stage_report(out, **over):
     rep = {"schema": 1, "version": VERSION, "commit": HEAD,
            "verdict": "PASS", "steps": [], "assets": [],
-           "sums_sha256": SUMS, "created": CREATED, "sandbox": False,
+           "sums_sha256": SUMS, "build_python": rp.rb.pinned_python(),
+           "created": CREATED, "sandbox": False,
            "notes": []}
     rep.update(over)
     out.mkdir(parents=True, exist_ok=True)
@@ -469,3 +470,17 @@ def test_publish_never_uses_a_wide_push_flag():
     text = (ROOT / "tools" / "rel_publish.py").read_text(encoding="utf-8")
     for bad in ('"--tags"', '"--all"', '"--mirror"', '"--force"', '"fetch"'):
         assert bad not in text, bad
+
+
+def test_check_stage_refuses_builds_on_another_python():
+    """decision 0064 amendment 2026-11-28: a stage built on another CPython
+    than release.yml's pin would not match CI's rebuild."""
+    pin = rp.rb.pinned_python()
+    rep = {"schema": 1, "version": VERSION, "commit": HEAD, "verdict": "PASS",
+           "sums_sha256": SUMS, "created": CREATED, "build_python": pin}
+    assert rp.check_stage(rep, VERSION, HEAD, pin=pin) is rep
+    for other in ("3.14.4", None):
+        bad = dict(rep, build_python=other)
+        with pytest.raises(rp.Refuse) as exc:
+            rp.check_stage(bad, VERSION, HEAD, pin=pin)
+        assert pin in str(exc.value)

@@ -862,3 +862,44 @@ def test_sandbox_missing_feature_is_reported_not_enabled(repo, tmp_path,
                  "runas", "-verb", "shellexecute", "isuseranadmin",
                  "/online"):
         assert word not in text.lower(), word
+
+
+# --- the build interpreter pin (decision 0064 amendment 2026-11-28) --------
+
+def test_pinned_build_routes_by_interpreter(monkeypatch):
+    pin = rs.rb.pinned_python()
+    monkeypatch.setattr(rs.rb, "python_matches", lambda _p: True)
+    assert rs.pinned_build() == (rs.rb.build, pin)
+    monkeypatch.setattr(rs.rb, "python_matches", lambda _p: False)
+    monkeypatch.setattr(rs.rb, "find_python", lambda _p: sys.executable)
+    build, got = rs.pinned_build()
+    assert got == pin and build is not rs.rb.build
+    monkeypatch.setattr(rs.rb, "find_python", lambda _p: None)
+    build, got = rs.pinned_build()
+    with pytest.raises(rs.rb.BuildError) as exc:
+        build(root=ROOT, out=ROOT / "never")
+    assert "needs CPython %s" % pin in str(exc.value)
+
+
+def test_stage_records_the_build_python(repo, tmp_path, monkeypatch):
+    pin = rs.rb.pinned_python()
+    monkeypatch.setattr(rs, "pinned_build",
+                        lambda: (_builder(tmp_path), pin))
+    rep = rs.stage(VERSION, run=Runner(), now=lambda: WHEN_TS, root=repo,
+                   out=tmp_path / "out", owner="sess.agent",
+                   roundtrip=FakeFactory(tmp_path))
+    assert rep["verdict"] == "PASS", rep["steps"]
+    doc = json.loads((tmp_path / "out" / "stage.json").read_bytes())
+    assert doc["build_python"] == pin
+
+
+def test_stage_without_the_pinned_python_fails_the_builds_step(repo, tmp_path,
+                                                                monkeypatch):
+    monkeypatch.setattr(rs.rb, "python_matches", lambda _p: False)
+    monkeypatch.setattr(rs.rb, "find_python", lambda _p: None)
+    rep = rs.stage(VERSION, run=Runner(), now=lambda: WHEN_TS, root=repo,
+                   out=tmp_path / "out", owner="sess.agent",
+                   roundtrip=FakeFactory(tmp_path))
+    assert rep["verdict"] == "FAIL"
+    assert _statuses(rep)["builds"] == "fail"
+    assert "needs CPython" in _detail(rep, "builds")
