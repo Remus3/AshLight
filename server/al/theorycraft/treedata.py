@@ -24,6 +24,15 @@ still accepted. The pseudo node `root` has no skill and a non-numeric key,
 so it is skipped. Unknown fields are ignored; a malformed node is skipped,
 never an error.
 
+Drawing fields (PROGRESSION-VIEW, decision 0092; checked against the
+cached export 2026-11-27): each node also carries `x` / `y` (its position
+in the export's own units, about -22600 to 21800 wide; the ascendancy
+trees sit apart from the main tree), `group` / `orbit` / `orbitIndex`
+(not kept: x / y already place the node), `out` / `in` (linked node ids
+as strings, "root" for the pseudo node) and `isMastery`. The top level
+also has an `edges` list ({from, to}) and `groups`; the node lists give
+the same links, so only they are read.
+
 Id space (DATA-TREE-IDS, research 0015): a PoB2 build's Spec `nodes`
 attribute holds PoB2 tree node ids, and PoB2 sets each node's id from its
 `skill` field; PoB2's own GGG converter keeps the export's `skill` ids
@@ -89,6 +98,14 @@ class Node:
     class_start: tuple = ()  # class names that start on this node
     gid: str = None  # the export's string `id` slug (TC-BUILDFILE), None when null
     asc_start: bool = False  # `isAscendancyStart` (TC-TREE-URL)
+    # PROGRESSION-VIEW (decision 0092): the export's own drawing position
+    # (`x` / `y`, None when the node has none), its links (`out` and `in`,
+    # numeric ids only, so the pseudo node `root` is left out) and
+    # `isMastery`; not part of to_dict
+    x: float = None
+    y: float = None
+    links: tuple = ()
+    mastery: bool = False
 
     @property
     def display_stats(self):
@@ -181,6 +198,27 @@ class TreeData:
         return out
 
 
+def _coord(value):
+    """A finite drawing coordinate of the export, or None."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    value = float(value)
+    return value if abs(value) < 1e7 else None
+
+
+def _links(raw, nid):
+    """The numeric ids of a node's `out` and `in` lists, each once, in
+    export order (the pseudo node "root" and the node itself left out)."""
+    out = []
+    for field in ("out", "in"):
+        seq = raw.get(field)
+        for other in seq if isinstance(seq, list) else ():
+            oid = _id(other)
+            if oid is not None and oid != nid and oid not in out:
+                out.append(oid)
+    return tuple(out)
+
+
 def _ascendancy(raw, asc_names):
     """Ascendancy name from `ascendancyId` (the id itself when no class
     lists it), else the legacy `ascendancyName`, else None."""
@@ -240,7 +278,10 @@ def parse(doc):
                           keystone=raw.get("isKeystone") is True,
                           jewel_socket=raw.get("isJewelSocket") is True,
                           class_start=tuple(starts), gid=_str(raw.get("id")),
-                          asc_start=raw.get("isAscendancyStart") is True)
+                          asc_start=raw.get("isAscendancyStart") is True,
+                          x=_coord(raw.get("x")), y=_coord(raw.get("y")),
+                          links=_links(raw, nid),
+                          mastery=raw.get("isMastery") is True)
     asc_ids = {}
     for aid, name in asc_names.items():
         asc_ids.setdefault(name, aid)

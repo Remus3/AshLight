@@ -1,0 +1,114 @@
+/* PROGRESSION-VIEW (decision 0092): the Progression view of
+   web/panels/progression.js and the tree drawing of web/panels/tree.js.
+   Linked by the al:panels marker (server/al/webpage.py), after
+   web/app.css. Colours only from the kit tokens (design 0001 C3); the
+   node state is carried by shape and line style, colour only reinforces
+   it (C4): planned is a filled dot, take next a dashed ring, later a thin
+   ring, not in the plan a dim small dot, new since the last change a
+   steady outer ring. Nothing animates (design 0001 principle 3).
+
+   Play, region I: the mini view fills the region's own box (absolute
+   inside it in the cockpit classes, so the region's fixed track never
+   changes and nothing scrolls; design 0001 N7) and keeps the item
+   region's slack at its foot (I_SLACK_MIN of tests/test_play_fit.py:
+   16 px full, 6 px compact at s = 1; here 1.25rem). In the flow class it
+   sits in the page with a fixed-height tree.
+
+   Build and items: the card spans the card grid like the Kindler card
+   (grid rows 2 and 3 under the Builds row) while the Pasted build cells
+   are not drawn; two columns in the cockpit (the tree; next up, skills,
+   ascendancy and points stacked), one in the flow class. Skill and point
+   rows wrap. Unplanned nodes use the control edge tone, their links the
+   border tone (context, named in the legend). */
+
+/* --- the tree drawing (web/panels/tree.js) --- */
+.pg-svg { display: block; width: 100%; min-width: 0; }
+.tv-edge { fill: none; stroke-width: 1.5; stroke-linecap: round; }
+.tv-edge-o { stroke: var(--fk-border); }
+.tv-edge-l { stroke: var(--fk-text-muted); stroke-dasharray: 2 3; }
+.tv-edge-h { stroke: var(--fk-accent); stroke-width: 2.5; }
+.tv-edge-d { stroke: var(--fk-status-warn); stroke-width: 2; stroke-dasharray: 4 3; }
+.tv-node { stroke-width: 1.5; }
+.tv-node-o { fill: var(--al-control-edge); stroke: none; }
+.tv-node-l { fill: var(--fk-surface); stroke: var(--fk-text-muted); }
+.tv-node-h { fill: var(--fk-accent); stroke: var(--fk-text); }
+.tv-node-d { fill: var(--fk-surface); stroke: var(--fk-status-warn); stroke-width: 2.5; stroke-dasharray: 3 2; }
+.tv-ring { fill: none; stroke: var(--fk-text-muted); stroke-width: 1.5; }
+.tv-fresh { fill: none; stroke: var(--fk-status-warn); stroke-width: 2; }
+.pg-mini-tree .tv-node-d { stroke-width: 3; }
+
+/* --- Play, region I --- */
+#play-i { position: relative; }
+#play-i[data-pg="on"] > .slot { display: none; }
+.pg-mini { display: flex; flex-direction: column; gap: var(--al-space-1); min-width: 0; }
+.pg-mini[hidden] { display: none; }
+.pg-mini p, .pg-mini ul { margin: 0; }
+.pg-mini-head { display: flex; align-items: baseline; gap: var(--al-space-2); min-width: 0;
+  min-height: var(--al-lh-title); }
+.pg-mini-word { flex: none; font-weight: 600; color: var(--fk-text); }
+.pg-mini-sub { flex: 1 1 auto; min-width: 0; }
+.pg-mini-next { list-style: none; padding: 0; display: flex; flex-direction: column; min-width: 0; }
+.pg-mini-next li { color: var(--al-text-body); }
+.pg-mini-tree { height: 12rem; border: 1px solid var(--fk-border); border-radius: var(--al-radius-control);
+  background: var(--fk-surface); }
+.pg-mini-foot { display: flex; align-items: center; gap: var(--al-space-2); min-width: 0;
+  min-height: 1.5rem; }
+.pg-mini-legend { flex: 1 1 auto; min-width: 0; }
+.pg-mini-back { flex: none; }
+@media (min-width: 64em) and (min-height: 43.75em) {
+  #play-i > .pg-mini { position: absolute; top: var(--region-pad); left: var(--al-space-3);
+    right: var(--al-space-3); bottom: calc(var(--region-pad) + 1.25rem); }
+  #play-i > .pg-mini .pg-mini-tree { flex: 1 1 0; height: auto; min-height: 0; }
+}
+[data-text-spacing="user"] #play-i > .pg-mini { position: static; }
+[data-text-spacing="user"] #play-i > .pg-mini .pg-mini-tree { flex: none; height: 12rem; }
+
+/* --- Build and items, the Progression card --- */
+.kindler-bar #pg-open { margin-left: auto; flex: none; white-space: nowrap; }
+#pg-open[aria-pressed="true"] { font-weight: 600; border-color: var(--fk-accent); }
+/* while the card shows, Pasted build does not look picked (design review PG-10) */
+#panel-build[data-view="progress"]:not([data-sub]) #kindler-pasted[aria-current="true"] {
+  border-bottom-color: transparent; font-weight: 400; }
+#panel-build > .pg-card { grid-column: 1 / -1; }
+#panel-build[data-view="progress"]:not([data-sub]) > .col { display: none; }
+#panel-build[data-sub] > .pg-card { display: none; }
+.pg-card { display: flex; flex-direction: column; gap: var(--al-space-2); min-width: 0;
+  padding: var(--al-space-3); }
+.pg-card[hidden] { display: none; }
+.pg-card p, .pg-card ul { margin: 0; }
+.pg-head { display: flex; align-items: baseline; gap: var(--al-space-2); min-width: 0; }
+.pg-card .pg-head h2 { margin: 0; flex: none; font-size: var(--al-fs-title); line-height: var(--al-lh-title); }
+.pg-source { flex: 1 1 auto; min-width: 0; }
+.pg-back { flex: none; margin-left: auto; }
+.pg-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--al-space-3); min-height: 0;
+  margin-bottom: var(--al-space-1); }
+.pg-col { display: flex; flex-direction: column; gap: var(--al-space-1); min-width: 0; min-height: 0; }
+.pg-h3 { margin: 0; }
+.pg-list { list-style: none; padding: 0; display: flex; flex-direction: column; min-width: 0; }
+.pg-list li { color: var(--al-text-body); }
+.pg-skill .iteminfo-name { margin-right: var(--al-space-1); }
+.pg-wrap { overflow-wrap: anywhere; }
+.pg-tree { height: 18rem; border: 1px solid var(--fk-border); border-radius: var(--al-radius-control);
+  background: var(--fk-surface); }
+.pg-asc { height: 8rem; border: 1px solid var(--fk-border); border-radius: var(--al-radius-control);
+  background: var(--fk-surface); }
+.pg-legend { margin: 0; }
+@media (min-width: 64em) and (min-height: 43.75em) {
+  #panel-build > .pg-card { grid-row: 2 / span 2; min-height: 0; overflow: hidden; }
+  .pg-head .pg-source { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pg-body { flex: 1 1 auto; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); }
+  .pg-col-side { overflow: hidden; }
+  .pg-col-side .pg-asc { flex: none; }
+  .pg-col-tree .pg-tree { flex: 1 1 0; height: auto; min-height: 0; }
+}
+[data-text-spacing="user"] #panel-build > .pg-card { grid-row: auto; overflow: visible; }
+[data-text-spacing="user"] .pg-body { grid-template-columns: minmax(0, 1fr); }
+[data-text-spacing="user"] .pg-col-tree .pg-tree { flex: none; height: 18rem; }
+@media (forced-colors: active) {
+  .tv-node-h { fill: Highlight; stroke: CanvasText; }
+  .tv-edge-h { stroke: Highlight; }
+  .tv-node-d, .tv-edge-d, .tv-fresh { stroke: CanvasText; }
+  .tv-node-o, .tv-edge-o, .tv-edge-l, .tv-node-l, .tv-ring { stroke: GrayText; }
+  .tv-node-o { fill: GrayText; }
+  #pg-open[aria-pressed="true"] { border-color: Highlight; }
+}
