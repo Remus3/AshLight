@@ -161,7 +161,7 @@ test("web data off: the version plus a releases link; none while the address is 
 });
 
 test("the link is a plain https link on a listed host, opened in the player's own browser", () => {
-  assert.ok(HOSTS.includes("github.com"));
+  assert.ok(new Set(HOSTS).has("github.com"));
   for (const bad of ["http://github.com/a/b/releases", "javascript:alert(1)",
     "https://example.com/a/b/releases", "https://github.com", "", null,
     "https://github.com/a/b/releases?x=\"y\""]) {

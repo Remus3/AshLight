@@ -17,6 +17,8 @@ import json
 import re
 from pathlib import Path
 
+import htmlscan
+
 ROOT = Path(__file__).resolve().parent.parent
 
 FORBIDDEN = (
@@ -147,8 +149,9 @@ def js_strings(text):
 
 
 def html_text(text):
-    text = re.sub(r"<!--.*?-->", " ", text, flags=re.S)
-    return re.sub(r"<script\b.*?</script>", " ", text, flags=re.S | re.I)
+    """text with comments and script elements cut (html.parser, decision
+    0087: no tag regex)."""
+    return htmlscan.cut(text)
 
 
 def player_strings():

@@ -51,6 +51,7 @@ for _p in (ROOT / "tools", ROOT / "tests", ROOT):
         sys.path.insert(0, str(_p))
 
 import play_states as ps  # noqa: E402
+import htmlscan  # noqa: E402
 import srcpaths  # noqa: E402
 import synth_client  # noqa: E402
 import fullstack_mocks as fs  # noqa: E402
@@ -1661,7 +1662,7 @@ def kindler_page(sizes=KINDLER_SIZES):
         elif href.startswith("/web/"):
             links.append(srcpaths.path(href[len("/web/"):]))
     body = html[html.index("<body>") + len("<body>"):html.index("</body>")]
-    body = re.sub(r"<script\b[^>]*>.*?</script>\s*", "", body, flags=re.S)
+    body = htmlscan.cut(body, comments=False, repl="", eat_space=True)
     tid, tlabel = kindler_template()
     plan_answer, here = kindler_plan(tid)
     build_text = f"Version {VERSION}, build {PIN_COMMIT}, dev"  # web/panels/version.js

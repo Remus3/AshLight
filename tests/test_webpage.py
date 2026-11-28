@@ -16,6 +16,7 @@ from pathlib import Path
 
 import pytest
 
+import htmlscan
 import srcpaths
 from server.al import webpage
 from server.al.core import Core
@@ -155,9 +156,11 @@ def test_no_inline_script_and_no_remote_origin(web):
     for name in ("x.js", "y.css"):
         _panel(web, name)
     html = webpage.assemble(web).decode("ascii")
-    for tag in re.findall(r"<script[^>]*>", html):
-        assert "src=" in tag
-    assert re.search(r"<script[^>]*>\s*[^<\s]", html) is None
+    found = htmlscan.scripts(html)
+    assert found, "no script element parsed: the scan is broken"
+    for attrs, body in found:
+        assert attrs.get("src"), attrs
+        assert body.strip() == "", body[:60]
     for url in re.findall(r'(?:src|href)="([^"]*)"', html):
         assert url.startswith("/") and not url.startswith("//"), url
     assert "http:" not in html and "https:" not in html

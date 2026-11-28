@@ -485,7 +485,8 @@ def test_system_compiler_wins_over_the_pinned_toolchain(world):
 def test_toolchain_hosts_only_widen_for_the_toolchain():
     with pytest.raises(tc_pin.webfetch.UrlNotAllowed):
         next(tc_pin.http_stream("https://release-assets.githubusercontent.com/x", 10))
-    assert "release-assets.githubusercontent.com" in tc_pin.TOOLCHAIN_HOSTS
+    assert set(tc_pin.TOOLCHAIN_HOSTS) - set(tc_pin.ALLOWED_HOSTS) == {
+        "release-assets.githubusercontent.com", "objects.githubusercontent.com"}
 
 
 def test_setup_ps1_wires_the_opt_in_step():
