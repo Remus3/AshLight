@@ -152,8 +152,9 @@ F2 - The stated Node floor is wrong. README.md:62-64 and setup.ps1:5, :141
 accept Node 20. The pinned Electron 45.3.3 and its downloader declare
 `node >= 22.12.0` (app/package-lock.json:21-23, :39-41, :89-91), and the
 downloader is an ES module loaded with require() (M8). Node 20 is
-end-of-life since 2026-03-24 (NODE). UNVERIFIED: which Node 20 minors fail in practice
-(local Node is 24.15.0). Why it matters: a stranger on Node 20 passes the
+end-of-life since 2026-03-24 (NODE). RESOLVED 2026-11-24: README.md and
+scripts/setup.ps1 now state and check Node >= 22.12.0, so which Node 20
+minors fail no longer matters (local Node is 24.15.0). Why it matters: a stranger on Node 20 passes the
 check and then fails at "Electron download failed".
 
 F3 - The quick start makes a stranger run the test suite. README.md:67-69
