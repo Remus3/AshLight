@@ -3,3 +3,6 @@ contact_links:
   - name: Report a security problem privately
     url: https://github.com/Remus3/AshLight/security/advisories/new
     about: Use the private report page, never a public issue, for a security problem.
+  - name: Read the player FAQ first
+    url: https://github.com/Remus3/AshLight/blob/main/docs/guide/faq.md
+    about: Answers about bans, frame cost, what leaves your computer, chat, Path of Building and installing.

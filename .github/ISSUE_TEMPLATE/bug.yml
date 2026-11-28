@@ -7,6 +7,7 @@ body:
       value: |
         Thanks for the report. Please never attach Client.txt, game files, memory dumps or screenshots of the game.
         The redacted Checks report below has everything needed to start.
+        Do not paste a full Client.txt, your account or character names, or chat lines anywhere in this form.
   - type: input
     id: version
     attributes:
