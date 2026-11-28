@@ -1017,7 +1017,9 @@
   }
 
   /* An item or gem name: the shared popover's button (decision 0082 part
-     1), plain text when the popover script is not there. */
+     1), plain text when the popover script is not there. No gem level is
+     sent: the plan's gem levels are character levels, so the popover
+     shows gem level 1 rather than a guess (GEM-LEVEL-WIRE). */
   function itemNode(s, name) {
     var info = itemInfo();
     return info && typeof info.button === "function" ? info.button(s.doc, name) : el(s.doc, "span", "", name);

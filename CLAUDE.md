@@ -1350,17 +1350,29 @@ of the HALT check.
   split feels cramped in use, `@media not (...)` fails in the pinned
   Electron, or PoB renames its gem skill ids or drops Gems.lua
   (KINDLER-GEM-VARIANT).
-- DATA-GEMS-SNAP: snapshot.SOURCES adds repoe-fork's poe2 gems.json, cached
-  as the gems.json that theorycraft/archetypes.py reads (GEMS_FILE), with
-  the same web_data opt-in, cache, User-Agent and attribution as base_items
-  (decision 0009), a 64 MB cap (the reader's GEMS_MAX_BYTES) and no contact;
-  its snapprobe probe "gems" needs an object of at least 150 entries and at
-  least 100 gem names counted by archetypes.gem_index (name at the top or
-  under base_item / active_skill), never one named field; a failing body
-  keeps the cached copy and shows the "skill gem list" Checks row; no second
-  credit line (the repoe-fork sentence of datacredit.ATTRIBUTION covers it).
-  Reverses if: repoe-fork drops or renames gems.json, its terms forbid this
-  use, or real files trip the 150 / 100 thresholds.
+- DATA-GEMS-SNAP: snapshot.SOURCES reads repoe-fork's poe2
+  skill_gems.json (the export has no gems.json, HTTP 404 on 2026-11-28),
+  cached as the gems.json that theorycraft/archetypes.py reads (GEMS_FILE),
+  plus skills.json and gem_tags.json, all with the same web_data opt-in,
+  cache, User-Agent and attribution as base_items (decision 0009) and no
+  contact; caps 64 MB (gems, the reader's GEMS_MAX_BYTES), 128 MB (skills)
+  and 1 MB (gem_tags); snapprobe probes: "gems" needs an object of at least
+  150 entries and at least 100 gem names counted by archetypes.gem_index
+  (name at the top or under base_item / active_skill, display_name),
+  never one named field; "skills" at least 2000 entries with stat_sets;
+  "gem_tags" at least 20 entries; a failing body keeps the cached copy and
+  shows its Checks row ("skill gem list", "skill detail list", "gem tag
+  list"); the snapshot tool, in its own process, splits skills.json into
+  one small file per gem under <cache>/gem_details/ (theorycraft/
+  gemdetail.py, rebuilt only when the three inputs' sha256 change), and
+  the core reads one such file per popover look and never parses
+  skills.json; the export has no gem level requirement, so Kindler gem
+  levels stay unchecked; no second credit line (the repoe-fork sentence of
+  datacredit.ATTRIBUTION covers it) (decision 0083 amendment 2026-11-28).
+  Reverses if: repoe-fork drops, renames or reshapes skill_gems.json,
+  skills.json or gem_tags.json, its terms forbid this use, real files trip
+  the probe thresholds, or the gem_details split costs the snapshot run's
+  budget.
 - UI 0082: item names are link-like buttons opening one shared,
   fixed-position item info popover (web/iteminfo.js, one open, Escape
   returns focus, never resizes a card) over a cache-only token-gated GET
@@ -1417,12 +1429,24 @@ of the HALT check.
   isMap, read as text (theorycraft/pobtext.py) under one pob2_files sha256
   per file with the marker check, parsed once per pin and only for the
   core's default lookup; CurrencyNames.lua is absent from the pin and
-  Special/ is not read; credited by source id path-of-building. Reverses
-  if: a permitted source for drops, vendor or disenchant data appears, a
+  Special/ is not read; credited by source id path-of-building.
+  ITEM-INFO-GEM-DETAIL (decision 0083 amendment 2026-11-28): a gem name
+  also answers a "gem" field (kind, tags, description, max and asked
+  level, known costs, Spirit, cooldown, cast time, cost multiplier, per
+  stat set its label, damage, crit and lines as the export words them)
+  from its one gem_details/ file (DATA-GEMS-SNAP); no quality lines,
+  attack speed multipliers, level requirements, extra granted skills or
+  icons; GET /api/iteminfo takes level=1..40 (default 1) and
+  button(doc, name, level) asks for it; the Progression rows of a pasted
+  PoB build send the socket gem level, and Kindler plan buttons send none
+  (the plan's gem levels are character levels; never guessed;
+  GEM-LEVEL-WIRE, adjudicator ruling 2026-11-28). Reverses if: a permitted source for drops, vendor or disenchant data appears, a
   source publishes an API or app-use terms or gives written permission,
   GGG opens registration, PoB relicenses or a Source line proves wrong in
   play, poe2db objects to deep links or leaves config/link_hosts.json, PoB
-  reshapes its Source lines, a pin brings CurrencyNames.lua, or the
+  reshapes its Source lines, a pin brings CurrencyNames.lua, a shown gem
+  line proves different from the game's tooltip in play, archetypes.json
+  authors real gem levels (then Kindler buttons send them), or the
   operator asks for drop_level.
 - Updates: one read of the project's releases/latest per 24 h inside the
   web-data opt-in; verified by size, SHA-256 against SHA256SUMS and the API

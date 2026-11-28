@@ -253,3 +253,46 @@ def test_region_i_offers_the_view_before_any_level_up():
                    "mode2": "on", "head2": "Next up", "offer2": False, "back2": True,
                    "focus2": "pg-mini-item", "mode3": "on", "mode4": "off", "offer4": True,
                    "focus4": "pg-offer", "offer5": False}
+
+
+GEM_LEVEL_JS = r"""
+const P = require("./web/panels/progression.js");
+let data = "";
+process.stdin.on("data", (c) => { data += c; });
+process.stdin.on("end", () => {
+  const rows = JSON.parse(data);
+  process.stdout.write(JSON.stringify(rows.map((r) => {
+    const v = P.gemLevel(r);
+    return v === undefined ? "none" : v;
+  })));
+});
+"""
+
+
+def test_gem_buttons_carry_the_socket_level_only():
+    """GEM-LEVEL-WIRE: a pasted PoB build's skill row sends its socket gem
+    level to the item popover; a Kindler plan's row (whose levels are
+    character levels) sends none, so the popover shows level 1."""
+    t = pf.tree()
+    b = pf.build(t, skills=[[("Spark", "SparkPlayer", 3), ("Demo Support", "SupportDemo", 1)]])
+    pob = progression.build_model(build=b, tree=t, level=30)
+    assert pob["source"] == "pob"
+    spark = [r for r in pob["skills"] if r["name"] == "Spark"]
+    assert spark and spark[0]["level"] == 3
+    kin = progression.build_model(tree=t, level=29, kindler={"plan": pf.plan(t), "stage": 2,
+                                                             "label": "Demo"})
+    assert kin["source"] == "kindler" and kin["skills"]
+    assert all(r["level"] is None for r in kin["skills"])
+    got = run(GEM_LEVEL_JS, [spark[0], kin["skills"][0], {"level": 0}, {"level": "3"}, {}])
+    assert got == [3, "none", "none", "none", "none"]
+    src = VIEW.read_text(encoding="utf-8")
+    assert "info.button(doc, r.name, gemLevel(r))" in src
+
+
+def test_kindler_gem_buttons_send_no_level():
+    """GEM-LEVEL-WIRE: the Kindler plan knows no gem level (its gem levels
+    are the character level a gem is usable from), so its buttons name the
+    gem only and never guess one."""
+    src = (ROOT / "web" / "kindler.js").read_text(encoding="utf-8")
+    calls = re.findall(r"info\.button\(([^)]*)\)", src)
+    assert calls == ["s.doc, name"]

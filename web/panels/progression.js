@@ -459,13 +459,20 @@
     return el(doc, "li", "row-meta muted pg-wrap", WORDS.more.replace("{n}", String(n)));
   }
 
+  /* The gem level of a skill row for the popover: the pasted PoB build's
+     socket level ("level"); a Kindler row has none (its levels are
+     character levels), so it sends none and the popover shows level 1. */
+  function gemLevel(r) {
+    return typeof r.level === "number" && r.level >= 1 ? r.level : undefined;
+  }
+
   function fillSkills(doc, list, rows, count) {
     var info = itemInfo();
     list.replaceChildren();
     var shown = rows.slice(0, count);
     shown.forEach(function (r) {
       var li = el(doc, "li", "row-meta pg-wrap pg-skill");
-      li.appendChild(info && typeof info.button === "function" ? info.button(doc, r.name)
+      li.appendChild(info && typeof info.button === "function" ? info.button(doc, r.name, gemLevel(r))
         : el(doc, "span", "", r.name));
       var rest = " " + r.meta + "; " + r["with"];
       li.appendChild(el(doc, "span", "muted", rest));
@@ -588,7 +595,7 @@
 
   return {
     NAME: NAME, WORDS: WORDS, HOLD_S: HOLD_S, MAX_FAILS: MAX_FAILS, decide: decide,
-    hasContent: hasContent, levelWord: levelWord, paint: paint, wire: wire, step: step,
+    hasContent: hasContent, levelWord: levelWord, gemLevel: gemLevel, paint: paint, wire: wire, step: step,
     reset: reset, state: state, setOpen: setOpen,
     spec: { name: NAME, region: REGION, paint: paint, wire: wire }
   };
