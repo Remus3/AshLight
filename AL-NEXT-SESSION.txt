@@ -1,8 +1,10 @@
 AL NEXT SESSION
 ---------------
-SESSION: 33   (FLEET item 13 counter; /done writes n+1)
+SESSION: 34   (FLEET item 13 counter; /done writes n+1)
 
-WAVE POINTER: wave 61 done (RUN-VERDICTS-CLOSE merged f7fa26a, RUN-BUILDFILE-LIVE-CLOSE merged b1ed431; four fix rows filed BLOCKED: operator act), next wave 62 (nothing dispatchable at sessions 29 and 30 /done: every open session row waits on an operator act, a gate or a watch)
+WAVE POINTER: wave 62 done (W62-PLAN 206094b; GP-15, GP-16 b027ee6, AUTO-20 93e40b5, TEST-A11Y-NEWEST-DEVTOOLS dcd49d1, TEST-PLAYFIT-LOAD-FLAKE 6ea915c; W62-CLOSE 3960390 pushed), next wave 63 (nothing dispatchable at session 33 /done: every open session row waits on an operator act, a gate or a watch; TEST-CDP-ENDPOINT-CI-WAIT and TEST-CDP-OS-PORT are loop rows)
+NOTE (session 33 /done): gate green (line Status), the first gated whole suite after 6ea915c (play_fit watch 1 of 5). Inbox: classify scan empty (only the old MAIN TERMINAL note, seen). Fold: no row files, no done rows. Reap: "reap applied: 0 removed, 3 kept, 0 listed (base main)" (lane-0..2). HALT absent, REG_OPEN absent. Loop flags DD-20261124 parked 78 h, needs adjudicate, and TEST-UPDATES-NINJA-STUB in adjudicate (both loop-owned, do not touch). Branch cleanup: worktree-agent-a034d4f592d168cbd, -a287d832db4aa309e, -a6cbb58211ce2ac96, -a6680fe8eea88ba5c deleted with git branch -D after git cherry main <branch> printed only '-' lines for each (equivalence proven by git cherry; reflog-recoverable). Five other worktree-agent-* branches (a5131a8d, a5725617, a8df0042, ab38937e, ae5208e7) were not in scope and stay; check them with git cherry next session. Board skipped (opt-out).
+NOTE (session 33, wave 62): GP-12 dependency dropped from GP-15 / GP-16 / AUTO-20 (ruling in 206094b). GP-15: gh read back immutable releases {"enabled":true}, ruleset release-tags id 28270398 active on refs/tags/v*, 0 releases, so OA-3 is not needed. GP-16: synthetic p164 fixture, inbox / outbox .gitkeep untracked; the OA-6 repository settings line stays an operator act. AUTO-20: Dependabot alerts and pull requests reach the loop through a gh source, no workflow (decision 0069 amendment 2026-11-27); DEPBOT-PR rows are BLOCKED: session. W62-CLOSE gated suite 5962 passed / 8 skipped, npm 882/882; packages.json moves GP-12 to wave 61, GP-13 to wave 62.
 NOTE (session 32, operator order "public flip" 2026-11-27): ci fixed 307d5da (root causes in its message). Gate 12: ci 46079475413 attempts 1 and 2 green, identity guard 46079475566 green. Gate 6 amended (adjudicator): README may show docs/shots/* demo renders. Flipped PUBLIC; GP-13 settings read back; record docs/ops/public-flip-2026-11-27.md. Unblocked: GP-14, GP-15, GP-16 and rows BLOCKED on the flip. Filed TEST-A11Y-NEWEST-DEVTOOLS, TEST-PLAYFIT-LOAD-FLAKE.
 NOTE (session 32 /done, second run after the flip): gate green (line Status). Loop item TEST-UPDATES-NINJA-STUB came back gates_ok false (attempt 1, 16:19): gate failure outside its diff, tests/test_a11y_render.py every_tab_and_theme_was_audited and 320px_has_no_horizontal_scroll (same family as TEST-A11Y-NEWEST-DEVTOOLS / TEST-PLAYFIT-LOAD-FLAKE; loop-owned, do not touch). Loop flags DD-20261124 parked 77 h, needs adjudicate (loop-owned). Inbox: only the old MAIN TERMINAL note (seen). Fold: no row files, no done rows. Reap: 0 removed, 3 kept (lane-0..2). HALT absent, REG_OPEN absent. Board skipped (opt-out).
 NOTE (session 31 /done, operator away): no retry notes (tools/live_verdicts.py: the 4 checks still refused 2026-11-22, no note), no GP-12 word, REG_OPEN absent, inbox only the old MAIN TERMINAL note (skip, already in the seen ledger). Electron 45.5.0 row NOT filed by hand: decision 0070 weekly cadence (tools/watch_sources/electron.py BUMP_GAP_S 7 days after last_bump 45.4.1 at 2026-11-23 22:03) makes it eligible only from 2026-11-30 22:03, though the 3-day age is met 2026-11-27 22:18. The loop dispatched TEST-UPDATES-NINJA-STUB to lane build (loop-owned, do not touch); loop also flags DD-20261124 parked 76 h, needs adjudicate (loop-owned). No commit beyond this hand-off; wave 62 not planned (nothing unblocked). Reap: 0 removed, 3 kept (lane-0..2). Board skipped (opt-out).
@@ -18,26 +20,27 @@ WAVE-16 FOLLOW-UPS: design findings OPEN (reviews.log): RUN-LEDGER-WIRE LW-1..LW
 WAVE-15 FOLLOW-UPS: tools/docs_fresh.py EXPECTED_STALE (36 entries) can be emptied. OPEN design findings: PLAY-TD-22B TF-1 (news inside the 10 s grace not retried), RUN-METRICS-SITES RL-1..RL-3 (log record consent copy vague, no polite announcement, Client.txt stop also stops it unstated), TEST-STATE-TEXT-4 TST4-1 (design 0001 names state.py as text home). Decisions 0050/0069 want a note that the watcher's GitHub-metadata read of GGG's tree-export repo passes watch_gate though webfetch refuses GGG repos for dives. LOOP-WATCH-SETTLED's hand-off edit (drop the REG_OPEN start check) waits until SHAPE_ALL_PAGES is on, HALT is absent and a dry-run tick files TC-OAUTH-REG-OPEN. TC-WORN-KEY wear key is bound in app/main.js, not the hotkeys registry, with no snapshot / Settings UI.
 Closed records: docs/handoff-archive/AL-2026-11-19.txt to AL-2026-11-24.txt, one block per session headed "SESSION <n> /done", each listing what it moved: 11-17 indexed in "SESSION 18 /done" (AL-2026-11-21.txt); 19-21 in AL-2026-11-22.txt (19: session 18-19 lines, PUB-HOOK-RELEASE-CHECK ruling, WATCH gate-hold history, BUDGETLOG; 20: waves 26-28; 21: waves 31-33, GATE-HOLD-C, plan-07 drift); 22-23 in AL-2026-11-23.txt (22: waves 34-37 plan; 23: waves 38-45 merges, plan, operator requests, session 22 status); 24-28 in AL-2026-11-24.txt; 29 in AL-2026-11-26.txt (29: sessions 25-28 NOTEs, session 28 Do NOT redo); 24-28 detail (24-25: sessions 23-24 NOTE, reap, findings, Do NOT redo, SESSION-21 ROWS; 26: session 25 lines, the session 26 full NOTE, the session 23 NOTE with w42-int; 27: session 26 records; 28: session 27 full NOTE, reap, Do NOT redo, status, the session 28 full NOTE).
 
-Next action: the public flip is DONE (session 32, GP-12 and GP-13 acted,
-record docs/ops/public-flip-2026-11-27.md). Plan wave 62 from the rows it
-unblocked: GP-14, GP-15, GP-16 first, then every ROADMAP row whose
-BLOCKED reason is the public flip (re-read them; GP-15 also covers OA-3
-immutable releases), plus the new session rows TEST-PLAYFIT-LOAD-FLAKE
-and TEST-A11Y-NEWEST-DEVTOOLS. Then check whether the operator has given
-the retry notes (m: redo the four in-game checks refused 2026-11-22, each
-with a short note saying what the game showed; rows LIVE-SEARCHSTR-FIX,
-LIVE-FILTER-FIX, LIVE-FILTER-MERGE-FIX, TC-BUILDFILE-LIVE-FIX, all
-BLOCKED: operator act). Check the Electron 45.5.0 bump row: the loop
-files it from 2026-11-30 22:03 (decision 0070: 7-day gap after the
-45.4.1 bump); if ROADMAP.md has no 45.5.0 row after that, file it with
-tools/roadmap.py new.
-If something unblocks, plan wave 62 in docs/plan/packages.json from it
+Next action: no session row is dispatchable (wave 62 closed at
+3960390). Work the two watches: (1) TEST-A11Y-NEWEST-DEVTOOLS (dcd49d1)
+closes after 3 later ci runs with job test-newest green: read them with
+gh run list --workflow ci.yml and gh run view <id>; (2)
+TEST-PLAYFIT-LOAD-FLAKE (6ea915c) closes after 5 later gated whole
+suites green in tests/test_play_fit.py (1 of 5 so far: session 33
+/done); close each row with tools/roadmap.py done <ID> session when its
+count is met, a red resets it and reopens the cause. Then check the
+operator retry notes (m) in Checks > Tried in game (rows
+LIVE-SEARCHSTR-FIX, LIVE-FILTER-FIX, LIVE-FILTER-MERGE-FIX,
+TC-BUILDFILE-LIVE-FIX; tools/live_verdicts.py). If the date is after
+2026-11-30 22:03 and ROADMAP.md has no Electron 45.5.0 row, file it with
+tools/roadmap.py new (decision 0070). Check the five leftover
+worktree-agent-* branches with git cherry main <branch>.
+If something unblocks, plan wave 63 in docs/plan/packages.json from it
 (PLAN / W<n> / CLOSE as sessions 25-28: one package agent per package, at
 most 2 at once, design-reviewer for web/ or text/ changes, one integrator
 per merge batch; `python tools/plan_check.py waves --write` and `check`;
 commit; run; push main before spawning isolated agents). If nothing
 unblocks: loop work only, no wave. The main session only dispatches.
-1. Waves 10 to 61 are closed (sessions 12 to 28; GATE-HOLD-D dropped).
+1. Waves 10 to 62 are closed (sessions 12 to 28; GATE-HOLD-D dropped).
 Orchestrator lessons (full text: archive blocks "SESSION 18 /done", "SESSION
 19 /done"): dispatch the next step right after each child report; builders
 and verifiers also run tests/test_test_layout.py; fresh integrator per batch;
@@ -112,9 +115,11 @@ Carried forward (not acted on yet):
   AL sidecar Logs folder, acl-before-20261119-185409 (icacls save). The
   dashboard "Private files" Checks row clears on the next core start; read it
   back then.
-- SESSION 32 ROWS (filed 2e801d3, session work, BLOCKED: session): TEST-PLAYFIT-LOAD-FLAKE (2 of 3 gated whole suites red in tests/test_play_fit.py only, load), TEST-A11Y-NEWEST-DEVTOOLS (ci job test-newest, Python 3.14 / Node 24, 6 errors in tests/test_a11y_render.py, 'no DevTools'; continue-on-error). Plan both in wave 62.
-- GO-PUBLIC STATUS (session 32): repository PUBLIC 2026-11-27, GP-12 and
-  GP-13 done; record docs/ops/public-flip-2026-11-27.md.
+- WATCHES (session 33, session items, not loop; rows tagged BLOCKED: session (watch)): TEST-A11Y-NEWEST-DEVTOOLS fix dcd49d1 needs 3 later ci runs with job test-newest green (0 of 3 counted); TEST-PLAYFIT-LOAD-FLAKE fix 6ea915c needs 5 later gated whole suites green (1 of 5: session 33 /done). Loop rows filed at W62-CLOSE: TEST-CDP-ENDPOINT-CI-WAIT, TEST-CDP-OS-PORT (loop-owned).
+- OPERATOR ACT OA-6 (GP-16): the repository settings line stays an operator act (docs/plan/09-operator-acts.md OA-6); default in force until done.
+- OPERATOR ACT release phrase (DEP-18, OA-13): the operator types `release 0.2.0` only after REL-RC-LIVE, REL-CUTOVER-LIVE (cutover.ps1 run, bullet OPERATOR ACT REL-CUTOVER-LIVE) and the poe.ninja switch (decision 0072); then tools/release.py publish --version 0.2.0 --go "release 0.2.0" in an interactive session (decision 0073).
+- GO-PUBLIC STATUS (sessions 32-33): repository PUBLIC 2026-11-27, GP-12,
+  GP-13, GP-15, GP-16 done; record docs/ops/public-flip-2026-11-27.md.
 - OWED LIVE CHECKS (sessions 11, 12): tray tooltip / About / footer version line
   (RUN-BUILD-STAMP-UI); real `npm ci --ignore-scripts` (OVL-NPM-LOCK); real
   setup.ps1 / run.ps1 with the Electron fetch and client start
@@ -139,8 +144,8 @@ Carried forward (not acted on yet):
   (OA-36); (e) logon autostart scripts\autostart.ps1 -Enable (OA-7;
   decision 0011, OFF by default). Act (d) is done by GP-09; acts (g) OA-8
   and (k) OA-9 are answered 2026-11-26 (line OPERATOR ANSWERS); act (f), OA-12,
-  is done (hooks wired 021c7b7, AUTO-26 proof). After the first push: OA-3 (immutable releases, only if the API
-  answers 404) and OA-13 (the release phrase). (l) paste one real GGG
+  is done (hooks wired 021c7b7, AUTO-26 proof). OA-3 not needed (GP-15 read back immutable releases enabled,
+  session 33); OA-13 (the release phrase) stays, see the release phrase bullet. (l) paste one real GGG
   passive tree link of a character with an ascendancy (row
   TC-TREE-URL-ASC-CHECK; checks the ruled ascendancy byte of
   server/al/theorycraft/treeurl.py); (m) redo the four in-game checks
@@ -220,6 +225,7 @@ Operator orders (sessions 5 and 6), live state notes: archive block "SESSION 20 
 
 Acceptance: the operator ask is out (or answered); any unblocked row is planned as wave 62 in packages.json (plan_check check green, waves --write applied) and closed as 08 section 7 says (open-row command prints "none open" or only DEFERRED / BLOCKED ids, status empty on main, leak sweep clean, last batch suite and npm test green, WAVE POINTER moved), every package merged or re-deferred with a reason.
 
+Do NOT redo (session 33, pushed): wave 62 planning W62-PLAN 206094b; GP-15 (immutable releases, ruleset release-tags 28270398); GP-16 b027ee6; AUTO-20 93e40b5; TEST-A11Y-NEWEST-DEVTOOLS fix dcd49d1 and TEST-PLAYFIT-LOAD-FLAKE fix 6ea915c (only their watches remain); W62-CLOSE 3960390; deletion of the four proven-merged worktree-agent branches.
 Do NOT redo (session 32, pushed): ci fix 307d5da (gate 12 green: ci 46079475413, identity guard 46079475566); public flip GP-12 (repository PUBLIC) and GP-13 (rulesets main-protect, main-checks read back) 2e801d3, record docs/ops/public-flip-2026-11-27.md; plan 04 gate 6 amendment (README may show docs/shots/*); rows TEST-A11Y-NEWEST-DEVTOOLS and TEST-PLAYFIT-LOAD-FLAKE filed.
 Do NOT redo (session 31): Electron 45.5.0 row hand-file (not due before 2026-11-30 22:03); inbox triage (only the old TERMINAL note).
 Do NOT redo (session 30, pushed): FIX-VERDICTS-ARCHIVE (8c442b2, test_live_verdicts archive lookup); rows TEST-DEMO-PORT-FLAKE and TEST-UPDATES-NINJA-STUB filed and folded (018c3a0).
@@ -227,8 +233,8 @@ Do NOT redo (session 29, pushed): operator answers OA-5 / OA-8 / OA-9 recorded (
 
 Do NOT redo (sessions 6 to 28): docs/handoff-archive/ (closed blocks per session).
 
-In flight: none for the session. Loop item TEST-UPDATES-NINJA-STUB returned gates_ok false (foreign a11y_render reds), ops/loop/control/loop_items/TEST-UPDATES-NINJA-STUB.json, loop-owned; do not touch. Loop live, HALT absent; REG_OPEN absent (read back session 32 /done).
+In flight: none for the session. Loop items TEST-UPDATES-NINJA-STUB and DOCS-FRESH-20261121 in adjudicate, DD-20261124 parked 78 h (loop-owned; do not touch); ops/loop/control/progress/loop.json. Loop live, HALT absent; REG_OPEN absent (read back session 33 /done).
 
-Status (session 32 /done, 2026-11-27, fresh): gated suite from Bash: phase 1 5946 passed / 8 skipped (88.91 s), timing-calc 9 passed (35.74 s), timing-rest 12 passed (23.92 s), rc 0; npm 882/882; leak sweep armed (44 needles), no HALT; warnings only: tests/test_updates.py al-ninja thread (row TEST-UPDATES-NINJA-STUB). Main pushed through the git lock after this hand-off. Board skipped (opt-out).
+Status (session 33 /done, 2026-11-27, fresh): gated suite from Bash: phase 1 5962 passed / 8 skipped (89.41 s), timing-calc 9 passed (35.38 s), timing-rest 12 passed (22.68 s), rc 0; npm 882/882; leak sweep armed (44 needles), no HALT. Main pushed through the git lock after this hand-off. Board skipped (opt-out).
 
 Start with: read this file, then CLAUDE.md, ROADMAP.md, git log -10.
