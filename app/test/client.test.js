@@ -696,7 +696,7 @@ function startErrorDir(doc) {
 function runStartingPage(url) {
   const vm = require("node:vm");
   const els = {};
-  for (const id of ["starting", "failed", "reason", "reason-line"]) {
+  for (const id of ["starting", "failed", "failed-installed", "reason", "reason-line"]) {
     els[id] = { hidden: id !== "starting", textContent: "", innerHTML: "" };
   }
   const u = new URL(url);
@@ -776,10 +776,72 @@ test("failed page shows the start-error line, no script path", (t) => {
   // both failed branches of the window go through showFailed (this attempt's time)
   const c = code(WIN_SRC);
   assert.ok(!c.includes("loadFile("), "no file page is loaded");
-  assert.match(c, /win\.loadURL\(startingUrl\(failedPage\(line\)\)\);/);
+  assert.match(c, /win\.loadURL\(startingUrl\(failedPage\(line, opts\.copyKind\)\)\);/);
   assert.match(c, /if \(url\) \{ win\.loadURL\(url\); \} else \{ showFailed\(sinceMs\); \}/);
   assert.match(c, /log\("client: core did not answer within " \+ CORE_WAIT_MS \/ 1000 \+ " s"\);\s*showFailed\(since\);/);
   assert.match(c, /const since = Date\.now\(\);/);
+});
+
+/* UX-FAILED-PAGE-KIND (UX review 2026-11-28 P1-1): the failed page's
+   general line follows the copy kind window.js passes; an installed copy
+   never gets the install-Python advice or a raw environment path. */
+test("failed page picks the installed or checkout line by the copy kind", () => {
+  // the page options carry the kind only for an installed copy
+  assert.deepEqual(ClientWin.failedPage("", "installed"), { hash: "failed", query: { kind: "installed" } });
+  assert.deepEqual(ClientWin.failedPage(FIX, "installed"),
+    { hash: "failed", query: { reason: FIX, kind: "installed" } });
+  assert.deepEqual(ClientWin.failedPage("", "checkout"), { hash: "failed" });
+  assert.deepEqual(ClientWin.failedPage("", undefined), { hash: "failed" });
+  assert.deepEqual(ClientWin.failedPage("", "other"), { hash: "failed" });
+
+  // installed: the installed line, not the checkout line
+  const inst = runStartingPage(ClientWin.startingUrl(ClientWin.failedPage("", "installed")));
+  assert.equal(inst.starting.hidden, true);
+  assert.equal(inst["failed-installed"].hidden, false);
+  assert.equal(inst.failed.hidden, true);
+  assert.equal(inst.reason.hidden, true);
+  // checkout (or an unknown kind): today's line
+  for (const kind of ["checkout", undefined]) {
+    const chk = runStartingPage(ClientWin.startingUrl(ClientWin.failedPage("", kind)));
+    assert.equal(chk.failed.hidden, false);
+    assert.equal(chk["failed-installed"].hidden, true);
+  }
+  const odd = runStartingPage("al-app://app/client/starting.html?kind=x#failed");
+  assert.equal(odd.failed.hidden, false);
+  assert.equal(odd["failed-installed"].hidden, true);
+  // a reason still wins over both general lines
+  const why = runStartingPage(ClientWin.startingUrl(ClientWin.failedPage(FIX, "installed")));
+  assert.equal(why.reason.hidden, false);
+  assert.equal(why["failed-installed"].hidden, true);
+  assert.equal(why.failed.hidden, true);
+  // the starting page itself ignores the kind
+  const still = runStartingPage("al-app://app/client/starting.html?kind=installed");
+  assert.equal(still.starting.hidden, false);
+  assert.equal(still["failed-installed"].hidden, true);
+
+  // the two fixed lines
+  const html = fs.readFileSync(path.join(__dirname, "..", "client", "starting.html"), "utf8");
+  const lineOf = (id) => {
+    const m = html.match(new RegExp("<p id=\"" + id + "\" role=\"status\" hidden>([^<]*)</p>"));
+    assert.ok(m, id + " line present and hidden by default");
+    return m[1];
+  };
+  const installed = lineOf("failed-installed");
+  assert.equal(installed, "AshLight couldn't start. Open it again from its Start Menu shortcut. " +
+    "If it fails again, paste the install line from the README again; it repairs AshLight and " +
+    "keeps your settings. Details are in run.log in the logs folder of AshLight's install folder.");
+  const checkout = lineOf("failed");
+  assert.match(checkout, /check that Python 3\.11 or newer is installed/);
+  assert.match(checkout, /run\.log/);
+  for (const line of [installed, checkout]) {
+    assert.ok(!/%[A-Z]+%|\\/.test(line), "no environment path: " + line);
+  }
+  assert.ok(!/Python/.test(installed), "no install-Python advice for an installed copy");
+
+  // the window passes the copy kind; main.js hands it the resolved mode
+  const c = code(WIN_SRC);
+  assert.match(c, /win\.loadURL\(startingUrl\(failedPage\(line, opts\.copyKind\)\)\);/);
+  assert.match(code(MAIN_SRC), /copyKind: HOME\.mode/);
 });
 
 /* P8-3: main.js corePort, cut out of main.js and run (it is pure). */
@@ -948,7 +1010,7 @@ test("give-up reason is shown, no path", (t) => {
   // shown: the failed page falls back to it after the start-error line,
   // and an open window follows the watch's start to that page; no tray note
   const c = code(WIN_SRC);
-  assert.match(c, /let line = startErrorLine\(opts\.runtimeDir, sinceMs\);[\s\S]*?line = giveUpNow\(\);[\s\S]*?win\.loadURL\(startingUrl\(failedPage\(line\)\)\);/);
+  assert.match(c, /let line = startErrorLine\(opts\.runtimeDir, sinceMs\);[\s\S]*?line = giveUpNow\(\);[\s\S]*?win\.loadURL\(startingUrl\(failedPage\(line, opts\.copyKind\)\)\);/);
   assert.match(c, /function giveUpNow\(\) \{\s*return giveUpLine\(Launcher\.readGiveUp\(opts\.runtimeDir\)\);/);
   const startBody = c.slice(c.indexOf("const watch = makeWatch("), c.indexOf("function watchStep()"));
   assert.ok(startBody.includes("followStart(since);"));

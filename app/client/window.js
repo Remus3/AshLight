@@ -126,10 +126,15 @@ function startErrorLine(runtimeDir, sinceMs, fsi) {
   }
 }
 
-/* The page options of the failed page: #failed, plus the reason line
-   as the one query value when there is one (startingUrl builds the URL). */
-function failedPage(line) {
-  return line ? { hash: "failed", query: { reason: line } } : { hash: "failed" };
+/* The page options of the failed page: #failed, plus the reason line as a
+   query value when there is one, and kind=installed for an installed copy
+   (UX-FAILED-PAGE-KIND: copyKind is home.js's mode; any other value is the
+   checkout line). startingUrl builds the URL. */
+function failedPage(line, copyKind) {
+  const query = {};
+  if (line) { query.reason = line; }
+  if (copyKind === "installed") { query.kind = "installed"; }
+  return Object.keys(query).length ? { hash: "failed", query: query } : { hash: "failed" };
 }
 
 /* The starting page's app scheme URL, with failedPage's options or none. */
@@ -440,7 +445,7 @@ function createClient(opts) {
       line = giveUpNow();
       if (line) { log("client: supervisor gave up: " + line); }
     }
-    win.loadURL(startingUrl(failedPage(line)));
+    win.loadURL(startingUrl(failedPage(line, opts.copyKind)));
   }
 
   function showDashboard(sinceMs) {

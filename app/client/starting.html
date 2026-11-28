@@ -13,8 +13,10 @@
   <h1>AshLight</h1>
   <p id="starting" role="status">Starting AshLight. The dashboard opens here in a moment.</p>
   <!-- RUN-NO-DEAD-ENDS (research 0042 F12): the general line names the
-       retry and the exact place of the log, never a script -->
-  <p id="failed" role="status" hidden>AshLight couldn't start. Open it again from its Start Menu shortcut. If it fails again, check that Python 3.11 or newer is installed. The details are in run.log in AshLight's logs folder (an installed copy uses %LOCALAPPDATA%\Programs\AshLight\logs by default).</p>
+       retry and the exact place of the log, never a script.
+       UX-FAILED-PAGE-KIND: kind=installed picks the second line -->
+  <p id="failed" role="status" hidden>AshLight couldn't start. Open it again from its Start Menu shortcut. If it fails again, check that Python 3.11 or newer is installed. The details are in run.log in AshLight's logs folder.</p>
+  <p id="failed-installed" role="status" hidden>AshLight couldn't start. Open it again from its Start Menu shortcut. If it fails again, paste the install line from the README again; it repairs AshLight and keeps your settings. Details are in run.log in the logs folder of AshLight's install folder.</p>
   <div id="reason" role="status" hidden>
     <p>AshLight couldn't start.</p>
     <p id="reason-line"></p>
