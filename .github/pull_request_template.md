@@ -1,3 +1,6 @@
+Please read [CONTRIBUTING.md](../CONTRIBUTING.md) first. Tick only the boxes
+that apply to your change.
+
 ## What this changes
 
 <!-- One or two sentences. -->

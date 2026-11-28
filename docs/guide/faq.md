@@ -51,7 +51,8 @@ budgets: under 1 percent of one CPU core when idle and under 250 MB of memory.
 
 ## Does anything leave my computer?
 
-Not unless you turn on web data, which is off by default. With it on,
+Not while you use it, unless you turn on web data, which is off by default.
+Setup downloads its packages once, when you run it. With web data on,
 AshLight fetches prices from poe.ninja, public game data, and a build share
 link once when you paste it. Every request names AshLight and its version and
 carries no cookie or account id.

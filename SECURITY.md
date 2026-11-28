@@ -9,7 +9,7 @@ in the public issue list. Do not open a public issue for a security problem.
 
 Include what you found, how to reproduce it, and the AshLight version, as
 shown in the dashboard footer and under Settings, About and data (from a
-terminal: `GET /api/version` or the `python -m server.al --help` banner).
+terminal: the first line of `python -m server.al --help`).
 
 ## Scope
 

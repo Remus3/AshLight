@@ -82,9 +82,9 @@ Run `scripts\setup.ps1` again. If Checks still names the AshLight folder, run
 
 ## Port 8960 is taken by another program
 
-Set "port" in config\local.json to another free port from 8962 to 8969, then
-quit AshLight from the tray icon and start it again from its shortcut. Or
-start once with `scripts\run.ps1 -Port 8962`.
+Set "port" in config\local.json to 8976 or 8977, then quit
+AshLight from the tray icon and start it again from its shortcut. Or start
+once with `scripts\run.ps1 -Port 8976`.
 
 Next: [FAQ](faq.md).
 

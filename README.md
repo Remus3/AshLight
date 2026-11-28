@@ -23,13 +23,13 @@ rules. See [what AshLight never does](#what-ashlight-never-does) and the
 [FAQ](docs/guide/faq.md#is-it-allowed-can-i-be-banned).
 
 Status: no release yet. [Install from source](#quick-start-windows) needs
-Windows, Python 3.13 or newer and about 400 MB of disk. The first setup
-downloads packages, so allow a few minutes.
+Windows, Python 3.11 or newer (3.13 or newer for a new install) and about
+400 MB of disk. The first setup downloads packages, so allow a few minutes.
 
 On a phone or in a hurry: skip to [Quick start](#quick-start-windows); the
 sections between are for the first release.
 
-**Links**
+Links:
 
 - Player guide: [download](docs/guide/download.md),
   [quick start](docs/guide/quick-start.md),
@@ -116,8 +116,8 @@ corner of the screen.
 
 ## Get started
 
-1. You need Windows 10 or 11 and Python 3.13 or newer. Add Node.js 22.12.0 or
-   newer if you want the overlay, the AshLight window and the Start Menu
+1. You need Windows 10 or 11 and Python 3.11 or newer (3.13 or newer for a
+   new install). Add Node.js 22.12.0 or newer if you want the overlay, the AshLight window and the Start Menu
    shortcut.
 2. Get the source: download it from the green Code button (Download ZIP) and
    unpack it, or run `git clone https://github.com/Remus3/AshLight.git` if
@@ -401,8 +401,8 @@ yourself. AshLight's own folder (`python -m server.al.paths` prints it as
   it where you ask for help. More in
   [Common issues](docs/guide/common-issues.md).
 - Port 8960 taken by another program: set `"port"` in `config/local.json`
-  to another free port from 8962 to 8969 (the shortcut and the scripts both
-  read it), or start once with `scripts\run.ps1 -Port 8962`. AshLight only
+  to 8976 or 8977 (the shortcut and the scripts both read it), or start
+  once with `scripts\run.ps1 -Port 8976`. AshLight only
   uses a port in 8960-8979. The `AL_PORT` environment variable works too.
 - The overlay does not show over the game: play in Windowed Fullscreen,
   check that Show in-game overlay is ticked in the tray menu, and try
