@@ -1,8 +1,10 @@
 AL NEXT SESSION
 ---------------
-SESSION: 40   (FLEET item 13 counter; /done writes n+1)
+SESSION: 41   (FLEET item 13 counter; /done writes n+1)
 
 WAVE POINTER: wave 62 done (W62-PLAN 206094b; GP-15, GP-16 b027ee6, AUTO-20 93e40b5, TEST-A11Y-NEWEST-DEVTOOLS dcd49d1, TEST-PLAYFIT-LOAD-FLAKE 6ea915c; W62-CLOSE 3960390 pushed), next wave 63 (nothing dispatchable at session 33 /done: every open session row waits on an operator act, a gate or a watch; session 39: still nothing dispatchable)
+NOTE (session 40, 2026-11-28, run headless, self-adjudicated while the operator was away): shipped and merged UTIL-SALES-TALLY (decision 0088), TC-SPEC-FOLLOW (0089), UTIL-MAP-STATS; REVIEW-GH weekly GitHub page watcher (0090; its first row REVIEW-GH-20261128 filed by the loop); GitHub content (homepage set to the quick-start guide, issue form tidy-up, README six-lens fixes R1-R17, docs/guide/how-it-works.md, webfetch wiki / raw hosts as the decision 0050 addendum, which settles the research 0064 allow-list ruling); research 0065 augment data; DATA-AUGMENT-POB-TEXT (0091, 287 augments); PLAY-PROGRESSION-VIEW (0092: passive and ascendancy tree, gems, points, next-up strip, region I auto-swap, PG-1..15 review fixed); TC-AUGMENT-WHATIF (0093; stage bound 5 s for R7; quality half dropped); TC-UNCUT-GEM (0094); TC-GEM-UNLOCK (0095); player_notes bounds test counts fsync; README shots re-rendered (overlay no longer offline); CodeQL alert 12 fixed, 0 open on 84b5f96. The loop filed CI-WATCH-ELECTRON-45-5-0 (BLOCKED: session, decision 0076; a watch row, not the decision 0070 bump row). Next free decision number: 0096.
+NOTE (session 40 /done): inbox scan: nothing new (both MAIN notes already in the ledger, TERMINAL). roadmap_fold: no row files, no done rows. reap --apply removed 5 agent worktrees (agent-a8e12923c44a70df3, agent-aaa2b7a9f74be470c, agent-ab29c7809b8248ee8, agent-ab578cc2f18c62a64, agent-ad9f92e3ac637c9b8; clean, every commit on main by patch, branches deleted); kept lane-0, lane-1, lane-2.
 NOTE (session 39, 2026-11-27): parked rows closed and folded d8f1572: TEST-CDP-OS-PORT, TEST-CDP-ENDPOINT-CI-WAIT (c63c3b2: dash endpoint poll 100 locally, 300 under AL_CI; operator order overrides the adjudicator's 150), DOCS-FRESH-20261121 (29e113c, 977c977). DD-20261124 dropped by adjudicator ruling (offline null result, superseded by DD-20261125..27; alternatives: re-dispatch, keep parked; keep ref refs/al/keep/DD-20261124 retained, recover with git cherry-pick; reverses if a later dive cites it or every dive record must be kept); its loop_items record left untouched in adjudicate (the loop's stale-session line still names it; DD-20261125..27 records also sit in adjudicate). Security tab: no Dependabot / secret-scanning / advisory alerts, no open PRs; CodeQL default setup enabled (decision 0087: python, javascript-typescript, actions, weekly); first scan 11 alerts (1 real ReDoS in tools/loop_gatefail.py fixed, 10 test-code fixed via tests/htmlscan.py and exact host checks c188a06, 5b9be1d); rescan of 28b5e44: 0 open. README restructured from the design review (all 11 S-items, a26ee77 merged dfe5175). Research 0064-companion-landscape (9 tools, merge 23f61bd) and 9 ROADMAP rows filed 28b5e44 (6 loop-open; TC-AUGMENT-WHATIF BLOCKED gate on RES-AUGMENT-DATA; RES-MAP-CONTENT-LINES BLOCKED gate; DATA-PRICE-ALT-ASK BLOCKED operator act). Next free decision number: 0088.
 NOTE (session 39 /done): reap --apply removed agent-a9d3caebc1817f8ba and agent-ab25e75dcb2d0191c (clean, every commit on main by patch, branches deleted); kept lane-0, lane-1, lane-2 (fleet_lanes lane worktrees). roadmap_fold: no row files, no done rows. Inbox: MAIN INFORMATION TERMINAL note 2026-11-27-2239 (stray file at the drive root) already in the ledger (skip, terminal), no reply. VERDICTS-READ: tools/live_verdicts.py unchanged (four refused 2026-11-22, OVL-FPS worked). Electron 45.5.0 row not filed (date 2026-11-27, before 2026-11-30 22:03).
 NOTE (sessions 37-38, moved session 39): session 37 /done NOTE (GATE-FIX-37 e3603e4), session 38 NOTE (DASHCONSOLE-W3, NINJA-STUB, adjudicate-is-terminal ruling: a session may claim an adjudicate row) and the Do NOT redo lines of sessions 35 to 38: archive block "SESSION 39 /done" of AL-2026-11-27.txt.
@@ -21,14 +23,17 @@ WAVE-16 FOLLOW-UPS: design findings OPEN (reviews.log): RUN-LEDGER-WIRE LW-1..LW
 WAVE-15 FOLLOW-UPS: tools/docs_fresh.py EXPECTED_STALE (36 entries) can be emptied. OPEN design findings: PLAY-TD-22B TF-1 (news inside the 10 s grace not retried), RUN-METRICS-SITES RL-1..RL-3 (log record consent copy vague, no polite announcement, Client.txt stop also stops it unstated), TEST-STATE-TEXT-4 TST4-1 (design 0001 names state.py as text home). Decisions 0050/0069 want a note that the watcher's GitHub-metadata read of GGG's tree-export repo passes watch_gate though webfetch refuses GGG repos for dives. LOOP-WATCH-SETTLED's hand-off edit (drop the REG_OPEN start check) waits until SHAPE_ALL_PAGES is on, HALT is absent and a dry-run tick files TC-OAUTH-REG-OPEN. TC-WORN-KEY wear key is bound in app/main.js, not the hotkeys registry, with no snapshot / Settings UI.
 Closed records: docs/handoff-archive/AL-2026-11-19.txt to AL-2026-11-24.txt, one block per session headed "SESSION <n> /done", each listing what it moved: 11-17 indexed in "SESSION 18 /done" (AL-2026-11-21.txt); 19-21 in AL-2026-11-22.txt (19: session 18-19 lines, PUB-HOOK-RELEASE-CHECK ruling, WATCH gate-hold history, BUDGETLOG; 20: waves 26-28; 21: waves 31-33, GATE-HOLD-C, plan-07 drift); 22-23 in AL-2026-11-23.txt (22: waves 34-37 plan; 23: waves 38-45 merges, plan, operator requests, session 22 status); 24-28 in AL-2026-11-24.txt; 29 in AL-2026-11-26.txt (29: sessions 25-28 NOTEs, session 28 Do NOT redo); 24-28 detail (24-25: sessions 23-24 NOTE, reap, findings, Do NOT redo, SESSION-21 ROWS; 26: session 25 lines, the session 26 full NOTE, the session 23 NOTE with w42-int; 27: session 26 records; 28: session 27 full NOTE, reap, Do NOT redo, status, the session 28 full NOTE).
 
-Next action: check the operator retry notes for act (m) in Checks > Tried
-in game via tools/live_verdicts.py (rows LIVE-SEARCHSTR-FIX,
-LIVE-FILTER-FIX, LIVE-FILTER-MERGE-FIX, TC-BUILDFILE-LIVE-FIX). If the date
-is after 2026-11-30 22:03 and ROADMAP.md has no Electron 45.5.0 row, file it
-with tools/roadmap.py new (decision 0070). Otherwise rule (adjudicator) on
-research 0064's proposed webfetch allow-list additions (GitHub repo wiki
-pages, raw.githubusercontent.com; not applied; decision 0050 floor) and
-record the call. If something unblocks, plan wave 63 in
+Next action: check the ci workflow result for 357b4cb / 84b5f96 (it was
+still running at integrate time). Then, on or after 2026-11-29, the
+RES-MAP-CONTENT-LINES ledger investigation (bullet below). Also check the
+operator retry notes for act (m) in Checks > Tried in game via
+tools/live_verdicts.py (rows LIVE-SEARCHSTR-FIX, LIVE-FILTER-FIX,
+LIVE-FILTER-MERGE-FIX, TC-BUILDFILE-LIVE-FIX). If the date is after
+2026-11-30 22:03 and ROADMAP.md has no Electron 45.5.0 bump row, file it
+with tools/roadmap.py new (decision 0070); the watch row
+CI-WATCH-ELECTRON-45-5-0 (BLOCKED: session) is a session's to act on.
+Otherwise leave the loop to work the REVIEW-GH-20261128 row. If something
+unblocks, plan wave 63 in
 docs/plan/packages.json from it (PLAN / W<n> / CLOSE as sessions 25-28: one
 package agent per package, at most 2 at once, design-reviewer for web/ or
 text/ changes, one integrator per merge batch; `python tools/plan_check.py
@@ -63,6 +68,14 @@ and 5 (step 4, OA-2). If a line is lost or edited, the Q-23 default holds:
 stay local, nothing is pushed.
 
 Carried forward (not acted on yet):
+- CI CHECK (session 40): check the ci workflow result for 357b4cb / 84b5f96 (it was still running at integrate time).
+- LOOP: add a live augment-stage timing test with a free-socket item to tests/test_math_e2e_live.py (only a manual measurement covers it today: first press 11.21 s, warm 5.97 / 6.35 s).
+- OPERATOR ACTS (session 40, batched into the one ask): OA-4: upload assets/brand/social-preview.png in GitHub Settings > Social preview (checked 1280x640, 62 KB); send docs/ops/price-alt-ask-draft.md to poe2scout (DATA-PRICE-ALT-ASK); paste a real uncut gem item text so the synthetic fixtures of decision 0094 can be checked.
+- RES-MAP-CONTENT-LINES (session 40): re-check the ledger span on 2026-11-29. The ledger (ops/runtime/logshapes.json) has not been written since 2026-11-22: investigate whether the ledger consent and the writer are live.
+- CI BADGE (session 40, optional): the CI badge was left out because test_readme only allows assets/brand and docs/shots images; optionally rule on allowing the GitHub-served ci badge.
+- DEMO SHOTS (session 40, optional): the dashboard README shots show the "log quiet" banner (old demo log); optionally give the demo fixture fresh-timed lines.
+- TC-AUGMENT-WHATIF Settled line (session 40): its wording now says 5 s (amended); keep it.
+- STANDING OPERATOR ORDER: keep GitHub maintained. The weekly REVIEW-GH rows run the six-lens review, and any README, guide or .github change gets a six-lens review before push (memory github-upkeep).
 - TEST-SPLIT-B1-WATCH (row filed, BLOCKED: session): B1 test_real_loop_body red once at 0.920 percent (3 clock steps, 46.9 ms) in the wave 59 batch 3 whole suite under the split phase 2; 3 isolated gated reruns passed (0.616/0.000/0.000), every whole suite since green (session 28: three, incl. /done). If it reds again, apply decision 0060's split reverses-if (SPLIT_TIMING False, or B1 after both streams), never move the budget.
 - ELECTRON (session 27): app/node_modules still holds Electron 45.3.3 (npm ci not run, the client was running); the next setup with the client closed moves it to 45.4.1. Electron 45.5.0 released 2026-11-24, eligible under decision 0070 from 2026-11-30 22:03 (3-day age met 2026-11-27 22:18, 7-day gap after the 45.4.1 bump at 2026-11-23 22:03; the loop files the row; not filed at session 31 /done; file it by hand at the first session after 2026-11-30 22:03 if still missing).
 - PLAY-FEED-VERB-FIT low design notes (reviews.log, low priority): flow and text-spacing sizes unmeasured for trade rows; the price / Dismiss edge check uses the row outer edge.
@@ -110,9 +123,7 @@ Carried forward (not acted on yet):
   AL sidecar Logs folder, acl-before-20261119-185409 (icacls save). The
   dashboard "Private files" Checks row clears on the next core start; read it
   back then.
-- RESEARCH 0064 allow-list (session 39): the note proposes adding GitHub repo wiki pages and raw.githubusercontent.com to the tools/webfetch.py host allow-list; not applied, needs a ruling (decision 0050).
-- RESEARCH 0064 tidy-up (session 39): the research note's own copy of row TC-AUGMENT-WHATIF lacks the BLOCKED tag (ROADMAP.md has it: gate on RES-AUGMENT-DATA); add it to the note.
-- REPO HOMEPAGE (session 39, optional): the GitHub repository homepageUrl is still empty; set it to the player guide.
+- RESEARCH 0064 tidy-up (session 39, optional now that TC-AUGMENT-WHATIF is closed): the research note's own copy of row TC-AUGMENT-WHATIF lacks the BLOCKED tag; add it or mark the row closed in the note.
 - OPERATOR ACT OA-6 (GP-16): the repository settings line stays an operator act (docs/plan/09-operator-acts.md OA-6); default in force until done.
 - OPERATOR ACT release phrase (DEP-18, OA-13): the operator types `release 0.2.0` only after REL-RC-LIVE, REL-CUTOVER-LIVE (cutover.ps1 run, bullet OPERATOR ACT REL-CUTOVER-LIVE) and the poe.ninja switch (decision 0072); then tools/release.py publish --version 0.2.0 --go "release 0.2.0" in an interactive session (decision 0073).
 - GO-PUBLIC STATUS (sessions 32-33): repository PUBLIC 2026-11-27, GP-12,
@@ -126,7 +137,7 @@ Carried forward (not acted on yet):
 - WAVE-10 NOTES and DESIGN FINDINGS OPEN (session 10) (moved session 31, still open): full text in archive block "SESSION 31 /done" of AL-2026-11-27.txt (GLANCE-PENDING-OUT skip, test_floor_static_cache importlib load, findings TWB-1/2, LO-1..LO-4, DA-1/2, OCF-1/2, SU-1/2, SRW-1..3, OLD-1..4, FMT-1/2, ZR-1, TWR-1..3, TCS-2).
 - Design findings left OPEN (waves 7 and earlier, moved session 31, still open): full text in archive block "SESSION 31 /done" of AL-2026-11-27.txt (BAR-1/2, PC-1/2, BL-4, N14-5, DPC-2, F1, PH-1..3, TVC-1..3, DS-1/2/4, KC-1/2, CTX-1..6, IC-1..4, STRIP-1/2).
 - Review folds must file new rows already tagged "BLOCKED: session wave <n>" (06 line 39); an untagged fold row is what kept HALT in wave 6.
-- a bullet is loop work only when it starts with 'LOOP:'; none today.
+- a bullet is loop work only when it starts with 'LOOP:'; one today (the augment-stage timing test).
 - OPERATOR (optional, default in force): OA-19 / OA-20 tick the
   parse-ledger consent line in Settings (RUN-LEDGER-WIRE landed), then play
   as usual; other OA items: OPERATOR ACTS bullet.
@@ -222,12 +233,14 @@ Operator orders (sessions 5 and 6), live state notes: archive block "SESSION 20 
 
 Acceptance: the operator ask is out (or answered); any unblocked row is planned as wave 62 in packages.json (plan_check check green, waves --write applied) and closed as 08 section 7 says (open-row command prints "none open" or only DEFERRED / BLOCKED ids, status empty on main, leak sweep clean, last batch suite and npm test green, WAVE POINTER moved), every package merged or re-deferred with a reason.
 
+Do NOT redo (session 40, pushed by 84b5f96): UTIL-SALES-TALLY, TC-SPEC-FOLLOW, UTIL-MAP-STATS, REVIEW-GH watcher, GitHub content and homepage, the webfetch wiki / raw ruling (0050 addendum), research 0065, DATA-AUGMENT-POB-TEXT, PLAY-PROGRESSION-VIEW, TC-AUGMENT-WHATIF, TC-UNCUT-GEM, TC-GEM-UNLOCK (decisions 0088 to 0095, rows closed and archived), README shots, CodeQL alert 12.
+
 Do NOT redo (session 39, pushed): closing TEST-CDP-OS-PORT, TEST-CDP-ENDPOINT-CI-WAIT, DOCS-FRESH-20261121 (fold d8f1572); the DD-20261124 drop ruling; CodeQL setup and its 11 alert fixes (decision 0087, 0 open on 28b5e44); the README restructure (dfe5175); research 0064 and its 9 rows (28b5e44); the session 39 verdicts read (unchanged).
 
 Do NOT redo (sessions 6 to 34): docs/handoff-archive/ (closed blocks per session; 29 to 34 in block "SESSION 37 /done" of AL-2026-11-27.txt).
 
-In flight: none for the session. Loop items TEST-UPDATES-NINJA-STUB, TEST-CDP-ENDPOINT-CI-WAIT, TEST-CDP-OS-PORT, DOCS-FRESH-20261121 (rows closed by sessions 38-39), DD-20261124 (dropped by ruling) and DD-20261125..27 in adjudicate, records untouched (ops/loop/control/loop_items/, read back session 39 /done); ops/loop/control/progress/loop.json updated 2026-11-27T23:18 status done. Loop live, HALT absent; REG_OPEN absent (read back session 39 /done).
+In flight: none for the session. Loop live, HALT absent, REG_OPEN absent (read back session 40 /done); ops/loop/control/progress/loop.json updated 2026-11-28T01:18 status done (fire 1036, idle; its stale-session line still names DD-20261124 in adjudicate, records untouched). Row REVIEW-GH-20261128 open for the loop.
 
-Status (session 39 /done, 2026-11-27, fresh): gated whole suite green (parallel 5968 passed / 8 skipped in 90.45 s, timing-calc 9 passed 33.73 s, timing-rest 12 passed 23.77 s); npm 890/890; leak sweep ARMED needles=44, no HALT. Tree clean at /done; main already at 28b5e44 on origin (push read back: Everything up-to-date); this hand-off commit follows and is pushed. Reap: 2 agent worktrees removed, lane-0..2 kept. Board skipped (opt-out).
+Status (session 40 /done, 2026-11-28, fresh): gated whole suite green (parallel 6167 passed / 8 skipped in 91.05 s, timing-calc 9 passed 35.14 s, timing-rest 12 passed 22.56 s); npm 892/892; leak sweep ARMED needles=44, no HALT. Tree clean at /done; main at 84b5f96 on origin (push read back: Everything up-to-date); this hand-off commit follows and is pushed. Reap: 5 agent worktrees removed, lane-0..2 kept. Board skipped (opt-out).
 
 Start with: read this file, then CLAUDE.md, ROADMAP.md, git log -10.
