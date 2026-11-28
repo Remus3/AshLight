@@ -78,12 +78,22 @@ def test_blocked_loop_bullet_is_listed_not_dispatched(tmp_path):
     assert listed and listed[0]["skip"] == "blocked"
 
 
-def test_live_handoff_shape_yields_zero_work_items():
-    # the live hand-off carries no LOOP: bullet today, so the loop takes none
+def test_live_handoff_loop_bullets_are_counted_and_well_formed():
+    # the live hand-off may carry any number of LOOP: bullets; the preflight
+    # count matches the parsed work items and every item is well-formed
     live = (ROOT / "AL-NEXT-SESSION.txt").read_text(encoding="utf-8")
     assert "Carried forward" in live
-    assert al_loop.handoff_items(live) == []
-    assert loop_preflight.handoff_count(ROOT) == 0
+    items = al_loop.handoff_items(live)
+    work = [i for i in items if i["skip"] is None]
+    assert loop_preflight.handoff_count(ROOT) == len(work)
+    for item in items:
+        assert re.fullmatch(r"H[0-9a-f]{6}", item["id"])
+        assert isinstance(item["text"], str) and item["text"].strip()
+        assert not item["text"].startswith("LOOP:")
+        assert item["skip"] in (None, "blocked", "operator", "other-tree", "info")
+        if item["skip"] == "blocked":
+            assert item["reason"].startswith("BLOCKED")
+    assert len({i["id"] for i in items}) == len(items)
 
 
 @pytest.mark.git
