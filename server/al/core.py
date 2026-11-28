@@ -62,6 +62,7 @@ from .theorycraft import basetypes
 from .theorycraft import calcwire, health, pobout, skillsplit
 from .theorycraft import item as item_mod
 from .theorycraft import live as tc_live
+from .theorycraft import pobtext
 from .theorycraft import press as tc_press
 from .theorycraft import shareurl
 from .theorycraft import store as build_store
@@ -287,6 +288,12 @@ class Core:
                                         staged=True, worn=self.worn)
         # TC-WORN-WIRE: the worn_gear switch is read at every use
         self.last_eval.worn_on = self.worn_enabled
+        # TC-AUGMENT-WHATIF (decisions 0091, 0093): the pinned PoB
+        # ModRunes.lua rows, read as text once per pin and only while the
+        # calc component is opted in; the stage runs only with a calc
+        self.augments = pobtext.Augments()
+        self.last_eval.augments = lambda: (self.augments.get()
+                                           if self.tc_calc_enabled() else None)
         # TC-CARD-PARTS: the card parts' ctx gets the config and the area
         self.last_eval.ctx_extra = {"config": self._config, "area_id": lambda: self.state.area_id}
         # MATH-NEXT-LOOK: the build view ranks "look for next" stats with the

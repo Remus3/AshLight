@@ -15,6 +15,7 @@ are compared only through the optional PoB calc (TC-DELTA, `calc=`).
 import copy
 import math
 
+from . import augment as augment_mod
 from . import delta as delta_mod
 from . import item as item_parser
 from . import pobweights
@@ -380,7 +381,19 @@ def _marks(out, ref, new_stats, side, rows=None):
 
 
 STAGE_WEIGHTS, STAGE_POB, STAGE_MODS = "weights", "pob", "mods"
-STAGES = (STAGE_WEIGHTS, STAGE_POB, STAGE_MODS)
+STAGE_AUGMENT = "augment"  # TC-AUGMENT-WHATIF (decision 0093)
+STAGES = (STAGE_WEIGHTS, STAGE_POB, STAGE_MODS)  # the stages of every calc press
+
+
+def pending_after(name, result):
+    """TC-PRESS-STAGED-LIVE: True when another stage follows the stage
+    `name` whose result is `result` ("pob" always has "mods" after it; a
+    "mods" result marked augment pending has the "augment" stage after it)."""
+    if name == STAGE_POB:
+        return True
+    aug = result.get("augment") if isinstance(result, dict) else None
+    return (name == STAGE_MODS and isinstance(aug, dict)
+            and aug.get("state") == augment_mod.STATE_PENDING)
 
 
 def evaluate(item_text, build, weights=None, slot=None, calc=None, blend=None,
@@ -416,7 +429,7 @@ def evaluate(item_text, build, weights=None, slot=None, calc=None, blend=None,
 
 
 def stages(item_text, build, weights=None, slot=None, calc=None, blend=None,
-           cache=None, baseline=None):
+           cache=None, baseline=None, augments=None, cancelled=None):
     """TC-PRESS-STAGED-EVAL: evaluate() in all-or-nothing stages. A
     generator of (stage name, result) pairs; each result is a complete,
     independent evaluate()-shaped result (same keys):
@@ -428,6 +441,14 @@ def stages(item_text, build, weights=None, slot=None, calc=None, blend=None,
     - "pob": PoB's DPS / EHP deltas and verdicts per slot; the per-mod rows
       still carry the hand weights.
     - "mods": PoB-derived per-mod weights (the probes).
+    - "augment" (TC-AUGMENT-WHATIF, decision 0093): only with `augments`
+      (a callable returning the pobtext.load_augments map, or the map) and
+      an item with augment or quality room (theorycraft/augment.py): the
+      "mods" result then carries "augment": {"state": "pending"} and this
+      last stage adds the "augment" field (state "ready" or, after a calc
+      error, "failed"; the rest of the result is the "mods" one). With
+      `cancelled()` True between two of its calc calls the generator ends
+      with no further stage.
 
     A calc error in stage "pob" or "mods" ends the generator with one more
     "weights" result carrying its notice ("failed" / "implausible"). The
@@ -462,7 +483,45 @@ def stages(item_text, build, weights=None, slot=None, calc=None, blend=None,
         yield STAGE_WEIGHTS, done(_failed(base, e, build, slots, new_stats, cache,
                                           blend, side, ref))
         return
-    yield STAGE_MODS, done(out, rows)
+    mods = done(out, rows)
+    aug = _augment_plan(parsed, augments, base, mods, rows)
+    if aug is None:
+        yield STAGE_MODS, mods
+        return
+    the_plan, item_base = aug
+    yield STAGE_MODS, dict(_copy(mods), augment={"state": augment_mod.STATE_PENDING})
+    try:
+        field = augment_mod.run(calc, build, mods["slot"], item_text, item_base, the_plan,
+                                blend=blend, cancelled=cancelled)
+    except augment_mod.Cancelled:
+        return
+    except delta_mod.CalcError:
+        field = {"state": augment_mod.STATE_FAILED, "slot": mods["slot"]}
+    yield STAGE_AUGMENT, dict(_copy(mods), augment=field)
+
+
+def _augment_plan(parsed, augments, base, mods, rows):
+    """TC-AUGMENT-WHATIF: (augment.plan(), the build's outputs with the
+    pressed item in the headline slot) or None (no augments source, no
+    room, a slot the main skill cannot use, nothing to measure). The hand
+    stat weights only order the candidates; PoB ranks them."""
+    if augments is None or not mods.get("ok"):
+        return None
+    row = next((r for r in rows if r[0] == mods.get("slot")), None)
+    if row is None or row[2] is None:
+        return None
+    try:
+        index = augments() if callable(augments) else augments
+    except Exception:  # noqa: BLE001 - no augment rows: no stage
+        return None
+    if not isinstance(index, dict) or not index:
+        return None  # no pinned augment rows (decision 0091): no stage at all
+    table = weights_mod.lookup(base["mod_weights"]["weights"])
+    the_plan = augment_mod.plan(parsed, index, table)
+    if the_plan is None:
+        return None
+    d = row[2]
+    return the_plan, {k: d[k]["new"] for k in delta_mod.OUTPUTS}
 
 
 def _copy(out):

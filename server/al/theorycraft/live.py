@@ -25,6 +25,7 @@ import threading
 
 from .. import campaign as campaign_mod
 from .. import upgrade as upgrade_mod
+from . import augment as augment_mod
 from . import buildlive
 from . import cardparts
 from . import delta as delta_mod
@@ -154,6 +155,10 @@ class LastEval:
         self._busy = False
         # the result of the last published stage (wait() then read it)
         self.last_result = None
+        # TC-AUGMENT-WHATIF (decision 0093): a callable returning the
+        # pobtext.load_augments map (the core reads it only while the calc
+        # component is on), or None: no augment stage
+        self.augments = None
         # RUN-UNKNOWN-ITEM-TEXT (F-185): a callable taking each fresh
         # press's "unweighted" mod lines (plug/unknownitems.py sets it;
         # None: not kept). Memory only, decision 0045.
@@ -221,9 +226,13 @@ class LastEval:
         with self._lock:
             self._input = (text, slot)
         build = self.builds.build
+        # TC-AUGMENT-WHATIF: the augment stage stops between two calc calls
+        # once this press is no longer the newest
         stages = tc_evaluate.stages(text, build, self.weights.get(), slot=slot,
                                     calc=calc, cache=self.pob_weights,
-                                    baseline=self.baseline(build))
+                                    baseline=self.baseline(build),
+                                    augments=self.augments if calc is not None else None,
+                                    cancelled=lambda: not self.current(gen))
         press = _Press(self, text, slot, gen)
         if not self.staged:
             result = None
@@ -338,9 +347,11 @@ class LastEval:
             for name, result in stages:
                 if not self.current(press.gen):
                     return
-                # "pob" has the probes still to come; a "weights" stage
-                # after the first is a calc error's fallback, the last one
-                pending = name == tc_evaluate.STAGE_POB
+                # "pob" has the probes still to come, and a "mods" stage
+                # marked augment pending the augment stage (TC-AUGMENT-WHATIF);
+                # a "weights" stage after the first is a calc error's
+                # fallback, the last one
+                pending = tc_evaluate.pending_after(name, result)
                 if not press.publish(name, result, pending, True, None) or not pending:
                     return
                 last = name
@@ -350,6 +361,10 @@ class LastEval:
             if last == tc_evaluate.STAGE_WEIGHTS:
                 result["calc"] = dict(result.get("calc") or {},
                                       notice=delta_mod.NOTICE_FAILED)
+            aug = result.get("augment")
+            if isinstance(aug, dict) and aug.get("state") == augment_mod.STATE_PENDING:
+                result["augment"] = {"state": augment_mod.STATE_FAILED,
+                                     "slot": result.get("slot")}
             press.publish(last, result, False, True, None)
         finally:
             stages.close()
