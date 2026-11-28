@@ -257,6 +257,32 @@ function safeFileName(name) {
   return base.slice(0, 120);
 }
 
+/* AUDIT-DOWNLOAD-NAMES: the save path for a download named `name` in
+   `dir`. Tries "name.ext", then "name (1).ext" to "name (99).ext", then a
+   timestamped "name-<now>.ext" (with "-<n>" after it if that is taken too),
+   so an existing file is never overwritten. `taken` is the session's set
+   of paths already handed out; the picked path is added to it, so two
+   downloads in flight never share a name. exists(p) and now() are
+   injected (fs.existsSync and Date.now in the window). */
+function pickDownloadPath(dir, name, exists, taken, now) {
+  const ext = path.extname(name);
+  const stem = name.slice(0, name.length - ext.length);
+  const free = (p) => !taken.has(p) && !exists(p);
+  let target = path.join(dir, name);
+  for (let i = 1; !free(target) && i < 100; i++) {
+    target = path.join(dir, stem + " (" + i + ")" + ext);
+  }
+  if (!free(target)) {
+    const stamped = stem + "-" + String((now || Date.now)());
+    target = path.join(dir, stamped + ext);
+    for (let n = 1; !free(target); n++) {
+      target = path.join(dir, stamped + "-" + n + ext);
+    }
+  }
+  taken.add(target);
+  return target;
+}
+
 /* May this download be saved? Only from the core origin (its own page or
    a blob: URL the page made) and only with a .build, .filter, .json or
    .txt name. */
@@ -302,7 +328,8 @@ function makeHealthCheck(http, port, getToken) {
 }
 
 module.exports = { dashboardUrl, isCoreUrl, isExternalUrl, externalHref, routeFor,
-                   rateAllows, noteOpened, readHosts, downloadAllowed, wantsClient,
+                   rateAllows, noteOpened, readHosts, downloadAllowed, pickDownloadPath,
+                   wantsClient,
                    wantsTray, TRAY_FLAG,
                    windowBounds, wakeAction, stateDoc, safeFileName, waitFor, makeHealthCheck,
                    coreOrigin, CLIENT_FLAG, DEFAULT_SIZE, MIN_SIZE, LINK_HOSTS, HOSTS_FILE,

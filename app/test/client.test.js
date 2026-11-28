@@ -194,6 +194,47 @@ test("download names are reduced to a safe base name", () => {
   assert.ok(Link.safeFileName("x".repeat(400)).length <= 120);
 });
 
+/* AUDIT-DOWNLOAD-NAMES (audit 2026-11-28 P2-4): never overwrite, never
+   hand one name to two downloads in flight. */
+test("download path skips taken names and numbers up to 99", () => {
+  const dir = path.join("dl");
+  const disk = new Set([path.join(dir, "a.build"), path.join(dir, "a (1).build")]);
+  const taken = new Set();
+  const exists = (p) => disk.has(p);
+  const first = Link.pickDownloadPath(dir, "a.build", exists, taken, () => 5);
+  assert.equal(first, path.join(dir, "a (2).build"));
+  assert.ok(taken.has(first));
+  // A second download of the same name before the first lands on disk.
+  const second = Link.pickDownloadPath(dir, "a.build", exists, taken, () => 5);
+  assert.equal(second, path.join(dir, "a (3).build"));
+  assert.equal(Link.pickDownloadPath(dir, "new.txt", exists, taken, () => 5),
+               path.join(dir, "new.txt"));
+});
+
+test("download path never overwrites after 100 existing names", () => {
+  const dir = path.join("dl");
+  const disk = new Set([path.join(dir, "ashlight.filter")]);
+  for (let i = 1; i < 100; i++) { disk.add(path.join(dir, "ashlight (" + i + ").filter")); }
+  assert.equal(disk.size, 100);
+  const taken = new Set();
+  const exists = (p) => disk.has(p);
+  const got = Link.pickDownloadPath(dir, "ashlight.filter", exists, taken, () => 1234);
+  assert.equal(got, path.join(dir, "ashlight-1234.filter"));
+  assert.equal(disk.has(got), false);
+  // The same millisecond again, and that stamped name already on disk too.
+  disk.add(got);
+  const again = Link.pickDownloadPath(dir, "ashlight.filter", exists, taken, () => 1234);
+  assert.equal(disk.has(again), false);
+  assert.notEqual(again, got);
+  assert.ok(again.startsWith(path.join(dir, "ashlight-1234")) && again.endsWith(".filter"));
+});
+
+test("the window picks download paths through pickDownloadPath with a session set", () => {
+  assert.ok(WIN_SRC.includes("Link.pickDownloadPath("));
+  assert.ok(WIN_SRC.includes("handedOut"));
+  assert.ok(!/i < 100/.test(WIN_SRC));
+});
+
 test("waitFor polls until the core answers or the time is up", async () => {
   let t = 0;
   let calls = 0;
