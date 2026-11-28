@@ -58,6 +58,7 @@ REPORT_SCHEMA = 1
 MAX_REPORT_BYTES = 256 * 1024
 MAX_STAGED_BYTES = 64 * 1024
 MAX_HEALTH_BYTES = 64 * 1024
+MAX_STATE_BYTES = 4 * 1024 * 1024   # the snapshot default_idle reads
 PREVIOUS_RUNTIMES = "previous_runtimes"  # marker key beyond MARKER_FIELDS
 RUNTIME_KEYS = ("python", "electron")
 HEALTH_TIMEOUT_S = 3.0
@@ -501,6 +502,24 @@ def default_health(home, timeout=HEALTH_TIMEOUT_S):
     core, or None. The port comes from <home>/data/core.alive and the token
     from <home>/data/token; the listener proves it is the core first
     (hello.verify, decision 0054), loopback only, no proxy."""
+    return _core_doc(home, "/api/health", MAX_HEALTH_BYTES, timeout)
+
+
+def default_idle(home, timeout=HEALTH_TIMEOUT_S):
+    """REL-UPDATE-AUTO-IDLE (research 0066 F4): the game_idle flag of THIS
+    home's own core snapshot (decision 0029: the log's staleness, never a
+    process list): True or False, None when the core does not answer or
+    the flag is not a boolean. Same proof and route rules as
+    default_health."""
+    doc = _core_doc(home, "/api/state", MAX_STATE_BYTES, timeout)
+    idle = doc.get("game_idle") if isinstance(doc, dict) else None
+    return idle if isinstance(idle, bool) else None
+
+
+def _core_doc(home, route, max_bytes, timeout):
+    """The JSON object a GET of `route` on this home's own core answers,
+    or None (no heartbeat, no token, the hello proof failed, an error, a
+    body over max_bytes or not an object)."""
     from .. import hello
     from .. import keepalive as ka
     data = homemod.layout(home)["data"]
@@ -515,11 +534,14 @@ def default_health(home, timeout=HEALTH_TIMEOUT_S):
     if not token or not hello.verify(port, token, opener=hello.NO_PROXY_OPENER,
                                      timeout=timeout):
         return None
-    req = urllib.request.Request(f"http://{ports.LOOPBACK}:{int(port)}/api/health",
+    req = urllib.request.Request(f"http://{ports.LOOPBACK}:{int(port)}{route}",
                                  headers={"X-AL-Token": token})
     try:
         with hello.NO_PROXY_OPENER.open(req, timeout=timeout) as resp:
-            doc = json.loads(resp.read(MAX_HEALTH_BYTES).decode("utf-8"))
+            body = resp.read(max_bytes + 1)
+        if len(body) > max_bytes:
+            return None
+        doc = json.loads(body.decode("utf-8"))
     except (OSError, ValueError, urllib.error.URLError):
         hello.forget(port)
         return None

@@ -137,6 +137,22 @@ def test_staged_version_gives_one_line(home, core):
                                              "next time you open AshLight.")
 
 
+def test_a_version_due_for_72_h_says_how_to_finish(home, core):
+    # REL-APPLY-WAITING-NOTE (research 0066 F16): apply-staged waits while a
+    # core runs, so a player who only closes to the tray never applies it
+    marker(home, "0.4.0", previous="0.3.9")
+    stage(home, "0.5.0", NOW - 72 * HOUR + 60)
+    _, rows = rows_of(core)
+    assert rows[diag.UPDATE_ID]["detail"] == ("Version 0.5.0 is ready. It starts the "
+                                             "next time you open AshLight.")
+    stage(home, "0.5.0", NOW - 72 * HOUR)
+    _, rows = rows_of(core)
+    r = rows[diag.UPDATE_ID]
+    assert r["status"] == diag.NOTE and r["fix"] is None
+    assert r["detail"] == ("Version 0.5.0 is ready. To finish the update, choose "
+                           "Quit in the AshLight tray menu, then open AshLight again.")
+
+
 def test_only_the_newest_usable_staged_version_counts(home, core):
     marker(home, "0.4.0", previous="0.3.9")
     stage(home, "0.3.9", NOW)        # older: never offered
@@ -218,6 +234,28 @@ def test_update_run_report_is_the_last_result(home, core):
     last = core.diag_facts(NOW)["install"]["last"]
     assert last == {"action": "update", "status": "staged", "version": "0.5.0",
                     "from": "0.4.0", "at": NOW - HOUR}
+
+
+def test_a_disk_space_failure_is_named_in_the_row(home, core):
+    # REL-DISK-PRECHECK (research 0066 F2): the fixed stage word only,
+    # never the free-text reason
+    marker(home, "0.4.0", previous="0.3.9")
+    update.write_report(home, {"schema": update.REPORT_SCHEMA, "kind": "update",
+                               "from": "0.4.0", "version": "0.5.0",
+                               "status": update.FAILED, "stage": "space",
+                               "reason": "not enough free disk space (90 MB needed)"},
+                        now=stamp(NOW - HOUR))
+    last = core.diag_facts(NOW)["install"]["last"]
+    assert last["stage"] == "space" and "reason" not in last
+    _, rows = rows_of(core)
+    assert rows[diag.INSTALL_ID]["detail"] == (
+        "Version 0.4.0, previous 0.3.9 kept. Last update: not enough free disk "
+        "space for the new version, nothing changed, {ago}.")
+    update.write_report(home, {"schema": update.REPORT_SCHEMA, "kind": "update",
+                               "from": "0.4.0", "version": "0.5.0",
+                               "status": update.FAILED, "stage": "verify",
+                               "reason": "x"}, now=stamp(NOW - HOUR))
+    assert "stage" not in core.diag_facts(NOW)["install"]["last"]
 
 
 # -- the copied report -------------------------------------------------------

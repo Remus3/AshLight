@@ -17,6 +17,7 @@ the User-Agent and the size caps run for real and only the socket goes to
 127.0.0.1 (the connect guard allows loopback and nothing else).
 """
 
+import functools
 import hashlib
 import importlib.util
 import io
@@ -33,6 +34,7 @@ import zipfile
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -349,6 +351,52 @@ def test_a_rerun_of_a_staged_version_changes_nothing(home, releases):
     assert code == update.EXIT_OK and report["status"] == "staged"
     assert report["steps"]["selftest"] == "current" and test.calls == [VER_N1]
     assert (home / "staged" / (VER_N1 + ".json")).read_bytes() == staged
+
+
+# --- REL-DISK-PRECHECK (research 0066 F2) --------------------------------------------------
+
+def test_too_little_free_space_fails_with_the_fixed_reason_and_lays_out_nothing(
+        home, releases, monkeypatch):
+    seen = []
+
+    def usage(path):
+        seen.append(Path(path))
+        return SimpleNamespace(total=10 ** 12, used=10 ** 12 - 1024, free=1024)
+    monkeypatch.setattr(update, "disk_usage", usage)
+    test = FakeSelftest()
+    code, report = _stage(home, releases[VER_N1], selftest=test)
+    assert code == update.EXIT_FAIL and report["stage"] == "space", report
+    need = update.space_needed(releases[VER_N1]["zip"].stat().st_size, [])
+    assert report["reason"] == ("not enough free disk space (%d MB needed)"
+                                % -(-need // (1024 * 1024)))
+    assert seen == [Path(home)]
+    assert test.calls == [] and VER_N1 not in homemod.version_dirs(home)
+    assert update.staged_versions(home) == []
+
+
+def test_the_space_needed_counts_the_zip_changed_runtimes_and_a_margin():
+    mb = 1024 * 1024
+    assert update.space_needed(2 * mb, []) == 2 * mb + update.SPACE_MARGIN
+    assert update.space_needed(2 * mb, [100 * mb, 50 * mb]) == \
+        2 * mb + 3 * 150 * mb + update.SPACE_MARGIN
+    assert update.SPACE_MARGIN == 64 * mb
+
+
+def test_an_orphan_version_folder_is_removed_at_the_start_of_a_run(home, releases):
+    # a newer folder with no staged file (a staged write that failed) goes;
+    # the marker's own, its previous and a staged one stay
+    app = homemod.layout(home)["app"]
+    (app / "9.9.9").mkdir()
+    (app / "9.9.9" / "boot.py").write_text("# left over\n", encoding="ascii")
+    active = homemod.read_marker(home)["version"]
+    code, report = _stage(home, releases[VER_N1])
+    assert code == update.EXIT_OK, report
+    assert report["cleaned"] == ["9.9.9"]
+    assert not (app / "9.9.9").exists()
+    assert {active, VER_N1} <= set(homemod.version_dirs(home))
+    code, report = _stage(home, releases[VER_N1])  # nothing more to clean
+    assert code == update.EXIT_OK and report.get("cleaned") in (None, [])
+    assert VER_N1 in homemod.version_dirs(home)
 
 
 # --- refused, failed, deferred ---------------------------------------------------------------
@@ -890,6 +938,23 @@ def test_a_runtime_that_fails_its_new_pin_stages_nothing(web_home, releases, gh)
     assert not (web_home / "staged").exists()
 
 
+def test_a_broken_runtime_download_is_a_download_failure(web_home, releases, gh):
+    # REL-DOWNLOAD-RESUME (research 0066 F1): the stage the core retries
+    # sooner; a pin mismatch above stays a 'runtimes' failure
+    import urllib.error
+    rdoc = _release_doc(VER_N1)
+    rdoc["runtimes"]["electron"] = _pin(EL2_URL, EL2_ZIP, "45.3.4", "MIT")
+    answer = _publish(gh, releases, VER_N1, release_doc=rdoc)
+
+    def broken(*_a, **_k):
+        raise urllib.error.URLError("connection reset")
+    code, report = _rstage(web_home, answer, gh, runtime_fetch=broken)
+    assert code == update.EXIT_FAIL and report["stage"] == "download", report
+    assert report["reason"] == "runtime download: URLError"
+    assert not (web_home / "runtime" / EL2_RT).exists()
+    assert not (web_home / "staged").exists()
+
+
 def test_download_runs_below_normal_and_only_after_the_gate(web_home, releases, gh):
     answer = _publish(gh, releases, VER_N1)
     prio = FakePriority(start=0x20)
@@ -946,6 +1011,20 @@ def test_an_answer_without_digest_is_recorded_and_sha256sums_decides(
     assert code == update.EXIT_FAIL and report["stage"] == "verify"
     assert "SHA256SUMS" in report["reason"]
     assert update.staged_versions(web_home) == [VER_N1]
+
+
+def test_an_answer_with_digests_on_some_assets_only_is_refused(web_home, releases, gh):
+    # REL-DIGEST-PARTIAL (research 0066 F5): a mixed answer is not a GitHub
+    # shape we expect, so it is refused before anything is requested
+    answer = _publish(gh, releases, VER_N1)
+    answer["assets"][0]["digest"] = None
+    assert any(a["digest"] for a in answer["assets"])
+    opener = gh.opener()
+    code, report = _rstage(web_home, answer, gh, opener=opener)
+    assert code == update.EXIT_FAIL and report["stage"] == "release", report
+    assert "digest for some assets only" in report["reason"]
+    assert opener.urls == []
+    _nothing_staged(web_home)
 
 
 def test_web_data_off_or_unacknowledged_makes_no_request(home, releases, gh):
@@ -1049,9 +1128,75 @@ def test_the_yes_line_with_web_data_off_requests_nothing(home, releases, gh):
     assert _report_doc(home)["stage"] == "web_data"
 
 
+def _cache_answer(home, answer):
+    cache = update.cache_path(home)
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    cache.write_text(json.dumps({"repo": REPO, "latest": answer}) + "\n", encoding="ascii")
+
+
+def test_the_auto_line_waits_for_game_idle_before_download_and_self_test(
+        web_home, releases, gh, monkeypatch):
+    # REL-UPDATE-AUTO-IDLE (research 0066 F4): the core's automatic start
+    # is not a click; the download and the self-test re-check game_idle
+    seen = []
+
+    def run(h, version, **kw):
+        seen.append((kw.get("clicked"), kw.get("idle")() if kw.get("idle") else None))
+        return selftestmod.Result(status=selftestmod.PASSED, version=version)
+    monkeypatch.setattr(selftestmod, "run", run)
+    monkeypatch.setattr(update, "set_priority", lambda _cls: None)
+    _cache_answer(web_home, _publish(gh, releases, VER_N1))
+    asked = []
+
+    def idle():
+        asked.append(1)
+        return True
+    opener = gh.opener()
+    out = io.StringIO()
+    code = update.main(["--yes", "--auto", "--home", str(web_home)], out=out,
+                       opener=opener, idle=idle)
+    assert code == update.EXIT_OK, out.getvalue()
+    assert seen == [(False, True)] and len(asked) >= 2
+    assert _report_doc(web_home)["steps"]["gate"] == "idle"
+    assert update.staged_versions(web_home) == [VER_N1]
+
+
+def test_the_auto_line_defers_with_no_request_while_the_game_is_not_idle(
+        web_home, releases, gh, monkeypatch):
+    monkeypatch.setattr(update, "stage_from_release", functools.partial(
+        update.stage_from_release, max_wait_s=0.0, sleep=lambda _s: None))
+    _cache_answer(web_home, _publish(gh, releases, VER_N1))
+    opener = gh.opener()
+    code = update.main(["--yes", "--auto", "--home", str(web_home)],
+                       out=io.StringIO(), opener=opener, idle=lambda: False)
+    assert code == update.EXIT_DEFERRED
+    assert opener.urls == [] and gh.seen == []
+    assert _report_doc(web_home)["stage"] == "gate"
+    _nothing_staged(web_home)
+
+
+def test_the_auto_line_reads_the_homes_own_core_by_default(web_home, releases, gh,
+                                                          monkeypatch):
+    homes = []
+
+    def fake_idle(h, timeout=None):
+        homes.append(Path(h))
+        return None   # the core does not answer: wait, never go
+    monkeypatch.setattr(switchmod, "default_idle", fake_idle)
+    monkeypatch.setattr(update, "stage_from_release", functools.partial(
+        update.stage_from_release, max_wait_s=0.0, sleep=lambda _s: None))
+    _cache_answer(web_home, _publish(gh, releases, VER_N1))
+    opener = gh.opener()
+    code = update.main(["--yes", "--auto", "--home", str(web_home)],
+                       out=io.StringIO(), opener=opener)
+    assert code == update.EXIT_DEFERRED and opener.urls == []
+    assert homes and all(h == Path(web_home) for h in homes)
+
+
 def test_the_yes_line_usage():
     for argv in (["--yes", "--zip", "x.zip"], ["--yes", "--runtime-dir", "rt"],
                  ["--yes", "--published-at", "2026-11-19T00:00:00Z"],
+                 ["--auto", "--zip", "x.zip"],
                  ["--zip", "x.zip", "--release-cache", "c.json"]):
         assert update.main(argv, out=io.StringIO()) == update.EXIT_USAGE, argv
 

@@ -221,6 +221,29 @@ def test_verifies_and_hands_over_to_the_installer(tmp_path):
 
 
 @needs_ps
+def test_a_finished_install_prints_the_sums_file_sha256(tmp_path):
+    # REL-INSTALL-SUMS-PRINT (research 0066 F6): a second hash source a
+    # careful player can compare with the release page
+    rel = make_release(tmp_path)
+    runner, _record = make_runner(tmp_path)
+    home = tmp_path / "h"
+    code, out = run_file("-Zip", rel["zip"], "-RuntimeDir", rel["rt"], "-InstallDir", home,
+                         "-NoStart", "-Runner", runner)
+    assert code == 0, out
+    want = _sha((rel["rel"] / "SHA256SUMS.txt").read_bytes())
+    line = ("AshLight installer: SHA-256 of SHA256SUMS.txt: " + want
+            + " (the release page lists the same value)")
+    assert line in out.splitlines()
+    assert out.index(line) < out.index("AshLight installer: done")
+    # a failed hand-over prints no hash: nothing was installed to compare
+    (tmp_path / "x").mkdir()
+    runner7, _ = make_runner(tmp_path / "x", code=7)
+    code, out = run_file("-Zip", rel["zip"], "-RuntimeDir", rel["rt"], "-InstallDir",
+                         tmp_path / "h2", "-NoStart", "-Runner", runner7)
+    assert code == 7 and want not in out
+
+
+@needs_ps
 def test_without_no_start_the_flag_is_not_passed(tmp_path):
     rel = make_release(tmp_path)
     runner, record = make_runner(tmp_path)

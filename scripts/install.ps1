@@ -266,6 +266,7 @@ function Invoke-AlBootstrap {
     $stage = $null
     $code = 1
     $handedOver = $false
+    $sumsHash = ''
     try {
         # 2. the release files
         if ($Zip) {
@@ -308,6 +309,7 @@ function Invoke-AlBootstrap {
         if ((Get-Item -LiteralPath $zipPath).Length -gt $AlMaxAppZip) { throw 'the app zip is too large' }
         Assert-AlSum $zipPath $sumsText $zipName
         Write-AlLine ('verified ' + $zipName)
+        $sumsHash = Get-AlSha256 $sumsPath
 
         # 3. the pinned CPython zip
         $pin = Get-AlPythonPin $release
@@ -357,6 +359,9 @@ function Invoke-AlBootstrap {
         Write-AlLine ('the installer stopped with code ' + $code + '; its report is <home>\logs\reports\last-install.json')
         return $code
     }
+    # REL-INSTALL-SUMS-PRINT (research 0066 F6): a second hash source; the
+    # release page body ends with the same value (release.yml)
+    Write-AlLine ('SHA-256 of SHA256SUMS.txt: ' + $sumsHash + ' (the release page lists the same value)')
     Write-AlLine 'done'
     return 0
 }

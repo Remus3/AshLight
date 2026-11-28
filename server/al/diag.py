@@ -572,6 +572,12 @@ ROLLBACK_SHOWN_S = 7 * 86400
 FIX_ROLLBACK = ("Nothing to undo: AshLight already went back by itself. The next "
                 "release installs by itself. To tell the project what went "
                 "wrong, copy this report.")
+# REL-APPLY-WAITING-NOTE (research 0066 F16): apply-staged waits while a core
+# of the home runs (switch BUSY), and closing the window keeps the core in
+# the tray, so a version due this long gets the one line that finishes it
+APPLY_WAITING_S = 72 * 3600
+APPLY_WAITING_TEXT = ("To finish the update, choose Quit in the AshLight tray "
+                      "menu, then open AshLight again.")
 _VERSION_CHARS = set("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.-")
 
 
@@ -593,6 +599,8 @@ def _last_text(last):
     if action == "update":
         if status == "staged" and new:
             return f"{new} downloaded and checked"
+        if status == "failed" and last.get("stage") == "space":
+            return "not enough free disk space for the new version, nothing changed"
         if status == "failed":
             return "a new version failed its checks, nothing changed"
         if status == "deferred":
@@ -658,6 +666,9 @@ def _staged_row(staged, version, now):
     if due is not None and due > now:
         stamp = time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime(due))
         when = f"the first time you open AshLight after {stamp}"
+    elif due is not None and now - due >= APPLY_WAITING_S:
+        return _check(UPDATE_ID, UPDATE_LABEL, NOTE,
+                      f"Version {new} is ready. {APPLY_WAITING_TEXT}")
     else:
         when = "the next time you open AshLight"
     return _check(UPDATE_ID, UPDATE_LABEL, NOTE, f"Version {new} is ready. It starts {when}.")

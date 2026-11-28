@@ -496,3 +496,25 @@ def test_the_three_commands_are_in_the_table_and_refuse_a_game_home(tmp_path):
     assert switch.rollback(bad, out=out)[0] == switch.EXIT_USAGE
     assert switch.confirm(bad, out=out)[0] == switch.EXIT_USAGE
     assert not bad.exists()
+
+
+def test_default_idle_reads_only_a_boolean_game_idle(monkeypatch, tmp_path):
+    # REL-UPDATE-AUTO-IDLE (research 0066 F4): the automatic update's gate
+    # reads this home's own core snapshot; anything but a boolean is unknown
+    asked = []
+    real = switch._core_doc
+
+    def doc(answer):
+        def fake(home, route, max_bytes, timeout):
+            asked.append((home, route, max_bytes))
+            return answer
+        return fake
+    for answer, want in (({"game_idle": True}, True), ({"game_idle": False}, False),
+                         ({"game_idle": "yes"}, None), ({}, None), (None, None)):
+        monkeypatch.setattr(switch, "_core_doc", doc(answer))
+        assert switch.default_idle(tmp_path) is want, answer
+    assert {a[1] for a in asked} == {"/api/state"}
+    assert {a[2] for a in asked} == {switch.MAX_STATE_BYTES}
+    # with no heartbeat in the home there is no core to ask: unknown
+    monkeypatch.setattr(switch, "_core_doc", real)
+    assert switch.default_idle(tmp_path) is None
