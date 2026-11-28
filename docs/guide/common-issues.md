@@ -21,8 +21,10 @@ You can stop it again at any time with "Stop reading Client.txt".
 
 ## Checks says AshLight is not reading Client.txt
 
-A part of AshLight stopped. Run `scripts\run.ps1` to start AshLight's parts
-again; it starts only the parts that are not already running.
+A part of AshLight stopped. Quit AshLight from the tray icon, then start it
+again from its shortcut. Without the shortcut (no Node.js), run
+`scripts\run.ps1` in the AshLight folder; it starts only the parts that are
+not already running.
 
 ## "can't reach AshLight"
 
@@ -68,9 +70,10 @@ stays missing or old, check this computer's internet connection.
 
 ## Build numbers are missing from item checks
 
-The optional calc component is off or needs a fix. Run
-`scripts\setup.ps1 -TcCalc`; that one step installs the calc again and turns
-it on.
+The optional calc component is off or needs a fix. In the AshLight window,
+press "Set up the calc" under Settings, Checks; that one step installs the
+calc again and turns it on. In a browser dashboard the button is not there:
+run `scripts\setup.ps1 -TcCalc` in the AshLight folder instead.
 
 ## Other accounts on this computer can change AshLight's files
 
@@ -79,8 +82,11 @@ Run `scripts\setup.ps1` again. If Checks still names the AshLight folder, run
 
 ## Port 8960 is taken by another program
 
-Set "port" in config\local.json to another port from 8960 to 8979, or start
-once with `scripts\run.ps1 -Port 8961`.
+Set "port" in config\local.json to another free port from 8962 to 8969, then
+quit AshLight from the tray icon and start it again from its shortcut. Or
+start once with `scripts\run.ps1 -Port 8962`.
+
+Next: [FAQ](faq.md).
 
 ---
 

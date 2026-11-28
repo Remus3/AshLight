@@ -4,14 +4,22 @@ From nothing to a live dashboard in four steps. Windows only.
 
 ## 1. Set it up
 
-You need Python 3.11 or newer (3.13 or newer for a new install). Node.js
-22.12.0 or newer is only needed for the desktop client and the overlay. There
-is no release yet, so AshLight runs from a copy of its source code (see
-[Download](download.md)). In that folder, run once:
+You need Python 3.11 or newer (3.13 or newer for a new install). Check it
+with `python --version` in PowerShell. If it says Python was not found, or
+opens the Microsoft Store, run the python.org installer again and tick "Add
+python.exe to PATH" on its first page. Node.js 22.12.0 or newer is only
+needed for the desktop client and the overlay. There is no release yet, so
+AshLight runs from a copy of its source code (see [Download](download.md)).
+
+Open PowerShell in the AshLight folder (in File Explorer, click the address
+bar, type `powershell`, press Enter). Then run once:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\setup.ps1
 ```
+
+`-ExecutionPolicy Bypass` applies to this one command only. Your Windows
+setting stays as it is.
 
 It checks what you have, makes AshLight's folders and, when Node.js is
 installed, sets up the desktop client and puts an "AshLight" shortcut in the
@@ -60,6 +68,8 @@ changed with Change a key under Settings, Keys.
   when you log on; `-Disable` turns it off.
 
 Something not working? See [Common issues](common-issues.md).
+
+Next: [Common issues](common-issues.md).
 
 ---
 

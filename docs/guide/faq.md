@@ -68,6 +68,19 @@ against it. For full build numbers, the optional calc component runs Path of
 Building PoE2 unmodified as a separate program. AshLight has no damage
 calculator of its own.
 
+## Does it run on Mac, Linux or the Steam Deck?
+
+No. AshLight is for Windows 10 and 11 only, with Path of Exile 2 from Steam.
+It is not built or tested for any other system.
+
+## Why Windowed Fullscreen?
+
+The overlay is a separate window that sits on top of the game. In exclusive
+fullscreen the game owns the whole screen, so no other window can show over
+it. In Windowed Fullscreen the game looks the same and the overlay can show.
+Without the overlay, any display mode works for the dashboard on a second
+screen.
+
 ## Is there an installer?
 
 No release yet: install from source (see [Download](download.md)).
@@ -80,6 +93,9 @@ No. AshLight is free, has no paid tier, no ads and no donation gate.
 ## Who makes it?
 
 An independent project, not made by Grinding Gear Games.
+
+Next: back to [Download](download.md), or read
+[How AshLight works](how-it-works.md).
 
 ---
 

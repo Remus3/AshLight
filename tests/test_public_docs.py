@@ -4,9 +4,11 @@ and a stranger today's real steps.
 - The README quick start names exactly one setup command, then the
   AshLight shortcut, and has Stop, Update, Uninstall and Troubleshooting
   sub-sections with the steps that exist today.
-- The README explains how the repository is run (the development files a
-  reader may ignore, the gates, the unattended loop reads) between
-  "How it works" and "Disclaimer", with no repository address yet.
+- The README keeps a "How this repository is run" heading between "How it
+  works" and "Disclaimer" that says AI assistants build it and links the
+  full text in docs/guide/how-it-works.md (the development files a reader
+  may ignore, the gates, the unattended loop reads), with no repository
+  address in either (six-lens review R13, 2026-11-27).
 - SECURITY.md speaks in the present tense.
 - CONTRIBUTING.md states the re-apply policy and what the hooks are.
 """
@@ -18,6 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 README = ROOT / "README.md"
 SECURITY = ROOT / "SECURITY.md"
 CONTRIBUTING = ROOT / "CONTRIBUTING.md"
+HOW = ROOT / "docs" / "guide" / "how-it-works.md"
 
 
 def _section(text, heading):
@@ -34,7 +37,9 @@ def test_readme_quick_start_update_uninstall_shortcut():
     for word in ("Update", "Uninstall", "shortcut"):
         assert word in text, word
     subs = re.findall(r"^### (.+)$", qs, re.M)
-    assert subs == ["Stop", "Update", "Uninstall", "Troubleshooting"], subs
+    # R9 (2026-11-27): the source steps are named apart from the release ones
+    assert subs == ["Stop", "Update from source", "Uninstall from source",
+                    "Troubleshooting"], subs
     flat = " ".join(qs.split())
     # the shortcut is the start, written by setup; -NoShortcut skips it
     assert "start AshLight from its shortcut" in flat
@@ -67,6 +72,12 @@ def test_readme_explains_how_the_repository_is_run():
     i = heads.index("How this repository is run")
     assert heads[i - 1] == "How it works" and heads[i + 1] == "Disclaimer"
     sec = _section(text, "## How this repository is run")
+    assert "AI coding assistants" in sec
+    assert "(docs/guide/how-it-works.md#how-this-repository-is-run)" in sec
+    assert "Releases: none yet, install from source" in sec
+    assert "http" not in sec and "github.com" not in sec.lower()
+    # the full text moved to the guide page (R13); its facts are kept there
+    sec = _section(HOW.read_text(encoding="ascii"), "## How this repository is run")
     for name in ("`CLAUDE.md`", "`ops/`", "`AL-NEXT-SESSION.txt`",
                  "`ROADMAP.md`", "`docs/`"):
         assert name in sec, name

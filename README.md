@@ -5,65 +5,40 @@
   <img src="assets/brand/readme-hero-light.png" width="1280" alt="AshLight: a live, glanceable companion for Path of Exile 2">
 </picture>
 
+A live, glanceable companion for Path of Exile 2.
+
 AshLight is a free, unofficial second-screen dashboard and small overlay for
-Path of Exile 2 on Windows. It reads the game's own log file (`Client.txt`)
-and shows the zone you are in and your time there, your level, deaths, and
-incoming whispers and trade requests, and it checks items against your Path of
-Building build.
+Path of Exile 2 on Windows. It reads the game's own log file (`Client.txt`).
+It shows your zone and your time there, your level and your deaths. It also
+shows incoming whispers and trade requests. It checks items against your Path
+of Building build.
 
-It is for players who want a live view on a second screen without any tool
-touching the game. It runs on your own computer, on `127.0.0.1` only, never
-touches the game process and never sends input to the game.
+It is for players who want a live view on a second screen. It runs on your
+own computer, on `127.0.0.1` only. It never touches the game process and
+never sends input to the game.
 
-Status: no release yet. [Install from source](#quick-start-windows) takes
-about 5 minutes. See also [what AshLight never does](#what-ashlight-never-does).
+No third-party tool is approved by Grinding Gear Games, so no one can promise
+you are safe. AshLight is built to stay on the strict side of GGG's published
+rules. See [what AshLight never does](#what-ashlight-never-does) and the
+[FAQ](docs/guide/faq.md#is-it-allowed-can-i-be-banned).
+
+Status: no release yet. [Install from source](#quick-start-windows) needs
+Windows, Python 3.13 or newer and about 400 MB of disk. The first setup
+downloads packages, so allow a few minutes.
+
+On a phone or in a hurry: skip to [Quick start](#quick-start-windows); the
+sections between are for the first release.
 
 **Links**
 
 - Player guide: [download](docs/guide/download.md),
   [quick start](docs/guide/quick-start.md),
   [common issues](docs/guide/common-issues.md) and [FAQ](docs/guide/faq.md).
-- Releases: none yet. AshLight releases appear at
-  github.com/Remus3/AshLight/releases.
+- Releases: none yet.
+  [AshLight releases appear at github.com/Remus3/AshLight/releases.](https://github.com/Remus3/AshLight/releases)
 - Source: [github.com/Remus3/AshLight](https://github.com/Remus3/AshLight);
   security policy in [SECURITY.md](SECURITY.md); how to help in
   [CONTRIBUTING.md](CONTRIBUTING.md).
-
-<!-- shots:begin -->
-## Screenshots
-
-AshLight's own pages, rendered from an invented demo session (no game
-footage, no game art). They follow your light or dark setting.
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/shots/play-dark-1440.png">
-  <img src="docs/shots/play-light-1440.png" width="720" alt="The Play tab of the AshLight dashboard">
-</picture>
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/shots/build-dark-1440.png">
-  <img src="docs/shots/build-light-1440.png" width="720" alt="The Build and items tab of the AshLight dashboard">
-</picture>
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/shots/run-dark-1440.png">
-  <img src="docs/shots/run-light-1440.png" width="720" alt="The Run tab of the AshLight dashboard">
-</picture>
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/shots/settings-dark-1440.png">
-  <img src="docs/shots/settings-light-1440.png" width="720" alt="The Settings tab of the AshLight dashboard">
-</picture>
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/shots/play-dark-360.png">
-  <img src="docs/shots/play-light-360.png" width="240" alt="The Play tab at phone width">
-</picture>
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/shots/overlay-dark-1440.png">
-  <img src="docs/shots/overlay-light-1440.png" width="480" alt="The AshLight overlay page on a plain ground">
-</picture>
-<!-- shots:end -->
 
 ## What AshLight never does
 
@@ -99,18 +74,62 @@ How these promises are checked: [SECURITY.md](SECURITY.md) and
 - Prices (web data on): poe.ninja values for items and currency, price movers
   and a price watch list.
 
+<!-- shots:begin -->
+## Screenshots
+
+AshLight's own pages, rendered from an invented demo session (no game
+footage, no game art). They follow your light or dark setting.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/shots/play-dark-1440.png">
+  <img src="docs/shots/play-light-1440.png" width="720" alt="Play tab: zone, zone timer, level, deaths and session time on top, the last session, recent deaths and zone changes, and the item check card">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/shots/build-dark-1440.png">
+  <img src="docs/shots/build-light-1440.png" width="720" alt="Build and items tab: a box to paste a Path of Building code, build health, search strings, the last checked item, prices and web data, and item scoring weights">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/shots/run-dark-1440.png">
+  <img src="docs/shots/run-light-1440.png" width="720" alt="Run tab: last session, act times, maps, deaths with zone and level, recent events and the character picker">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/shots/settings-dark-1440.png">
+  <img src="docs/shots/settings-light-1440.png" width="720" alt="Settings tab: the Checks list, one row per check with its state and the fix when one is needed">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/shots/play-dark-360.png">
+  <img src="docs/shots/play-light-360.png" width="240" alt="Play tab at phone width: the same live numbers stacked in one column">
+</picture>
+
+The Play tab at phone width, then the overlay: a small box in the top-left
+corner of the screen.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/shots/overlay-dark-1440.png">
+  <img src="docs/shots/overlay-light-1440.png" width="480" alt="The overlay: a small two-line box in the top-left corner on a plain background, here reading AshLight and offline">
+</picture>
+<!-- shots:end -->
+
 ## Get started
 
-1. Have Windows 10 or 11 and Python (the version is in the quick start);
-   Node.js is optional, for the desktop client and the in-game overlay.
-2. Get the source: `git clone https://github.com/Remus3/AshLight.git`
-3. Run the one setup command in [Quick start (Windows)](#quick-start-windows),
-   then open AshLight from its Start Menu shortcut.
+1. You need Windows 10 or 11 and Python 3.13 or newer. Add Node.js 22.12.0 or
+   newer if you want the overlay, the AshLight window and the Start Menu
+   shortcut.
+2. Get the source: download it from the green Code button (Download ZIP) and
+   unpack it, or run `git clone https://github.com/Remus3/AshLight.git` if
+   you have git.
+3. Open PowerShell in that folder and run the one command in
+   [Quick start (Windows)](#quick-start-windows). Start AshLight from its
+   shortcut. With no Node.js, run `scripts\run.ps1` and use the browser
+   dashboard.
 
 ## Install (Windows)
 
-Releases: none yet, so the line below does not work today; use
-[Get started](#get-started) until then.
+> Not available yet. Releases: none yet, so the line below does not work today; use [Get started](#get-started) until then.
 
 Open Windows PowerShell as yourself (not with "Run as admin") and paste this
 one line:
@@ -146,7 +165,7 @@ folder inside a Steam library or the game's own folder is refused).
 To check everything before anything runs, or to install offline: from the
 release page, download `install.ps1`, `AshLight-<version>-app.zip`,
 `release.json` and `SHA256SUMS.txt` into one folder, check them (see
-Verify your download below), then run in that folder:
+[Verify your download](#verify-your-download)), then run in that folder:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\install.ps1 -Zip .\AshLight-<version>-app.zip
@@ -164,7 +183,7 @@ without opening AshLight.
 Automatic update is not finished yet. For now, update by hand: paste the
 install line again. It upgrades in place and keeps your settings and data.
 The release-files route above, with the new release's files, does the
-same. From a source copy, see Update under the quick start.
+same. From a source copy, see [Update from source](#update-from-source).
 
 <details>
 <summary>When automatic update ships</summary>
@@ -201,7 +220,7 @@ see what would go without removing anything. It ends by naming what stays.
 Files you saved elsewhere yourself, such as a downloaded `.build` guide or
 loot filter, are yours to delete: it never looks in your game folders.
 
-From a source copy, see Uninstall under the quick start.
+From a source copy, see [Uninstall from source](#uninstall-from-source).
 
 ## Verify your download
 
@@ -220,11 +239,13 @@ files (the last two need the GitHub CLI, `gh`):
    `gh release verify-asset v<version> .\AshLight-<version>-app.zip --repo Remus3/AshLight`
 
 The installer makes the first check by itself. It cannot make the other
-two; `SECURITY.md` says what it does verify.
+two; [SECURITY.md](SECURITY.md#release-provenance) says what it does verify.
 
 ## Windows may warn
 
-Only needed once a release exists; a source install shows none of these.
+Only needed once a release exists. A source install meets only the
+PowerShell execution policy, and its commands pass `-ExecutionPolicy Bypass`
+for that one command only.
 
 AshLight is not code-signed yet, so Windows may show one of these:
 
@@ -235,9 +256,10 @@ AshLight is not code-signed yet, so Windows may show one of these:
 - Microsoft Defender SmartScreen ("Windows protected your PC"): the pasted
   line downloads with PowerShell, which adds no download mark, so
   SmartScreen should not stop it. If it stops a file you downloaded in a
-  browser, choose Don't run. Check the file (see Verify your download); if
-  a hash does not match, get the file again from the release page. Or use
-  the pasted line, which checks every file it downloads.
+  browser, choose Don't run. Check the file (see
+  [Verify your download](#verify-your-download)); if a hash does not match,
+  get the file again from the release page. Or use the pasted line, which
+  checks every file it downloads.
 - Smart App Control (Windows 11): it may block unsigned programs such as
   the AshLight desktop client. This is not tested yet. If it blocks
   AshLight, there is no fix yet. Leave Smart App Control as it is.
@@ -252,41 +274,51 @@ AshLight is not code-signed yet, so Windows may show one of these:
 
 ## Quick start (Windows)
 
+Releases: none yet, so AshLight runs from a copy of this repository's source
+(see [Get started](#get-started) for how to get it).
+
 Needs Python 3.11 or newer. For a new install take 3.13 or newer, because
-python.org has no Windows installer for 3.11 or 3.12 any more.
-Node.js 22.12.0 or newer is only needed for the optional overlay. Releases: none
-yet, so AshLight runs from a copy of this repository's source. One command sets
-it up:
+python.org has no Windows installer for 3.11 or 3.12 any more. Check Python
+with `python --version` in PowerShell. If it says Python was not found, or
+opens the Microsoft Store, run the python.org installer again and tick "Add
+python.exe to PATH" on its first page. Node.js 22.12.0 or newer is only
+needed for the optional overlay, the AshLight window and the shortcut.
+
+Open PowerShell in the AshLight folder (in File Explorer, click the address
+bar, type `powershell`, press Enter). Then run the one setup command:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\setup.ps1   # checks, folders, desktop client packages, shortcut
 ```
 
-Then start AshLight from its shortcut: setup puts an "AshLight" shortcut in
-the Start Menu and on the desktop (when Node.js is installed; `-NoShortcut`
-skips it). Starting it is one click. It starts the core and opens the
-AshLight desktop client: the companion window with the dashboard, a tray icon
-and the in-game overlay. Closing the window with X keeps AshLight running in
-the tray; click the tray icon to bring the window back. Right-click the tray
-icon for the menu: Minimize or Restore AshLight, Show in-game overlay, Open
-AshLight when the game wakes, Restart overlay and Quit AshLight.
+`-ExecutionPolicy Bypass` applies to this one command only. Your Windows
+setting stays as it is.
 
-With the opt-in logon autostart (below), AshLight starts in the tray at
-logon with no window and no click; the overlay appears once the game is
-running.
+When Node.js is installed, setup puts an "AshLight" shortcut in the Start
+Menu and on the desktop (`-NoShortcut` skips it). Then start AshLight from
+its shortcut. That one click opens the AshLight desktop client: the
+companion window with the dashboard, a tray icon and the in-game overlay.
+Closing the window with X keeps AshLight running in the tray. Click the tray
+icon to bring the window back. Right-click it for the menu: Minimize or
+Restore AshLight, Show in-game overlay, Open AshLight when the game wakes,
+Restart overlay and Quit AshLight.
+
+With the opt-in logon autostart (see Optional extras below), AshLight starts
+in the tray at logon with no window and no click; the overlay appears once
+the game is running.
 
 The same starts from a terminal, also without Node.js:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts\run.ps1              # core, supervisor and the desktop client (the browser dashboard without the client)
+powershell -ExecutionPolicy Bypass -File scripts\run.ps1              # AshLight and its desktop client (the browser dashboard without the client)
 powershell -ExecutionPolicy Bypass -File scripts\run.ps1 -NoOverlay   # no client, so no overlay: the dashboard opens in the browser
-powershell -ExecutionPolicy Bypass -File scripts\run.ps1 -NoBrowser   # no window at all: the core and supervisor only
+powershell -ExecutionPolicy Bypass -File scripts\run.ps1 -NoBrowser   # no window at all: only AshLight's background parts
 ```
 
 Every script is safe to run again: a finished step is skipped, and `run.ps1`
-starts only the parts of AshLight that are not already running. A keepalive
-supervisor restarts the core if it dies; a stop from the tray or `stop.ps1`
-is one it respects.
+starts only the parts of AshLight that are not already running. If
+AshLight's background part stops by itself, a small helper starts it again.
+A stop from the tray or `stop.ps1` is one it respects.
 
 Optional extras:
 
@@ -297,12 +329,12 @@ Optional extras:
   current-user scheduled task; no window, and the overlay appears once the
   game is running); `-Disable` removes it. Off by default.
 
-Logs, caches and build output go to the AshLight sidecar folder (printed by
-`python -m server.al.paths` as `sidecar`; the `AL_SIDECAR_ROOT` environment
-variable moves it), never into the repository's tracked files or the drive
-root.
+Logs, caches and build output go to AshLight's own folder outside the
+repository (printed by `python -m server.al.paths` as `sidecar`; the
+`AL_SIDECAR_ROOT` environment variable moves it), never into the
+repository's tracked files or the drive root.
 
-Without the scripts:
+For developers, without the scripts:
 
 ```text
 python -m server.al                     # start; prints the dashboard link
@@ -310,7 +342,7 @@ python -m server.al --log PATH          # point at a Client.txt yourself
 python -m server.al --no-tail --replay tests/fixtures/client_sample.txt   # demo data
 ```
 
-Open the printed link (it carries a one-time access token after `#token=`).
+Open the printed link; the part after `#token=` is a one-time access key.
 The overlay toggles with Alt+Shift+A by default. Play in Windowed Fullscreen
 so the overlay can sit on top of the game.
 
@@ -326,22 +358,23 @@ calc component).
 
 ### Stop
 
-Right-click the AshLight tray icon and choose Quit AshLight: it stops the
-core, the supervisor and the overlay. Closing the window with X does not
+Right-click the AshLight tray icon and choose Quit AshLight: it stops every
+part of AshLight, the overlay included. Closing the window with X does not
 stop AshLight. Without the client, or from a terminal:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\stop.ps1    # stops every AshLight process
 ```
 
-### Update
+### Update from source
 
-Releases: none yet, so an update is a source update. Quit AshLight, run
-`git pull` in your copy of the repository, run the setup command above again
+Releases: none yet, so an update is a source update. Quit AshLight, then get
+the newer source: run `git pull` in your copy of the repository, or download
+the ZIP again and unpack it over your copy. Run the setup command above again
 (it redoes only what changed and keeps your settings), then start AshLight
 from its shortcut.
 
-### Uninstall
+### Uninstall from source
 
 Run the uninstall script from your copy of the repository:
 
@@ -355,21 +388,22 @@ desktop, when they point into this copy. It deletes no file by itself. Add
 `-DryRun` to see what it would do without changing anything, or `-Purge` to
 also move your settings in `config/local.json` and your run history in
 `ops/runtime/` to the Recycle Bin and delete the caches, logs and build
-output in the sidecar folder; `-Purge` asks once for the typed word PURGE.
-It ends by naming what stays. Then delete the repository folder yourself.
-The sidecar folder (`python -m server.al.paths` prints it as `sidecar`) is
-left in place; delete it too if you no longer want it.
+output in AshLight's own folder; `-Purge` asks once for the typed word
+PURGE. It ends by naming what stays. Then delete the repository folder
+yourself. AshLight's own folder (`python -m server.al.paths` prints it as
+`sidecar`) is left in place; delete it too if you no longer want it.
 
 ### Troubleshooting
 
 - Something missing or wrong: open the dashboard's Settings tab and the
   Checks list. Each failing check names its fix. Copy report copies a short
   plain-text report with no file paths, names, contact or chat in it; paste
-  it where you ask for help.
+  it where you ask for help. More in
+  [Common issues](docs/guide/common-issues.md).
 - Port 8960 taken by another program: set `"port"` in `config/local.json`
-  to another port in 8960-8979 (the shortcut and the scripts both read it),
-  or start once with `scripts\run.ps1 -Port 8961`. The `AL_PORT` environment
-  variable works too.
+  to another free port from 8962 to 8969 (the shortcut and the scripts both
+  read it), or start once with `scripts\run.ps1 -Port 8962`. AshLight only
+  uses a port in 8960-8979. The `AL_PORT` environment variable works too.
 - The overlay does not show over the game: play in Windowed Fullscreen,
   check that Show in-game overlay is ticked in the tray menu, and try
   Restart overlay there. The overlay hides itself after 20 minutes with no
@@ -392,21 +426,24 @@ left in place; delete it too if you no longer want it.
   nothing else, and nothing is fetched while web data is off.
 - It never asks the trade site anything: the trade link after an item check
   opens in your own browser only when you click it.
-- When automatic update ships (see Update), an installed copy with web data on
-  will read the project's latest release on GitHub once a day, to learn whether
-  a newer version is out. It is not made yet. The request will name AshLight and
-  its version and carry no contact, cookie or account id; with web data off it
-  is never made.
-- The server binds `127.0.0.1` only; every API call needs the per-start token;
-  the Host and Origin headers are checked; the dashboard runs under a strict
-  Content Security Policy.
+- When automatic update ships (see [Update](#update)), an installed copy with
+  web data on will read the project's latest release on GitHub once a day, to
+  learn whether a newer version is out. It is not made yet. The request will
+  name AshLight and its version and carry no contact, cookie or account id;
+  with web data off it is never made.
+- AshLight listens on `127.0.0.1` only, so other computers cannot reach it.
+  It makes a secret key when it starts, and every request to it must carry
+  that key. The dashboard runs under strict browser rules
+  that load nothing from outside AshLight. The details are in
+  [SECURITY.md](SECURITY.md).
 - The log can hold chat text. AshLight keeps only a short in-memory list of
   recent whispers and events and writes none of it to disk. Run history is
   kept on this computer only while its box is ticked, and can be cleared.
 
 ## Budgets
 
-For developers: the performance budgets the test suite enforces.
+For developers: the performance budgets the test suite enforces. How they are
+measured: [How AshLight works](docs/guide/how-it-works.md#budgets).
 
 AshLight must never cost you frames. The tested budgets:
 
@@ -426,43 +463,16 @@ and the maintainer re-applies accepted changes locally. See
 
 ## How it works
 
-For developers: how the core, the dashboard and the overlay fit together.
-
-The core is a small Python program using only the standard library. A tailer
-polls the size of `Client.txt` four times a second and reads only the new
-bytes. At start it looks back through the log only to pick up the current
-run (zone, level, deaths), so an old session is never replayed. A parser
-turns each line into an event (zone change, level up, death, whisper, trade
-request, ...). Events go through an in-process event bus into a session
-state, and a local HTTP server pushes that state to the dashboard over
-Server-Sent Events, coalesced to at most four updates a second.
-
-The dashboard is plain HTML, CSS and JavaScript served by the core. The
-overlay is a separate Electron window that is transparent, always on top,
-click-through and never takes focus; it shows the same feed in a tiny corner
-box. Build numbers come from Path of Building PoE2: the ones saved in your
-build code, and more when the optional calc component runs it unmodified as a
-separate process. AshLight has no damage calculator of its own.
+For developers: [How AshLight works](docs/guide/how-it-works.md) explains the
+core, the dashboard and the overlay.
 
 ## How this repository is run
 
-AshLight is built by one maintainer with AI coding assistants. The files
-`CLAUDE.md`, `AL-NEXT-SESSION.txt` and `ROADMAP.md` and the folders `ops/` and
-`docs/` are that development process: the assistants' rules, the hand-off
-between work sessions, the work list, research notes and decision records. You
-can ignore them to use AshLight or to read its code.
-
-The process is AI-assisted and operator-reviewed: the maintainer reviews every
-change, and every commit is gated by the test suite, an identity check (no bot
-author and no AI co-author line) and a leak sweep (no machine path, account id
-or e-mail address in any tracked file).
-
-The development loop, not the app, reads a few public web pages unattended:
-once a day the Path of Building PoE2 releases list (decision 0025) and GGG's
-developer documentation pages (decision 0044). The app itself fetches nothing
-unless you turn web data on.
-
-Releases: none yet, install from source (see the quick start above).
+AshLight is built by one maintainer with AI coding assistants; every change
+is reviewed and gated. The files, the gates and the unattended reads:
+[How this repository is run](docs/guide/how-it-works.md#how-this-repository-is-run).
+Releases: none yet, install from source (see the
+[quick start](#quick-start-windows)).
 
 ## Disclaimer
 

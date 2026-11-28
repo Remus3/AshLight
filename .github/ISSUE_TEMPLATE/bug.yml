@@ -16,6 +16,15 @@ body:
       placeholder: "0.1.0"
     validations:
       required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install AshLight?
+      options:
+        - From source
+        - From a release
+    validations:
+      required: true
   - type: input
     id: windows
     attributes:
