@@ -1845,3 +1845,17 @@ of the HALT check.
   drops it, gh leaves the dev host, the weekly rows crowd out row work or
   are mostly empty (then drift only), or the operator changes the cadence
   or the lenses.
+- AUGMENT-DATA (decision 0091, DATA-AUGMENT-POB-TEXT): augment effects,
+  values and slot rules come only from PoB-PoE2 src/Data/ModRunes.lua,
+  read as text (theorycraft/pobtext.py load_augments / Augments, never run
+  as Lua, 1 MB cap, parsed once per pin) under its pob2_files sha256 and
+  the checkout marker, only while the optional calc component is
+  installed; repoe-fork wins conflicts; nothing is guessed: a slot block
+  not of the known shape, an augment with no slot left, or a name given
+  twice is left out; statOrder line parts (6448.1) are kept as written and
+  a tradeHashes entry with empty text keeps its hash with no line; the
+  tradeHashes are used only as the rune.stat_<n> ids of decision 0037; no
+  price, no trade2 call (decision 0017). Reverses if: PoB relicenses or
+  drops or reshapes ModRunes.lua, repoe-fork publishes the augment to stat
+  join, GGG objects to the relay, a real augment line proves wrong in
+  play, or the operator rules otherwise.

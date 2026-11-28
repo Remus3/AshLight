@@ -3,12 +3,15 @@
 One file per decision: `NNNN-<topic>.md` (decision, alternatives, why,
 reverses if). Numbers 0047 to 0076 are reserved for the packages of
 docs/plan/packages.json (docs/plan/07, Reserved decision numbers); a
-package uses the number in its new_files entry. 0077 to 0090
-are taken; 0091 is reserved for DATA-AUGMENT-POB-TEXT. Numbers are
-reserved in the plan before a wave starts.
+package uses the number in its new_files entry. 0077 to 0091
+are taken. Numbers are reserved in the plan before a wave starts.
 Numbers are reserved per package in docs/plan/packages.json before a
 wave starts; the wave integrator adds the index line. 0035 stays unused.
 
+- 0091: Augment effects, values and slot rules from PoB-PoE2
+  src/Data/ModRunes.lua, sha256-pinned and read as text, only while the
+  calc component is installed; repoe-fork wins; tradeHashes only as 0037
+  ids.
 - 0090: Weekly GitHub page review row (REVIEW-GH) from the github-page
   watcher source; six lenses, review lane, not BLOCKED.
 - 0089: TC-SPEC-FOLLOW: a pasted build's tree spec follows the
