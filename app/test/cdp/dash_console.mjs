@@ -43,9 +43,9 @@ const killer = setTimeout(() => { chrome.kill(); process.exit(3); }, CI ? 180000
 // TEST-CDP-ENDPOINT-CI-WAIT (decision 0080): the DevTools endpoint poll
 // widens 3x under AL_CI only (a cold runner's first Chrome launch outran
 // the fixed bound, TEST-A11Y-NEWEST-DEVTOOLS) and stops at once if Chrome
-// has failed; locally 150 x 100 ms, as play_fit.mjs and a11y.mjs (the
+// has failed; locally it stays 100 x 100 ms, as before the row (the
 // port is now read from DevToolsActivePort first, TEST-CDP-OS-PORT).
-const ENDPOINT_POLLS = CI ? 450 : 150;
+const ENDPOINT_POLLS = CI ? 300 : 100;
 let port = 0;
 let targets = null;
 for (let i = 0; i < ENDPOINT_POLLS && !targets && chromeExit === null; i++) {

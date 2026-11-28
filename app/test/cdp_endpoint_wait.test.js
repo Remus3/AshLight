@@ -1,9 +1,9 @@
 // TEST-CDP-ENDPOINT-CI-WAIT (decision 0080): every CDP driver's DevTools
 // endpoint poll widens 3x under AL_CI only and stops at once when Chrome
 // has failed, as a11y.mjs does since TEST-A11Y-NEWEST-DEVTOOLS. Local
-// bounds are 150 x 100 ms for every driver (dash_console.mjs and
-// dash_perf.mjs rose from 100 when they began reading DevToolsActivePort,
-// TEST-CDP-OS-PORT). Static read of the driver sources.
+// bounds stay what they were before the row: 150 x 100 ms for a11y.mjs
+// and play_fit.mjs, 100 x 100 ms for dash_console.mjs and dash_perf.mjs.
+// Static read of the driver sources.
 "use strict";
 const test = require("node:test");
 const assert = require("node:assert");
@@ -12,7 +12,7 @@ const path = require("node:path");
 
 const DIR = path.join(__dirname, "cdp");
 // driver -> its local poll count (100 ms each)
-const DRIVERS = { "a11y.mjs": 150, "dash_console.mjs": 150, "dash_perf.mjs": 150,
+const DRIVERS = { "a11y.mjs": 150, "dash_console.mjs": 100, "dash_perf.mjs": 100,
   "play_fit.mjs": 150 };
 
 for (const [name, local] of Object.entries(DRIVERS)) {

@@ -210,10 +210,15 @@ const chrome = spawn(chromePath, ["--headless=new", "--disable-gpu", "--in-proce
   "--remote-debugging-port=0", `--user-data-dir=${profile}`, "about:blank"],
   { stdio: "ignore" });
 const killer = setTimeout(() => { chrome.kill(); process.exit(3); }, CI ? 180000 : 60000);
+let chromeExit = null;
+// a clean 0 exit may be a hand-off to a running browser: keep polling then
+chrome.on("exit", (code, signal) => { if (signal || code) { chromeExit = signal || code; } });
+// TEST-CDP-ENDPOINT-CI-WAIT (decision 0080): the same DevTools endpoint
+// wait as app/test/cdp/dash_perf.mjs, 100 x 100 ms locally, 3x under AL_CI.
+const ENDPOINT_POLLS = CI ? 300 : 100;
 let port = 0;
 let targets = null;
-for (let i = 0; i < 100 && !targets; i++) {
-  if (chrome.exitCode !== null) { break; }
+for (let i = 0; i < ENDPOINT_POLLS && !targets && chromeExit === null; i++) {
   if (!port) {
     try {
       const first = readFileSync(portFile, "utf8").split(/\r?\n/)[0].trim();
@@ -226,7 +231,12 @@ for (let i = 0; i < 100 && !targets; i++) {
   }
   if (!targets) { await sleep(100); }
 }
-if (!targets) { chrome.kill(); console.log(JSON.stringify({ error: "no DevTools endpoint" })); process.exit(2); }
+if (!targets) {
+  chrome.kill();
+  console.log(JSON.stringify({ error: "no DevTools endpoint" + (chromeExit === null
+    ? ` after ${ENDPOINT_POLLS} polls` : ` (browser exited: ${chromeExit})`) }));
+  process.exit(2);
+}
 const page = targets.find((t) => t.type === "page" &&
   String(t.webSocketDebuggerUrl).startsWith(`ws://127.0.0.1:${port}/`));
 if (!page) { chrome.kill(); console.log(JSON.stringify({ error: "no page target" })); process.exit(2); }
