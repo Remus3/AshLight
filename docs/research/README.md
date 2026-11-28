@@ -256,6 +256,12 @@ its code (license notes: 0006).
   follow-ups on licence and Kindler detail. Feeds decisions 0081 to 0083
   and docs/plan/10
   ([0060-operator-requests-2026-11-19.md](0060-operator-requests-2026-11-19.md))
+- 0064 Companion landscape Nov 2026 (gap dive) - nine PoE / PoE2 tools
+  read through the dive allow-list (READMEs and release notes only), no
+  floor change; nine ranked gaps led by a PoB tree spec that follows the
+  level, uncut gem advice on the press and gem unlock cards; eight
+  proposed rows; refused hosts listed. Verified 2026-11-27
+  ([0064-companion-landscape.md](0064-companion-landscape.md))
 
 ## Open research (feeds ROADMAP)
 
