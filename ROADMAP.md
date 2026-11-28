@@ -35,6 +35,8 @@ operator phrase.`
 - [ ] LIVE-SEARCHSTR-FIX (build) Fix what the game refused: A copied search string pasted into a game search box (verdict refused 2026-11-22, research 0025 section 4; the clicks landed within 19 s with no note, so no cause is known yet). Once the retry note says what the game showed, find the cause and fix it, or record a worked verdict if the retry works. ACCEPT: python tools/live_verdicts.py lists a worked verdict for LIVE-SEARCHSTR. ZERO-CLICK: One more try by the player ends in one click plus a short note; the fix is automatic from there. DEPENDS: RUN-VERDICTS-CLOSE. BLOCKED: operator act (one more try in game, with a note saying what the game showed).
 - [ ] TC-BUILDFILE-LIVE-FIX (build) Fix what the game refused: An AshLight-made .build file loaded in game (verdict refused 2026-11-22, research 0027 section 5; the clicks landed within 19 s with no note, so no cause is known yet). Once the retry note says what the game showed, find the cause and fix it, or record a worked verdict if the retry works. ACCEPT: python tools/live_verdicts.py lists a worked verdict for TC-BUILDFILE-LIVE. ZERO-CLICK: One more try by the player ends in one click plus a short note; the fix is automatic from there. DEPENDS: RUN-BUILDFILE-LIVE-CLOSE. BLOCKED: operator act (one more try in game, with a note saying what the game showed).
 - [ ] TEST-UPDATES-NINJA-STUB (build) tests/test_updates.py test_core_tick_drives_the_client_once_a_day_only_when_on_and_acked and test_post_web_data_with_ack_stores_the_wording_version start the al-ninja thread, which asks poe.ninja for leagues through a fake fetcher that expects only api.github.com; the thread raises (PytestUnhandledThreadExceptionWarning, not a failure). Stub the ninja league read in those tests, never a real request. ACCEPT: the gated whole suite shows no al-ninja warning from tests/test_updates.py. ZERO-CLICK: test-side only.
+- [ ] TEST-CDP-ENDPOINT-CI-WAIT (build) app/test/cdp/dash_console.mjs and dash_perf.mjs poll the DevTools endpoint a fixed 100 x 100 ms (about 10 s) and play_fit.mjs a fixed 150 x 100 ms (about 15 s), with no AL_CI widening, the cause of the a11y red on a cold ci runner (TEST-A11Y-NEWEST-DEVTOOLS, dcd49d1). Widen each poll 3x under AL_CI only and stop it at once on a failed Chrome exit, as a11y.mjs does (decision 0080: no rerun plugin, local waits unchanged). ACCEPT: `git grep -n "i < 100 && !targets\|i < 150 && !targets" -- app/test/cdp` prints nothing outside an AL_CI-scaled bound, and python -m pytest -q tests/test_dash_console.py tests/test_dash_perf.py tests/test_play_fit.py passes, also with AL_CI=1; npm test --prefix app passes. ZERO-CLICK: test-side only; the loop works it.
+- [ ] TEST-CDP-OS-PORT (build) app/test/cdp/a11y.mjs still draws a random DevTools port from 9100-9479, and dash_console.mjs and dash_perf.mjs share 9500-9899, so two parallel drivers can draw one port and attach to the other's browser (the TEST-PLAYFIT-LOAD-FLAKE cause, 6ea915c). Switch each to --remote-debugging-port=0 and read the OS-chosen port from its own profile's DevToolsActivePort, attaching only to a page target on that port, as play_fit.mjs and capture.mjs do. ACCEPT: `git grep -n "Math.random" -- app/test/cdp` prints no port draw, and python -m pytest -q tests/test_a11y_render.py tests/test_dash_console.py tests/test_dash_perf.py passes; npm test --prefix app passes. ZERO-CLICK: test-side only; the loop works it.
 
 ## Lane: data
 
@@ -54,8 +56,8 @@ operator phrase.`
 
 - [ ] TEST-SPLIT-B1-WATCH (review) B1 test_real_loop_body red once at 0.920 percent (3 clock steps, 46.9 ms) in the wave 59 batch 3 whole suite while the concurrent timing-calc stream of TEST-SERIAL-PHASE-CUT ran; 3 isolated gated reruns passed (0.616, 0.000, 0.000) and the next whole suite was green. If it reds again under the split phase 2, apply decision 0060's split reverses-if (SPLIT_TIMING False, or run B1 after both streams), never move the budget. ACCEPT: 5 later gated whole suites green on B1, or the split change landed with a soak. ZERO-CLICK: test-side only. DEPENDS: TEST-SERIAL-PHASE-CUT. BLOCKED: session (watch).
 - [ ] TEST-DEMO-PORT-FLAKE (review) The session 30 first gated whole suite red on 3 tests in tests/test_port_lease.py and tests/test_play_states.py (29/29 pass alone, next whole suite green); suspected contention for the demo port block 8970-8975 in the parallel phase 1. Find the shared port or lease, then pin those tests to one xdist group or give them distinct ports; never widen a timeout. ACCEPT: the cause is named and 5 later gated whole suites are green on both files. ZERO-CLICK: test-side only. BLOCKED: session (watch).
-- [ ] TEST-A11Y-NEWEST-DEVTOOLS (review) ci job test-newest (Python 3.14, Node 24, continue-on-error) red on run 46079475413 attempt 1: 6 errors in tests/test_a11y_render.py, "a11y.mjs: no DevTools endpoint"; attempt 2 green. Find why the headless browser gave no DevTools endpoint (cold start, port file wait), fix in app/test/cdp/a11y.mjs at the cause under decision 0080 (3x CI wait only, no rerun plugin). ACCEPT: the cause is named and 3 later ci runs have test-newest green on that file. ZERO-CLICK: test-side only. BLOCKED: session wave 62 (watch).
-- [ ] TEST-PLAYFIT-LOAD-FLAKE (review) Session 32: 2 of 3 gated whole suites red in tests/test_play_fit.py only (state a2 at 1280x760 measured as 1920x950; state f 320x640 sr-only count 0 of 6; a budgets miss), all 29 pass alone and the next whole suite went green; no web/ change in those runs. Find why the srcdoc iframe size is not applied under the parallel phase load and fix the cause; never widen a cap or a timeout. ACCEPT: the cause is named and 5 later gated whole suites are green on that file. ZERO-CLICK: test-side only. BLOCKED: session wave 62 (watch).
+- [ ] TEST-A11Y-NEWEST-DEVTOOLS (review) ci job test-newest (Python 3.14, Node 24, continue-on-error) red on run 46079475413 attempt 1: 6 errors in tests/test_a11y_render.py, "a11y.mjs: no DevTools endpoint"; attempt 2 green. Find why the headless browser gave no DevTools endpoint (cold start, port file wait), fix in app/test/cdp/a11y.mjs at the cause under decision 0080 (3x CI wait only, no rerun plugin). ACCEPT: the cause is named and 3 later ci runs have test-newest green on that file. ZERO-CLICK: test-side only. FIX LANDED 2026-11-27 (dcd49d1, wave 62): cause: a fixed 150 x 100 ms endpoint poll with no AL_CI widening beat the first cold Chrome launch on a CI runner; the poll widens 3x under AL_CI and stops on a failed Chrome exit. Watch: 3 later ci runs with test-newest green on tests/test_a11y_render.py, then close. BLOCKED: session (watch).
+- [ ] TEST-PLAYFIT-LOAD-FLAKE (review) Session 32: 2 of 3 gated whole suites red in tests/test_play_fit.py only (state a2 at 1280x760 measured as 1920x950; state f 320x640 sr-only count 0 of 6; a budgets miss), all 29 pass alone and the next whole suite went green; no web/ change in those runs. Find why the srcdoc iframe size is not applied under the parallel phase load and fix the cause; never widen a cap or a timeout. ACCEPT: the cause is named and 5 later gated whole suites are green on that file. ZERO-CLICK: test-side only. FIX LANDED 2026-11-27 (6ea915c, wave 62): cause: play_fit.mjs drew a random DevTools port from 9100-9479 (the a11y range), so two parallel drivers could share one browser; it now uses the OS-chosen port from its own profile, waits for the applied size and for the new page to go live. Watch: 5 later gated whole suites green on tests/test_play_fit.py, then close. BLOCKED: session (watch).
 
 
 ## Theorycraft and item optimization (decision 0004, research 0010)
@@ -468,11 +470,6 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   dev_press_samples on (rare gear, a unique, a currency stack, a waystone, a tablet, a gem; plain
   and advanced copy); unblocks when at least six sanitized candidate files, one per shape, exist
   under the sidecar Scratch press-samples folder (operator).
-- [ ] AUTO-20 (build) DEPBOT-WATCH: Dependabot alerts and pull requests become rows. ACCEPT: `python
-  -m pytest -q tests/test_watch_dependabot.py tests/test_watch_rows.py` passes. ZERO-CLICK: The lane
-  runs from the tick and re-applies the bump locally as an operator commit; nothing is merged on
-  GitHub (FLEET item 17). DEPENDS: AUTO-19, LOOP-CI-ISSUES, GP-12, GP-08, GP-14. BLOCKED: session
-  wave 62 (public since 2026-11-27).
 - [ ] DATA-GUIDE-GAP-TUNE (build) Tune the clear-or-push threshold from play data. ACCEPT: python -m
   pytest -q tests/test_zone_guide.py tests/test_util_underlevel.py passes and the commit message
   cites the sample size. ZERO-CLICK: Automatic for the player; the data comes from normal play.
@@ -486,10 +483,6 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   DEPENDS: TC-CARD-PARTS, TC-PRESS-FIXTURES. BLOCKED: a real advanced-copy item sample as a fixture;
   unblocks when tests/fixtures/press holds a reviewed advanced-copy gear fixture (package
   TC-PRESS-FIXTURES).
-- [ ] GP-16 (build) Public-surface tidy. ACCEPT: `python -m pytest -q tests/test_loop_inbox_p164.py
-  tests/test_al_loop.py tests/test_ascii_lf.py tests/test_leak_sweep.py` is green. ZERO-CLICK: Agent
-  step; nothing for the operator beyond the one batched settings edit. DEPENDS: GP-12. BLOCKED:
-  session wave 62 (public since 2026-11-27).
 - [ ] PLAY-F-204B-SR-RUN (build) One real screen-reader pass: the run and its transcript. ACCEPT:
   python -m pytest -q tests/test_sr_pass.py tests/test_ascii_lf.py tests/test_leak_sweep.py passes
   with docs/design/screen-reader-pass.md present: it is dated, lists the five steps, and has no
@@ -514,11 +507,6 @@ rows that packages cover under other ids keep a FOLDED pointer line where they w
   normal play with the budget log on (no operator act); closes from the log.
 - (TC-OAUTH-REG: its row is replaced in place under '## Theorycraft and item optimization (decision 0004, research 0010)'.)
 - (OVL-FPS: its row is replaced in place under '## Lane: build'.)
-- [ ] GP-15 (review) Release settings: immutable releases and the tag ruleset. ACCEPT: `gh api
-  "repos/$R/immutable-releases" --jq .enabled` prints true, `gh api "repos/$R/rulesets" --jq
-  '.[].name'` lists release-tags, and `gh release list --repo "$R"` is empty. ZERO-CLICK: Agent step
-  with gh; tags are pushed only by the release procedure of plan 05. DEPENDS: GP-12,
-  PUB-SETTINGS-FILES. BLOCKED: session wave 62 (gh settings).
 - [ ] LOOP-KIT-REPORT-SEND (review) KIT-REPORT: send the drafted note once a destination inbox
   exists. ACCEPT: The last line for the note in ops/loop/control/delivery.jsonl reads `"reached":
   true` with `"count": "1/1"`. ZERO-CLICK: Sent by the tick's own note path (InboxMixin.deliver_note

@@ -1514,6 +1514,13 @@ of the HALT check.
   source's owner asks tools not to read it automatically, the metadata-only
   rule hides a break only a data read shows, or the operator exempts a
   source from the web-data gate in writing.
+  Amended 2026-11-27 (AUTO-20, DEPBOT-WATCH): METADATA_TAILS gains /pulls
+  and /dependabot/alerts (sub-paths stay refused); the dependabot source
+  reads both lists through gh api in the main checkout only while web_data
+  is on, never in a lane and with no CI workflow; DEPBOT-PR-<n> rows are
+  BLOCKED: session (lanes have no gh). Reverses if: the operator wants the
+  read while the dev host is off (then the docs/plan/06 W9 CI job), GitHub
+  treats these as non-metadata, or gh leaves the dev host.
 - Observability records: AshLight records only its own behaviour: in-memory
   counters behind the token-gated /api/debug and the probe command, a 1 MB
   budget log of its own processes, a typed event log with no free-text field,

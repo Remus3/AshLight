@@ -2087,7 +2087,8 @@
    "goal": "RUN-VERDICTS-CLOSE and RUN-BUILDFILE-LIVE-CLOSE record the in-game verdicts now in ops/runtime/verdicts.json (2026-11-22) in research 0025, 0022 and 0027 and file the fix rows, tagged for the operator's re-try because the clicks carry no note.",
    "merge_order": [
     "RUN-VERDICTS-CLOSE",
-    "RUN-BUILDFILE-LIVE-CLOSE"
+    "RUN-BUILDFILE-LIVE-CLOSE",
+    "GP-12"
    ],
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
   },
@@ -2096,6 +2097,7 @@
    "title": "Wave 62: post-flip settings, tidy, Dependabot watch and two flake fixes",
    "goal": "With the repository public (GP-12, 2e801d3), GP-15 sets immutable releases and the tag ruleset, GP-16 tidies the public surface and AUTO-20 turns Dependabot alerts and pull requests into rows; TEST-A11Y-NEWEST-DEVTOOLS and TEST-PLAYFIT-LOAD-FLAKE fix the two flakes seen at the flip.",
    "merge_order": [
+    "GP-13",
     "GP-15",
     "GP-16",
     "AUTO-20",
@@ -2127,9 +2129,7 @@
     "DATA-GUIDE-GAP-TUNE",
     "TC-AFFIX-LINE",
     "PLAY-F-204B-SR-RUN",
-    "GP-12",
     "RUN-LIVE-CLICKS-CLOSE",
-    "GP-13",
     "RUN-OVL-BUDGET-CLOSE",
     "TC-OAUTH-REG",
     "OVL-FPS",
@@ -20875,9 +20875,11 @@
     "F-150",
     "AUTO-20"
    ],
-   "files": [],
+   "files": [
+    "tools/watch_gate.py",
+    "docs/decisions/0069-upstream-watch-frame.md"
+   ],
    "new_files": [
-    ".github/workflows/watch-dependabot.yml",
     "tools/watch_sources/dependabot.py",
     "ops/loop/watch_rows/dependabot.json",
     "tests/test_watch_dependabot.py"
@@ -20891,7 +20893,7 @@
     "tests/test_watch_dependabot.py::test_open_dependabot_pull_request_yields_one_depbot_pr_row",
     "tests/test_watch_dependabot.py::test_no_pr_row_while_an_advisory_row_names_the_package",
     "tests/test_watch_dependabot.py::test_pull_request_from_another_author_yields_nothing",
-    "tests/test_watch_dependabot.py::test_workflow_grants_no_write_but_issues_and_pins_actions"
+    "tests/test_watch_dependabot.py::test_no_workflow_is_added_for_the_dependabot_read"
    ],
    "accept": "`python -m pytest -q tests/test_watch_dependabot.py tests/test_watch_rows.py` passes.",
    "zero_click": "The lane runs from the tick and re-applies the bump locally as an operator commit; nothing is merged on GitHub (FLEET item 17).",
@@ -20910,7 +20912,7 @@
    "design_review": false,
    "blocked": null,
    "operator_act": "",
-   "notes": "Source contract (AUTO-05): a module tools/watch_sources/<name>.py exposes SOURCE = {name, home, cadence_s, window, needs_web_data, hosts, urls, check}; check(state, now, fetch, ctx) returns findings {source, kind, key, tokens}; ctx is the dict the caller passes ({} by default: the tick's docs_watch and drift seams, and 'live', true only when the tick runs on the main checkout), and a source starts a subprocess or reads a runtime file outside its root only when ctx.get('live') is true, so loop tests on scratch roots stay hermetic; urls lists the exact https URLs the source may request beside GitHub repository metadata (checked by watch_gate.check_url, LOOP-WATCH-GATE); its templates live in ops/loop/watch_rows/<name>.json (LOOP-WATCH-ROWS). New files only: never edit tools/upstream_watch.py, another source or another template file. Every network behaviour is proven with an injected transport and fixtures; no test makes a real request. W9 and AUTO-20 of docs/plan/06. docs/plan/06 adds the two read permissions to the job of AUTO-19; this plan gives the Dependabot read its own workflow file, .github/workflows/watch-dependabot.yml (same schedule shape, standard runner, actions pinned by full commit id, no secret; permissions contents: read, issues: write, vulnerability-alerts: read, pull-requests: read and no other write), so the two parked packages share no file and the main watch job keeps the smaller permission set. It runs `python tools/watch_ci.py --sources dependabot` (the entry AUTO-19 builds takes source names; it is not edited here). Templates DEPBOT-<PACKAGE>-<GHSA> (lane data, '(priority)', never held by the soft budget gate) and DEPBOT-PR-<n> (lane data) with the tokens of 06 W9: <GHSA> upper-cased and matching GHSA(-[0-9A-Z]{4}){3}; <package> must be a name in the tracked lockfile; <n> must be a pull request whose author is the Dependabot app (the CI key carries the number only). Each row's lane runs `python tools/dependabot_reapply.py apply <n>` (the go-public cluster's tool, unit F-081). Unblocked 2026-11-27 (session 33, wave 62 plan): the repository is public (GP-12 done 2026-11-27 in 2e801d3, record docs/ops/public-flip-2026-11-27.md; visibility read back PUBLIC). The deps edge on GP-12 is dropped because GP-12 was run as a session act and stays listed in the parked wave 99, where an edge from wave 62 cannot point; integrator ruling, session 33.",
+   "notes": "Source contract (AUTO-05): a module tools/watch_sources/<name>.py exposes SOURCE = {name, home, cadence_s, window, needs_web_data, hosts, urls, check}; check(state, now, fetch, ctx) returns findings {source, kind, key, tokens}; ctx is the dict the caller passes ({} by default: the tick's docs_watch and drift seams, and 'live', true only when the tick runs on the main checkout), and a source starts a subprocess or reads a runtime file outside its root only when ctx.get('live') is true, so loop tests on scratch roots stay hermetic; urls lists the exact https URLs the source may request beside GitHub repository metadata (checked by watch_gate.check_url, LOOP-WATCH-GATE); its templates live in ops/loop/watch_rows/<name>.json (LOOP-WATCH-ROWS). New files only: never edit tools/upstream_watch.py, another source or another template file. Every network behaviour is proven with an injected transport and fixtures; no test makes a real request. W9 and AUTO-20 of docs/plan/06. docs/plan/06 adds the two read permissions to the job of AUTO-19; this plan gives the Dependabot read its own workflow file, .github/workflows/watch-dependabot.yml (same schedule shape, standard runner, actions pinned by full commit id, no secret; permissions contents: read, issues: write, vulnerability-alerts: read, pull-requests: read and no other write), so the two parked packages share no file and the main watch job keeps the smaller permission set. It runs `python tools/watch_ci.py --sources dependabot` (the entry AUTO-19 builds takes source names; it is not edited here). Templates DEPBOT-<PACKAGE>-<GHSA> (lane data, '(priority)', never held by the soft budget gate) and DEPBOT-PR-<n> (lane data) with the tokens of 06 W9: <GHSA> upper-cased and matching GHSA(-[0-9A-Z]{4}){3}; <package> must be a name in the tracked lockfile; <n> must be a pull request whose author is the Dependabot app (the CI key carries the number only). Each row's lane runs `python tools/dependabot_reapply.py apply <n>` (the go-public cluster's tool, unit F-081). Unblocked 2026-11-27 (session 33, wave 62 plan): the repository is public (GP-12 done 2026-11-27 in 2e801d3, record docs/ops/public-flip-2026-11-27.md; visibility read back PUBLIC). The deps edge on GP-12 is dropped because GP-12 was run as a session act and stays listed in the parked wave 99, where an edge from wave 62 cannot point; integrator ruling, session 33. Landed 2026-11-27 (session 33, wave 62, 93e40b5): no workflow file is added; the source reads Dependabot alerts and open pull requests through gh on the dev loop while web_data is on, watch_gate gains the /dependabot/alerts and /pulls metadata tails, decision 0069 amendment 2026-11-27; DEPBOT-PR-<n> rows are tagged BLOCKED: session because lanes have no gh.",
    "wave": 62,
    "owner": "session",
    "tier": "P2",
@@ -21562,14 +21564,10 @@
    "isolation": "none",
    "lane": "review",
    "design_review": false,
-   "blocked": {
-    "on": "every P0 unit of the plan on origin/main, and flip gates 0 to 6 green",
-    "who": "packages",
-    "unblock": "`grep -c \"^OPERATOR GO Q-23 step 4\" AL-NEXT-SESSION.txt` prints 1 and the line quotes the operator's own words with their date, `grep -c \"^OA-2 SKIPPED IN WRITING\" AL-NEXT-SESSION.txt` prints 1, and `python -m pytest -q tests/test_http_security.py tests/test_tc_code.py tests/test_no_discovery.py` is green on the commit at origin/main"
-   },
+   "blocked": null,
    "operator_act": "",
-   "notes": "Tier P0 (F-006, blocker B7), placed after its dependencies. No tracked file; isolation none. Flip gates, all read back on the commit at origin/main: (1) every other P0 unit of the plan has landed; hard minimum F-006: the commits of F-001, F-002 and F-005 are in `git log origin/main` and the three test files above are green; (2) GP-01's commands re-run: identity 0, leaks 0, set names 0; (3) both workflows success on that commit; (4) GP-06, GP-07 (folded into PUB-README-PLAYERS), GP-10 and GP-11 landed; (5) OA-2 sent or skipped in writing (met by the hand-off line 'OA-2 SKIPPED IN WRITING' of 2026-11-18; adjudicator LE-38); (6) `git ls-files` has no FUNDING file and README images are only assets/brand/*. Then `gh repo edit \"$R\" --visibility public --accept-visibility-change-consequences`. A red gate stops; nothing is skipped. A later finding scored 4 or more joins gate 1 before any release. The gate read-backs go into the progress file (counts, never names). PLAN 07 (review, floor lens): a flip gate 0 is added in front of the six: the hand-off line 'OPERATOR GO Q-23 step 4' quotes the operator's own words; one message that orders both steps may be quoted in both lines. PLAN 07 (close-out 2026-11-18, adjudicator LE-01): steps 1 and 4 of Q-23 are recorded, so the flip waits for packages only (every P0 unit on origin/main, gates 0 to 6). A hit of the gate 2 scans keeps the repository private and files one rewrite request to MAIN (fleet_rewrite.py, ORDER only). The dependency on DATA-PRICE-CADENCE stays, so the release polling gate is in code before the flip.",
-   "wave": 99,
+   "notes": "Tier P0 (F-006, blocker B7), placed after its dependencies. No tracked file; isolation none. Flip gates, all read back on the commit at origin/main: (1) every other P0 unit of the plan has landed; hard minimum F-006: the commits of F-001, F-002 and F-005 are in `git log origin/main` and the three test files above are green; (2) GP-01's commands re-run: identity 0, leaks 0, set names 0; (3) both workflows success on that commit; (4) GP-06, GP-07 (folded into PUB-README-PLAYERS), GP-10 and GP-11 landed; (5) OA-2 sent or skipped in writing (met by the hand-off line 'OA-2 SKIPPED IN WRITING' of 2026-11-18; adjudicator LE-38); (6) `git ls-files` has no FUNDING file and README images are only assets/brand/*. Then `gh repo edit \"$R\" --visibility public --accept-visibility-change-consequences`. A red gate stops; nothing is skipped. A later finding scored 4 or more joins gate 1 before any release. The gate read-backs go into the progress file (counts, never names). PLAN 07 (review, floor lens): a flip gate 0 is added in front of the six: the hand-off line 'OPERATOR GO Q-23 step 4' quotes the operator's own words; one message that orders both steps may be quoted in both lines. PLAN 07 (close-out 2026-11-18, adjudicator LE-01): steps 1 and 4 of Q-23 are recorded, so the flip waits for packages only (every P0 unit on origin/main, gates 0 to 6). A hit of the gate 2 scans keeps the repository private and files one rewrite request to MAIN (fleet_rewrite.py, ORDER only). The dependency on DATA-PRICE-CADENCE stays, so the release polling gate is in code before the flip. Done 2026-11-27 in 2e801d3 (session 32, between waves 61 and 62; record docs/ops/public-flip-2026-11-27.md); moved out of the parked wave into wave 61 at the wave 62 close (session 33).",
+   "wave": 61,
    "owner": "session",
    "tier": "P0",
    "cluster": "PUB"
@@ -21651,14 +21649,10 @@
    "isolation": "none",
    "lane": "review",
    "design_review": false,
-   "blocked": {
-    "on": "the public flip (rulesets and free secret scanning need a public repository on a personal account)",
-    "who": "package GP-12",
-    "unblock": "`gh repo view \"$R\" --json visibility --jq .visibility` prints PUBLIC"
-   },
+   "blocked": null,
    "operator_act": "",
-   "notes": "Tier P1; runs at once after GP-12. No tracked file unless a read-back differs from ops/github/*.json (then that file is corrected first, in a worktree, with tests/test_repo_settings_files.py green). Commands and expected read-backs: 04 section 'Repository settings' C (vulnerability-alerts 204, automated-security-fixes true, private-vulnerability-reporting true, PATCH with ops/github/security.json, three statuses enabled), D (POST the two main rulesets; main-checks has exactly one bypass actor, main-protect none), E (Actions enabled, sha_pinning_required true, default workflow permissions read, cannot approve reviews), F (community profile health 100). A re-run updates a ruleset in place with PUT. Fallbacks: if the ruleset call is refused or a direct push of a fresh commit is rejected, apply ops/github/branch-protection-fallback.json (classic protection); if that also blocks pushes, keep both checks running but not required and report it to MAIN. The 'fresh commit' is the integrator's next ledger commit. Also hand the two peer gaps (Dependabot security updates on in 1 of 7 public peers; the identity guard required in 0 of 7) to the note F-203 owns. PLAN 07 (ruling R4, 2026-11-18): any other ref found by the read-back stops GP-13; the session removes it only with the operator's account through gh after recording it, and the creation-restricting ruleset becomes a new package.",
-   "wave": 99,
+   "notes": "Tier P1; runs at once after GP-12. No tracked file unless a read-back differs from ops/github/*.json (then that file is corrected first, in a worktree, with tests/test_repo_settings_files.py green). Commands and expected read-backs: 04 section 'Repository settings' C (vulnerability-alerts 204, automated-security-fixes true, private-vulnerability-reporting true, PATCH with ops/github/security.json, three statuses enabled), D (POST the two main rulesets; main-checks has exactly one bypass actor, main-protect none), E (Actions enabled, sha_pinning_required true, default workflow permissions read, cannot approve reviews), F (community profile health 100). A re-run updates a ruleset in place with PUT. Fallbacks: if the ruleset call is refused or a direct push of a fresh commit is rejected, apply ops/github/branch-protection-fallback.json (classic protection); if that also blocks pushes, keep both checks running but not required and report it to MAIN. The 'fresh commit' is the integrator's next ledger commit. Also hand the two peer gaps (Dependabot security updates on in 1 of 7 public peers; the identity guard required in 0 of 7) to the note F-203 owns. PLAN 07 (ruling R4, 2026-11-18): any other ref found by the read-back stops GP-13; the session removes it only with the operator's account through gh after recording it, and the creation-restricting ruleset becomes a new package. Done 2026-11-27 in 2e801d3 (session 32, run at once after GP-12); moved out of the parked wave into wave 62 at the wave 62 close (session 33).",
+   "wave": 62,
    "owner": "session",
    "tier": "P1",
    "cluster": "PUB"
