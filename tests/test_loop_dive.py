@@ -74,6 +74,44 @@ def test_idle_dive_runs_at_most_once_in_7_days(tmp_path):
     assert d.seen["launch"][1:] == [f"DD-{_day(T0 + 7 * DAY_S)}"]
 
 
+def test_next_dive_counts_an_open_dives_claimed_number(tmp_path):
+    """RES-DIVE-NUMBER-COLLISION: DD-20261125..27 each claimed 0064 because
+    an unmerged dive's note is not in the main tree yet. An existing 0064
+    file and an open dive holding 0065 give the next dive 0066, for the
+    idle dive and the requested dive alike."""
+    import loop_prompts
+    from loop_steps import dive_request
+    rm = ROADMAP.replace("- [ ] ", "- [x] ")
+    root = make_root(tmp_path, roadmap=rm, handoff="",
+                     local={"loop": {"max_new_plans_per_day": 1}})
+    research = root / "docs" / "research"
+    research.mkdir(parents=True, exist_ok=True)
+    (research / "0064-companion-landscape.md").write_text("x\n", encoding="ascii")
+    items = al_loop.Items(root)
+    items.put({"id": "DD-20261125", "kind": "deep-dive", "state": "ran",
+               "prompt": "Write docs/research/0065-deep-dive-20261125.md now"})
+    p = loop_prompts.deep_dive_prompt(root, "20261126", 1, {})
+    assert "docs/research/0066-deep-dive-20261126.md" in p
+    p = dive_request.requested_dive_prompt(root, "20261126", 1, {}, "t",
+                                           ["https://api.github.com/repos/a/b"])
+    assert "docs/research/0066-deep-dive-20261126.md" in p
+    # the tick's idle dive takes the same next free number
+    def git(args, cwd, input=None, lock=None):
+        import subprocess
+        code = 0 if args and args[0] == "log" else (1 if args[:1] == ["config"] else 128)
+        return subprocess.CompletedProcess(["git", *args], code, "", "")
+
+    d = deps(root, clock=lambda: T0, git=git)
+    # an unmerged dive that holds its note outside the main tree, not in review
+    held = items.get("DD-20261125")
+    held.update(state="failed", error="red gate")
+    items.put(held)
+    al_loop.tick(deps=d, no_push=True)
+    assert d.seen["launch"] == [f"DD-{_day(T0)}"]
+    rec = items.get(f"DD-{_day(T0)}")
+    assert rec and f"docs/research/0066-deep-dive-{_day(T0)}.md" in rec["prompt"]
+
+
 def test_dive_backoff_is_weekly_whatever_was_proposed():
     import datetime as dt
     from loop_roadmap import dive_backoff

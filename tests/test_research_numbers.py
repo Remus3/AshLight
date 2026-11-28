@@ -38,3 +38,32 @@ def test_checker_catches_a_clash_and_a_bad_name(tmp_path):
     bad, dup = problems(tmp_path)
     assert bad == ["0028b-clash.md", "0030-Upper.md", "0031-ok.txt"]
     assert dup == ["0029"]
+
+
+def _dive_rec(items, iid, num, state="dispatched", kind="deep-dive"):
+    items.put({"id": iid, "kind": kind, "state": state, "date": iid[3:],
+               "prompt": f"Write docs/research/{num:04d}-deep-dive-{iid[3:]}.md and"})
+
+
+def test_next_dive_number_skips_files_and_open_dive_claims(tmp_path):
+    """RES-DIVE-NUMBER-COLLISION: an existing 0064 file and an open dive
+    holding 0065 give the next dive 0066; a merged or no-change dive's claim
+    is not counted, nor the dive's own record (a re-dispatch keeps its
+    number)."""
+    import sys
+    sys.path.insert(0, str(ROOT / "tools"))
+    import loop_base
+    research = tmp_path / "docs" / "research"
+    research.mkdir(parents=True)
+    (research / "0064-companion-landscape.md").write_text("x\n", encoding="ascii")
+    items = loop_base.Items(tmp_path)
+    assert loop_base.next_research_number(tmp_path) == 65
+    _dive_rec(items, "DD-20261125", 65)
+    assert loop_base.next_research_number(tmp_path) == 66
+    _dive_rec(items, "DD-20261120", 90, state="no-change")
+    _dive_rec(items, "DD-20261119", 91, state="merged")
+    _dive_rec(items, "PLAN-X", 92, kind="plan")
+    assert loop_base.next_research_number(tmp_path) == 66
+    assert loop_base.next_research_number(tmp_path, exclude="DD-20261125") == 65
+    other = tmp_path / "other"
+    assert loop_base.next_research_number(other, items_root=tmp_path) == 66
