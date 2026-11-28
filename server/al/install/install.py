@@ -252,8 +252,11 @@ def _fold_selftest(res):
     return out
 
 
-def _default_selftest(home, version):
-    return selftestmod.run(home, version, clicked=True)
+def _default_selftest(home, version, electron=None):
+    return selftestmod.run(home, version, clicked=True, electron=electron)
+
+
+_default_selftest.takes_electron = True  # REL-SELFTEST-CLIENT
 
 
 # --- the run --------------------------------------------------------------------------------
@@ -308,7 +311,9 @@ def run(zip, home, runtime_dir=None, start=True, sums=None, release=None,
         if before is not None and before["version"] == version:
             steps["selftest"] = "skipped"
         else:
-            res = selftest(home, version)
+            electron = (homemod.layout(home)["runtime"] / folders["electron"]
+                        / paths.ELECTRON_EXE)
+            res = selftestmod.call(selftest, home, version, electron)
             folded = _fold_selftest(res)
             report["selftest"] = folded
             steps["selftest"] = folded["status"]

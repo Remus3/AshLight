@@ -20,8 +20,10 @@ const HOOKS = ["early", "ready", "overlayWindow", "clientWindow", "configChanged
 
 /* The parts of dir: its *.js files sorted by file name, each loaded with
    req. A missing or unreadable dir is no parts. A part that fails to load
-   is logged and skipped. */
-function load(dir, readdirSync, req, log) {
+   is logged and skipped; with a failed array it is also recorded there as
+   {name, hook: "load", message} (REL-SELFTEST-CLIENT: the client self-test
+   fails on it). */
+function load(dir, readdirSync, req, log, failed) {
   let names;
   try {
     names = readdirSync(dir);
@@ -34,26 +36,33 @@ function load(dir, readdirSync, req, log) {
       const mod = req(path.join(dir, name));
       out.push({ name: name, mod: mod || {} });
     } catch (e) {
-      if (typeof log === "function") { log("part " + name + " not loaded: " + e.message); }
+      const message = String(e && e.message);
+      if (typeof log === "function") { log("part " + name + " not loaded: " + message); }
+      if (Array.isArray(failed)) { failed.push({ name: name, hook: "load", message: message }); }
     }
   }
   return out;
 }
 
 /* Call hook on every part that has it, in order. A throwing part is logged
-   through ctx.log and skipped; the rest still run. */
+   through ctx.log and skipped; the rest still run. Returns the failures,
+   [{name, hook, message}], empty when every part ran. */
 function run(parts, hook, ctx, ...args) {
+  const failed = [];
   for (const p of parts) {
     const fn = p.mod && p.mod[hook];
     if (typeof fn !== "function") { continue; }
     try {
       fn(ctx, ...args);
     } catch (e) {
+      const message = String(e && e.message);
+      failed.push({ name: p.name, hook: hook, message: message });
       if (ctx && typeof ctx.log === "function") {
-        ctx.log("part " + p.name + " failed in " + hook + ": " + (e && e.message));
+        ctx.log("part " + p.name + " failed in " + hook + ": " + message);
       }
     }
   }
+  return failed;
 }
 
 module.exports = { HOOKS, load, run };

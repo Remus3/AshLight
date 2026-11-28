@@ -433,6 +433,124 @@ def test_a_failed_self_test_leaves_the_marker_on_n_with_exit_1_and_one_report(
         assert spawned[0][1]["creationflags"] & update.BELOW_NORMAL
 
 
+# --- REL-SELFTEST-CLIENT: the new Electron main process, hidden, with --selftest ---------
+
+class CodeProc:
+    """A child that exits with code at once (or never, when code is None)."""
+
+    def __init__(self, code, stdout=None):
+        self.code = code
+        self.returncode = None
+        self.stdout = stdout
+        self.pid = 0
+        self.terminated = False
+
+    def wait(self, timeout=None):
+        if self.code is None and not self.terminated:
+            raise subprocess.TimeoutExpired("electron", timeout)
+        self.returncode = self.code if not self.terminated else 1
+        return self.returncode
+
+    def poll(self):
+        if self.code is None and not self.terminated:
+            return None
+        return self.wait()
+
+    def terminate(self):
+        self.terminated = True
+
+    def kill(self):
+        self.terminated = True
+
+
+class ClientSpawn:
+    """--check exits 0, the demo core prints its token and stays up (health
+    faked), the client (--selftest) exits client_code."""
+
+    def __init__(self, client_code=0):
+        self.client_code = client_code
+        self.calls = []
+        self.client = None
+
+    def __call__(self, cmd, **kw):
+        self.calls.append((list(cmd), dict(kw)))
+        if "--check" in cmd:
+            return CodeProc(0)
+        if selftestmod.CLIENT_ARG in cmd:
+            self.client = CodeProc(self.client_code)
+            return self.client
+        return CodeProc(None, io.BytesIO(b"http://127.0.0.1:8970/#token=tok123\n"))
+
+
+@pytest.fixture
+def healthy(monkeypatch):
+    seen = {}
+
+    def health(port, token, timeout=2.0):
+        seen["version"] = VER_N1
+        return {"name": selftestmod.NAME, "version": VER_N1}
+    monkeypatch.setattr(selftestmod, "_health", health)
+    monkeypatch.setattr(selftestmod, "probe_free", lambda p: True)
+    return seen
+
+
+def test_the_client_self_test_starts_the_new_electron_hidden_and_passes(home, releases,
+                                                                          healthy):
+    spawn = ClientSpawn(0)
+    code, report = _stage(home, releases[VER_N1], selftest=None, spawn=spawn)
+    assert code == update.EXIT_OK, report
+    assert report["steps"]["selftest"] == "passed"
+    clients = [(c, kw) for c, kw in spawn.calls if selftestmod.CLIENT_ARG in c]
+    assert len(clients) == 1 and [c for c, _ in spawn.calls].index(clients[0][0]) == 2
+    cmd, kw = clients[0]
+    assert Path(cmd[0]) == home / "runtime" / EL_RT / "electron.exe"
+    assert Path(cmd[1]) == home / "app" / VER_N1 / "app"
+    assert cmd[2:] == [selftestmod.CLIENT_ARG]
+    env = kw["env"]
+    profile = Path(env[selftestmod.CLIENT_PROFILE_ENV])
+    assert home / "temp" in profile.parents
+    for key in ("ELECTRON_RUN_AS_NODE", "NODE_OPTIONS", "AL_RUNTIME_DIR", "AL_PORT"):
+        assert key not in env
+    assert env["AL_HOME"] == str(home)
+    assert Path(kw["cwd"]).parent == home / "temp"
+    if os.name == "nt":  # hidden, below normal
+        assert kw["creationflags"] & 0x08000000
+        assert kw["creationflags"] & update.BELOW_NORMAL
+    assert not [n for n in os.listdir(home / "temp") if n.startswith("selftest-")]
+
+
+def test_a_throwing_part_fails_the_client_stage(home, releases, healthy):
+    marker_n = (home / "install.json").read_bytes()
+    spawn = ClientSpawn(selftestmod.CLIENT_EXIT_PART)
+    code, report = _stage(home, releases[VER_N1], selftest=None, spawn=spawn)
+    assert code == update.EXIT_FAIL
+    assert report["stage"] == "selftest" and report["status"] == "failed"
+    assert "a part failed to load" in report["reason"]
+    doc = _report_doc(home)
+    assert doc["selftest"]["stage"] == "client"
+    assert doc["selftest"]["exit_code"] == selftestmod.CLIENT_EXIT_PART
+    assert (home / "install.json").read_bytes() == marker_n
+    assert not (home / "app" / VER_N1).exists()
+    assert (home / "temp" / ("failed-" + VER_N1)).is_dir()
+    assert not (home / "staged").exists()
+
+
+def test_a_client_that_does_not_exit_in_time_fails_and_is_stopped(home, releases, healthy):
+    spawn = ClientSpawn(None)
+    code, report = _stage(home, releases[VER_N1], selftest=None, spawn=spawn)
+    assert code == update.EXIT_FAIL
+    assert _report_doc(home)["selftest"]["stage"] == "client"
+    assert "30 s" in report["reason"] and spawn.client.terminated
+    assert selftestmod.CLIENT_TIMEOUT_S == 30.0
+
+
+@pytest.mark.parametrize("code,word", [(4, "egress lock off"), (5, "a window opened"),
+                                       (1, "client exited 1")])
+def test_every_other_client_exit_fails_the_stage(home, releases, healthy, code, word):
+    rc, report = _stage(home, releases[VER_N1], selftest=None, spawn=ClientSpawn(code))
+    assert rc == update.EXIT_FAIL and word in report["reason"]
+
+
 def test_the_work_runs_at_below_normal_priority_and_restores_it(home, releases,
                                                                 monkeypatch):
     prio = FakePriority(start=0x20)

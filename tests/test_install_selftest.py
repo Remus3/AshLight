@@ -394,6 +394,44 @@ def test_constants_match_the_core():
     assert selftest.STOP_FILE == core_main.STOP_FILE
 
 
+def test_client_stage_skips_without_electron_and_fails_on_a_missing_exe(tmp_path, clean_env):
+    """REL-SELFTEST-CLIENT: no electron named skips the client stage; a named
+    electron.exe that is missing fails it (stage client) and starts nothing."""
+    clean_env.setattr(selftest, "_health",
+                      lambda port, token, timeout=2.0: {"name": selftest.NAME, "version": NEW})
+    home = tmp_path / "home"
+    lay_out(home)
+    with_marker(home)
+    res = selftest.run(home, NEW, clicked=True, spawn=HermeticSpawn(), probe=lambda p: True)
+    assert res.ok and res.detail["client"] == "skipped"
+    spawn = HermeticSpawn()
+    bad = selftest.run(home, NEW, clicked=True, spawn=spawn, probe=lambda p: True,
+                       electron=home / "runtime" / "electron-0" / "electron.exe")
+    assert bad.status == selftest.FAILED and bad.stage == "client"
+    assert "electron.exe" in bad.reason and bad.moved
+    assert not [c for c, _ in spawn.calls if selftest.CLIENT_ARG in c]
+
+
+def test_client_env_drops_node_switches_and_names_a_scratch_profile(tmp_path):
+    env = selftest.client_env({"ELECTRON_RUN_AS_NODE": "1", "node_options": "x", "KEEP": "1"},
+                              tmp_path)
+    assert env == {"KEEP": "1",
+                   selftest.CLIENT_PROFILE_ENV: str(tmp_path / selftest.CLIENT_PROFILE_DIR)}
+
+
+def test_client_exit_codes_match_the_app():
+    text = (ROOT / "app" / "selftest.js").read_text(encoding="ascii")
+    m = re.search(r"const EXIT = \{([^}]*)\}", text)
+    codes = {k.strip(): int(v) for k, v in (p.split(":") for p in m.group(1).split(","))}
+    assert codes["ok"] == 0 and codes["part"] == selftest.CLIENT_EXIT_PART
+    assert selftest.CLIENT_EXIT_WORDS == {
+        codes["part"]: "a part failed to load", codes["egress"]: "egress lock off",
+        codes["window"]: "a window opened", codes["crash"]: "client crashed",
+        codes["timeout"]: "client timed out"}
+    assert f'const ARG = "{selftest.CLIENT_ARG}"' in text
+    assert selftest.CLIENT_PROFILE_ENV in (ROOT / "app" / "main.js").read_text(encoding="ascii")
+
+
 def test_child_env_drops_caller_overrides(tmp_path):
     env = selftest.child_env(tmp_path, {"AL_RUNTIME_DIR": "x", "AL_SIDECAR_ROOT": "y",
                                         "AL_PORT": "8960", "PYTHONPATH": "z", "KEEP": "1"})

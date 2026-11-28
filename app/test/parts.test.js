@@ -73,7 +73,7 @@ test("main.js runs every hook name, once each, from the places the seam names", 
     const n = (MAIN.match(new RegExp('runParts\\("' + hook + '"', "g")) || []).length;
     assert.equal(n, 1, hook);
   }
-  assert.match(MAIN, /Parts\.load\(path\.join\(__dirname, "parts"\), fs\.readdirSync, require, log\)/);
+  assert.match(MAIN, /Parts\.load\(path\.join\(__dirname, "parts"\), fs\.readdirSync, require, log,\s+partFailures\)/);
   // early runs before the mode branch that ends in app.whenReady()
   assert.ok(MAIN.indexOf('runParts("early")') < MAIN.indexOf("if (!CLIENT_MODE && !OVERLAY_ALONE_TEST)"));
   // ready: after onEval is built, before the start line diag reads

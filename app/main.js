@@ -43,6 +43,12 @@ const Pages = require("./pages.js");
 const Metrics = require("./metrics.js");
 const AppLog = require("./applog.js");
 const Hello = require("./hello.js");
+const Selftest = require("./selftest.js");
+
+// REL-SELFTEST-CLIENT (research 0066 F11a): "--selftest" is the update
+// self-test's hidden start of a NEW version (app/selftest.js): parts load,
+// the egress lock is checked, no window, no lock, no core call, then exit.
+const SELFTEST = Selftest.wanted(process.argv);
 
 // RUN-OBS-LOGS-SHELL (F-090): overlay.log in the one line format, rotated
 // at start over 1 MB, the build banner first (app/applog.js). Lines before
@@ -62,7 +68,7 @@ try {
   // REL-HOME-REFUSAL-UI: a refused home also shows its one sentence in an
   // error box (no window for any other error); exit code 2 either way.
   try {
-    Home.refusalNotice(e, (text) => dialog.showErrorBox("AshLight", text));
+    if (!SELFTEST) { Home.refusalNotice(e, (text) => dialog.showErrorBox("AshLight", text)); }
   } catch (err) { /* the stderr line stands */ }
   process.exit(2);
 }
@@ -216,24 +222,30 @@ if (CLIENT_MODE && !process.env.AL_SIDECAR_ROOT && HOME.mode === "checkout") {
 // OVL-MAIN-PARTS (decision 0053): the parts of app/parts/ in file-name
 // order and the one ctx every hook gets. actions.onEval is set in start(),
 // next to the one clipboard read.
-const PARTS = Parts.load(path.join(__dirname, "parts"), fs.readdirSync, require, log);
+const partFailures = []; // REL-SELFTEST-CLIENT: parts that did not load or threw
+const PARTS = Parts.load(path.join(__dirname, "parts"), fs.readdirSync, require, log,
+  partFailures);
 const ctx = {
   app: app, log: log, repo: REPO, runtimeDir: path.dirname(TOKEN_FILE), port: port,
   readToken: verifiedToken, readConfig: () => readJson(LOCAL_CONFIG), env: process.env,
-  clientMode: CLIENT_MODE, devTools: DEV_TOOLS,
+  clientMode: CLIENT_MODE, devTools: DEV_TOOLS, selftest: SELFTEST,
   defaults: { toggle: DEFAULT_TOGGLE, eval: DEFAULT_EVAL_KEY },
   keys: { toggle: toggleKey, eval: evalKey },
   getOverlay: () => win, getClient: () => client, getGate: () => gate || choiceGate,
   overlayBounds: () => layoutBounds(currentLayout()),
   actions: { toggle: toggle, restartOverlay: restartOverlay, openClient: openClient, onEval: null }
 };
-function runParts(hook, ...args) { Parts.run(PARTS, hook, ctx, ...args); }
+function runParts(hook, ...args) { return Parts.run(PARTS, hook, ctx, ...args); }
 
 // Sidecar rule: Electron's profile (cache, crash dumps) never lands in the
 // user's roaming profile - it goes to the AL sidecar (set by run.ps1 from
 // server.al.paths) or, without it, to <home>/cache in an install, else to
 // the repo's gitignored ops/runtime (Home.profileDir).
-const profileDir = process.env.AL_SIDECAR_ROOT
+// A self-test uses the scratch profile the installer names, never the
+// running client's profile.
+const profileDir = (SELFTEST && process.env.AL_SELFTEST_PROFILE)
+  ? process.env.AL_SELFTEST_PROFILE
+  : process.env.AL_SIDECAR_ROOT
   ? path.join(process.env.AL_SIDECAR_ROOT, "Cache", "overlay-profile")
   : Home.profileDir(HOME, process.env);
 app.setPath("userData", profileDir);
@@ -264,9 +276,13 @@ app.commandLine.appendSwitch("enable-features", "NetworkServiceInProcess2");
 const SMOKE_S = Number(process.env.AL_OVERLAY_SMOKE_S || 0);
 const OVERLAY_ALONE_TEST = !CLIENT_MODE && SMOKE_S > 0;
 
-runParts("early");
+for (const f of runParts("early")) { partFailures.push(f); }
 
-if (!CLIENT_MODE && !OVERLAY_ALONE_TEST) {
+if (SELFTEST) {
+  // No single-instance lock (the running client holds it), no window.
+  Selftest.start({ app: app, session: session, BrowserWindow: BrowserWindow, Parts: Parts,
+    parts: PARTS, ctx: ctx, failures: partFailures, out: process.stdout });
+} else if (!CLIENT_MODE && !OVERLAY_ALONE_TEST) {
   process.stderr.write("AshLight: the overlay starts only with the client (--client)\n");
   app.quit();
 } else if (!app.requestSingleInstanceLock()) {

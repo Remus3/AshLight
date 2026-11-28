@@ -19,6 +19,19 @@ through the one command builder paths.python_cmd (root = that folder):
    marker into a run folder under <home>/temp. A demo core that would open
    a log outside that folder exits 97 (decision 0049), which fails the test.
 
+3. REL-SELFTEST-CLIENT (research 0066 F11a): the NEW version's Electron
+   main process, `<home>/runtime/<electron folder>/electron.exe
+   <root>/app --selftest` (the runtime folder the new version's pin
+   names, given by the caller as `electron`), hidden at below-normal
+   priority, with the scratch profile AL_SELFTEST_PROFILE under the run
+   folder and without ELECTRON_RUN_AS_NODE or NODE_OPTIONS. app/selftest.js
+   loads every part, runs their early hooks (and the session-only ready
+   hooks), checks the egress lock on both sessions and that no window
+   exists, then exits 0. Any other exit code, or no exit within
+   CLIENT_TIMEOUT_S, fails the stage "client". With electron None (a direct
+   call that names no runtime) the stage is skipped and
+   detail["client"] says so; install and update always name it.
+
 Gate (FPS floor, decision 0029 signal): the test starts only on the
 player's click (clicked=True, e.g. the pasted install line or "Update
 now") or while the injected idle() callable answers True: the running
@@ -69,6 +82,15 @@ STOP_GRACE_S = 3.0        # stop.request first, then terminate
 POLL_S = 30.0             # gate poll while game_idle is false
 MAX_WAIT_S = 6 * 3600.0   # gate: then deferred, retried by the caller later
 HEALTH_POLL_S = 0.25
+CLIENT_ARG = "--selftest"           # app/selftest.js ARG
+CLIENT_TIMEOUT_S = 30.0             # the client must exit within this
+CLIENT_PROFILE_ENV = "AL_SELFTEST_PROFILE"  # app/main.js scratch profile
+CLIENT_PROFILE_DIR = "client-profile"
+CLIENT_DROP_ENV = ("ELECTRON_RUN_AS_NODE", "NODE_OPTIONS")
+CLIENT_EXIT_PART = 3                # app/selftest.js EXIT
+CLIENT_EXIT_WORDS = {3: "a part failed to load", 4: "egress lock off",
+                     5: "a window opened", 6: "client crashed",
+                     7: "client timed out"}
 FIXTURE_REL = ("server", "al", "data", "selftest", "client_selftest.txt")
 DEMO_MARKER = "ashlight-demo.json"  # demo.MARKER (decision 0049)
 DEMO_LOG = "Client.txt"             # demo.LOG_NAME
@@ -91,7 +113,7 @@ PASSED, FAILED, DEFERRED = "passed", "failed", "deferred"
 class Result:
     status: str                 # passed | failed | deferred
     version: str
-    stage: str = ""             # gate | layout | check | start | health
+    stage: str = ""             # gate | layout | check | start | health | client
     reason: str = ""            # short text, no path
     exit_code: object = None    # the failing child's exit code, if any
     port: object = None
@@ -305,9 +327,11 @@ def run(home, version, ports=ports.SELFTEST_PORTS, idle=None, spawn=None,
         clicked=False, environ=None, poll_s=POLL_S, max_wait_s=MAX_WAIT_S,
         sleep=time.sleep, clock=time.monotonic, probe=probe_free,
         health_timeout_s=HEALTH_TIMEOUT_S, check_timeout_s=CHECK_TIMEOUT_S,
-        now=None):
+        now=None, electron=None, client_timeout_s=CLIENT_TIMEOUT_S):
     """Self-test <home>/app/<version>. See the module text. spawn(cmd, **kw)
-    returns a Popen-like child (default subprocess.Popen)."""
+    returns a Popen-like child (default subprocess.Popen). electron: the
+    electron.exe the new version runs under (None skips the client
+    stage)."""
     port_pair = ports
     spawn = spawn or _spawn_default
     lay = homemod.layout(home)
@@ -373,12 +397,70 @@ def run(home, version, ports=ports.SELFTEST_PORTS, idle=None, spawn=None,
                              lay["temp"], health_timeout_s, result, probe)
         if outcome == "retry":
             continue  # the port was taken between the probe and the bind
-        if outcome == PASSED:
-            _rmtree(run_dir)
-            result.status = PASSED
-            result.stage, result.reason = "health", "answered"
-            return result
+        if outcome != PASSED:
+            return _fail(home, lay, result, run_dir, now)
+        break
+
+    # 3. the new Electron main process with --selftest (REL-SELFTEST-CLIENT)
+    if electron is None:
+        result.detail["client"] = "skipped"
+    elif not _client_once(spawn, root, Path(electron), env, common, run_dir,
+                          client_timeout_s, result):
         return _fail(home, lay, result, run_dir, now)
+    _rmtree(run_dir)
+    result.status = PASSED
+    result.stage, result.reason = "health", "answered"
+    return result
+
+
+def client_env(env, run_dir):
+    """The client's environment: the children's minus CLIENT_DROP_ENV, plus
+    the scratch profile folder."""
+    out = {k: v for k, v in env.items() if k.upper() not in CLIENT_DROP_ENV}
+    out[CLIENT_PROFILE_ENV] = str(Path(run_dir) / CLIENT_PROFILE_DIR)
+    return out
+
+
+def _client_once(spawn, root, electron, env, common, run_dir, timeout_s, result):
+    """Start `electron <root>/app --selftest` hidden; True on exit 0 in
+    time, else False with result filled (stage "client")."""
+    result.stage = "client"
+    app_dir = Path(root) / "app"
+    if not electron.is_file():
+        result.reason = "the client runtime has no electron.exe"
+        return False
+    if not (app_dir / "main.js").is_file():
+        result.reason = "the client app is missing"
+        return False
+    kw = dict(common)
+    kw["env"] = client_env(env, run_dir)
+    try:
+        proc = spawn([str(electron), str(app_dir), CLIENT_ARG],
+                     stdout=subprocess.DEVNULL, **kw)
+    except OSError as exc:
+        result.reason = f"client could not start ({exc.__class__.__name__})"
+        return False
+    try:
+        code = proc.wait(timeout=timeout_s)
+    except subprocess.TimeoutExpired:
+        _stop_child(proc, None)
+        result.reason = f"client did not exit within {timeout_s:g} s"
+        return False
+    if code != 0:
+        result.exit_code = code
+        result.reason = CLIENT_EXIT_WORDS.get(code, f"client exited {code}")
+        return False
+    result.detail["client"] = "passed"
+    return True
+
+
+def call(selftest, home, version, electron):
+    """Run selftest(home, version), handing it electron (the new version's
+    electron.exe) when it takes one (the default runners set
+    takes_electron); test fakes keep the two-argument form."""
+    if getattr(selftest, "takes_electron", False):
+        return selftest(home, version, electron=electron)
+    return selftest(home, version)
 
 
 def _demo_once(spawn, root, fixture, port, version, env, common, temp,
@@ -463,7 +545,9 @@ def main(argv=None):
         print("usage: python -m server.al.install.selftest HOME VERSION [--click]",
               file=sys.stderr)
         return 2
-    res = run(rest[0], rest[1], clicked=clicked)
+    # a manual run checks the client under the marker's Electron
+    res = run(rest[0], rest[1], clicked=clicked,
+              electron=paths.electron_exe(child_env(rest[0])))
     print(f"selftest: {res.status} {res.stage} {res.reason}".rstrip())
     return 0 if res.ok else 1
 
