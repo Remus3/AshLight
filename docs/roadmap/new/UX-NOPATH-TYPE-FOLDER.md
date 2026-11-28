@@ -1,0 +1,1 @@
+- [ ] UX-NOPATH-TYPE-FOLDER (build) With no Client.txt the setup card names the typed game folder field and its error button "Type the folder" jumps to #logpath-in instead of "Open Checks". Why: docs/reviews/ux/2026-11-28.md P2-1. ACCEPT: the setupcard tests pass with the new rows and jump. ZERO-CLICK: the jump opens Settings at the field.

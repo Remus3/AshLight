@@ -265,6 +265,13 @@ its code (license notes: 0006).
 - 0065 Augment data source (RES-AUGMENT-DATA) - no permitted repoe-fork
   source; PoB-PoE2 ModRunes.lua seen, not admitted
   ([0065-augment-data.md](0065-augment-data.md))
+- 0066 Release and self-update readiness (RES-46-RELEASE-READY) - offline
+  code read of the 0.2.0 release and update path; 22 findings, five P1
+  (pulled release still applies, rollback inside the new client, one 60 s
+  confirm try, toolchain not pinned to CI); rows REL-BUILD-TOOLCHAIN-GATE,
+  REL-UPDATE-WITHDRAW, REL-SELFTEST-CLIENT, REL-CONFIRM-CLIENT,
+  REL-CONFIRM-PATIENCE, REL-46-P2, REL-46-P3
+  ([0066-release-update-readiness.md](0066-release-update-readiness.md))
 
 ## Open research (feeds ROADMAP)
 

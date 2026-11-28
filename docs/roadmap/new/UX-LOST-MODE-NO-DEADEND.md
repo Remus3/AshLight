@@ -1,0 +1,1 @@
+- [ ] UX-LOST-MODE-NO-DEADEND (build) The setup card lost mode says "If it stays like this, quit from the tray and reopen it." and drops the Open Checks button (or uses a Reload page button). Why: docs/reviews/ux/2026-11-28.md P2-2. ACCEPT: the setupcard tests pass with the new row. ZERO-CLICK: the page still reconnects by itself.

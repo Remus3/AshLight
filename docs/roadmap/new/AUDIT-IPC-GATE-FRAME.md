@@ -1,0 +1,1 @@
+- [ ] AUDIT-IPC-GATE-FRAME (build) al:gate in app/main.js checks Guards.frameIsOverlayPage(e.senderFrame, ...) like al:config, with a guards test that a non-main frame sender is ignored. Why: docs/reviews/audit/2026-11-28.md P2-3. ACCEPT: npm test --prefix app passes with the new case. ZERO-CLICK: main-process check only.

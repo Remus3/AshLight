@@ -1,0 +1,1 @@
+- [ ] UX-NO-CORE-WORD (build) Remove "core" from the give-up line (app/client/window.js) and the restart sentence (server/al/text/explain.py), and add "core" to the copy scan for app/client and server/al/text. Why: docs/reviews/ux/2026-11-28.md P2-3. ACCEPT: python -m pytest -q tests/test_copy_dead_ends.py passes with the new scan. ZERO-CLICK: copy and test only.

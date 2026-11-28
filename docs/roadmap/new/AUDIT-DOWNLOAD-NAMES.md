@@ -1,0 +1,1 @@
+- [ ] AUDIT-DOWNLOAD-NAMES (build) app/client/window.js never overwrites after 99 same-name downloads (timestamped stem fallback) and keeps a per-session set so two concurrent downloads never share a name. Why: docs/reviews/audit/2026-11-28.md P2-4. ACCEPT: npm test --prefix app passes with a 100-existing-names case. ZERO-CLICK: the client picks the save path with no prompt.
