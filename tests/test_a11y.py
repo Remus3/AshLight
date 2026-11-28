@@ -328,6 +328,19 @@ def test_every_focusable_kind_has_a_visible_focus_ring():
     assert "outline: none" not in CSS and "outline:none" not in CSS
 
 
+def test_focused_hidden_region_heading_rings_its_region():
+    """BSC-6: focus moves to a visually hidden Play region heading
+    (tabindex -1, web/buildline.js keepPlace) when the switch it replaced
+    hides; the heading's own ring is clipped, so the region it names draws
+    the accent ring, on :focus because only script reaches it."""
+    css = re.sub(r"/\*.*?\*/", "", CSS, flags=re.S)
+    m = re.search(r"\.region:has\(> \.region-h:focus\) \{([^}]*)\}", css)
+    assert m, "no ring for a focused region heading"
+    assert re.search(r"outline:\s*3px solid var\(--fk-accent\)", m.group(1))
+    assert re.search(r"outline-offset:\s*-3px", m.group(1))
+    assert 'id="play-b-h" class="region-h sr-only"' in HTML
+
+
 def test_disabled_link_button_has_a_non_colour_cue():
     """A11Y-1 (wave 28 design finding; design 0001 C1, colour never the
     only signal): a disabled link-style button keeps no edge, so muted text
