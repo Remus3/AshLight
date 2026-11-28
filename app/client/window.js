@@ -164,7 +164,7 @@ function giveUpLine(rec) {
     ? " after " + n + (n === 1 ? " try" : " tries") : "";
   const why = Object.prototype.hasOwnProperty.call(GIVE_UP_WORDS, rec.reason)
     ? " (" + GIVE_UP_WORDS[rec.reason] + ")" : "";
-  const line = "AshLight stopped restarting its core" + count + why + ".";
+  const line = "AshLight stopped trying to restart" + count + why + ".";
   return line.length <= REASON_MAX && /^[\x20-\x7e]+$/.test(line) && !NO_PATH.test(line) ? line : "";
 }
 

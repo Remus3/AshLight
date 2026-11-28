@@ -182,6 +182,62 @@ def test_no_player_string_names_settings_file_scripts_or_ps1():
     assert not bad, "\n".join(bad)
 
 
+# UX-NO-CORE-WORD (docs/reviews/ux/2026-11-28.md P2-3; design 0001
+# principle 5, section 8 rule 4): "core" is an internal word. The card and
+# event text package and the desktop client's pages and window code say
+# "AshLight" or "itself" instead. Log calls and comments are not player text.
+CORE_WORD = re.compile(r"\bcore\b", re.I)
+CORE_PY_GLOBS = ("server/al/text/*.py",)
+CORE_JS_GLOBS = ("app/client/*.js",)
+CORE_HTML_GLOBS = ("app/client/*.html",)
+# exact string -> reason: strings in scope that are never shown to a player
+CORE_NOT_TEXT = {
+    "core.alive": "app/client/launcher.js runtime file name, never shown",
+}
+
+
+def _js_player_strings(text):
+    """js_strings minus the arguments of log(...) / say(...) /
+    console.*(...) calls (log lines, not player text)."""
+    cut = re.sub(r"\b(?:log|say|console\.\w+)\((?:[^()]|\([^()]*\))*\)", "", text)
+    return js_strings(cut)
+
+
+def core_word_strings():
+    out = []
+    for g in CORE_PY_GLOBS:
+        for p in sorted(ROOT.glob(g)):
+            rel = p.relative_to(ROOT).as_posix()
+            out += [(f"{rel}:{ln}", s) for ln, s in py_strings(p)]
+    for g in CORE_JS_GLOBS:
+        for p in sorted(ROOT.glob(g)):
+            rel = p.relative_to(ROOT).as_posix()
+            out += [(rel, s) for s in
+                    _js_player_strings(p.read_text(encoding="utf-8"))]
+    for g in CORE_HTML_GLOBS:
+        for p in sorted(ROOT.glob(g)):
+            rel = p.relative_to(ROOT).as_posix()
+            out.append((rel, html_text(p.read_text(encoding="utf-8"))))
+    return out
+
+
+def test_no_player_string_says_core():
+    found = core_word_strings()
+    assert any(w.startswith("app/client/") for w, _ in found)
+    assert any(w.startswith("server/al/text/") for w, _ in found)
+    bad = [f"{w}: {s[:90]!r}" for w, s in found
+           if s not in CORE_NOT_TEXT and CORE_WORD.search(s)]
+    assert not bad, "\n".join(bad)
+
+
+def test_core_scan_skips_log_calls_and_comments():
+    src = ('// the core\nlog("client: core down (" + n + ")");\n'
+           'var a = "AshLight stopped";\n')
+    assert _js_player_strings(src) == ["AshLight stopped"]
+    assert CORE_WORD.search("restarted its Core") and \
+        not CORE_WORD.search("scores cored")
+
+
 def test_the_scanner_sees_every_kind_of_source():
     # a scanner that reads nothing would pass the test above
     found = player_strings()
