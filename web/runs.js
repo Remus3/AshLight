@@ -10,7 +10,7 @@
    rows (8 compact) through web/acts.js's pager and page helpers (fill,
    wireCard). Maps: this session's maps, the open one first; pages: the
    summary line, the map ladder of this session and of all saved sessions
-   (UTIL-MAP-LADDER). Deaths: the death recap, newest first, with the zone
+   (UTIL-MAP-LADDER), and the maps by name (UTIL-MAP-STATS). Deaths: the death recap, newest first, with the zone
    of most deaths under it. */
 (function (root, factory) {
   "use strict";
@@ -141,6 +141,39 @@
       plural(parseInt(r.levelups, 10), "level-up");
   }
 
+  /* UTIL-MAP-STATS (research 0064 G5): the per-map table, from the saved
+     sessions while run history is on, else this session's. Each row is
+     the core's sentence plus the local time of its last run (design 0001
+     rule 8: a dashboard time is local clock time, dated when older). */
+  function byMap(maps) {
+    if (!maps) { return null; }
+    var all = maps.ladder_all && maps.ladder_all.by_map;
+    return all || (maps.ladder && maps.ladder.by_map) || null;
+  }
+
+  function byMapText(a, nowMs) {
+    var ok = typeof a.last_at === "number" && isFinite(a.last_at);
+    var t = ok ? F.clockDated(a.last_at, nowMs) : "";
+    return a.text + (t ? ", last run " + t : "");
+  }
+
+  function paintByMap(doc, maps, now) {
+    var A = actsLib();
+    if (!doc.getElementById("bymap")) { return; }
+    var st = byMap(maps);
+    var areas = (st && st.areas) || [];
+    var text = (st && (areas.length ? st.text : st.empty_text)) || "";
+    A.showText(doc, "bymap-text", text);
+    var t = doc.getElementById("bymap-text");
+    if (t) {
+      if (text) { t.setAttribute("title", text); } else { t.removeAttribute("title"); }
+    }
+    var nowMs = typeof now === "number" && isFinite(now) ? now * 1000 : undefined;
+    A.fill(doc, "bymap-rows", "maps by name", areas.filter(function (a) {
+      return a && typeof a.text === "string" && a.text;
+    }).map(function (a) { return { text: byMapText(a, nowMs) }; }));
+  }
+
   function paintMaps(doc, maps, snapNow, now, full) {
     var A = actsLib();
     if (!doc.getElementById("maps-rows")) { return; }
@@ -197,6 +230,7 @@
       var maps = snap.maps || {};
       paintLadder(doc, "ladder", maps.ladder || null, "map levels this session");
       paintLadder(doc, "ladder-all", maps.ladder_all || null, "map levels of all saved sessions");
+      paintByMap(doc, snap.maps || null, snap.now);
       // the saved sessions page exists only while run history is on
       var open = doc.getElementById("ladder-all-open");
       if (open) {
@@ -214,5 +248,6 @@
   return { duration: duration, levelText: levelText, clock: clock, plural: plural,
     liveTime: liveTime, mapRows: mapRows, mapText: mapText, mapsSummary: mapsSummary,
     deathLines: deathLines, deathText: deathText, recapFoot: recapFoot,
-    ladderRows: ladderRows, ladderText: ladderText, paint: paint };
+    ladderRows: ladderRows, ladderText: ladderText, byMap: byMap, byMapText: byMapText,
+    paint: paint };
 }));

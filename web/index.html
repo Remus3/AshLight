@@ -592,6 +592,7 @@
         <button type="button" class="secondary btn-24" data-card-open="summary" aria-label="Map summary">Summary</button>
         <button type="button" class="secondary btn-24" data-card-open="ladder" aria-label="Maps by level, this session">By level</button>
         <button type="button" class="secondary btn-24" data-card-open="saved" id="ladder-all-open" aria-label="Maps by level, all saved sessions" hidden>Saved</button>
+        <button type="button" class="secondary btn-24" data-card-open="bymap" aria-label="Maps by name">By map</button>
       </div>
     </div>
     <div class="card-page" data-page="summary" data-label="Map summary" hidden>
@@ -605,6 +606,11 @@
     <div id="ladder-all" class="card-page" data-page="saved" data-label="By map level, all saved sessions" hidden>
       <p id="ladder-all-text" class="row-meta one-line muted"></p>
       <div id="ladder-all-rows" class="pager-slot"></div>
+    </div>
+    <!-- UTIL-MAP-STATS: per map name, the most recent first; filled by itself -->
+    <div id="bymap" class="card-page" data-page="bymap" data-label="By map name" hidden>
+      <p id="bymap-text" class="row-meta one-line muted"></p>
+      <div id="bymap-rows" class="pager-slot"></div>
     </div>
   </section>
   </div>
