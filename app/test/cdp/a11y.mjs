@@ -32,7 +32,8 @@ import { createInterface } from "node:readline";
 const [chromePath, profile] = process.argv.slice(2);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // decision 0080: on a CI runner (AL_CI=1) the page-live wait gets one
-// bounded retry at 3x and the watchdog 3x; locally both stay as they are.
+// bounded retry at 3x, the DevTools endpoint wait and the watchdog 3x;
+// locally all stay as they are.
 const CI = process.env.AL_CI === "1";
 const MAX_STOPS = 300;
 const out = (o) => process.stdout.write(JSON.stringify(o) + "\n");
@@ -42,16 +43,29 @@ const chrome = spawn(chromePath, ["--headless=new", "--disable-gpu", "--in-proce
   "--hide-scrollbars", "--force-device-scale-factor=1",
   `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, "about:blank"],
   { stdio: "ignore" });
+let chromeExit = null;
+// a clean 0 exit may be a hand-off to a running browser: keep polling then
+chrome.on("exit", (code, signal) => { if (signal || code) { chromeExit = signal || code; } });
 const quit = (code) => { try { chrome.kill(); } catch { /* gone */ } process.exit(code); };
 const killer = setTimeout(() => { out({ error: `watchdog: ${CI ? 540 : 180} s` }); quit(3); },
   CI ? 540000 : 180000);
 
+// TEST-A11Y-NEWEST-DEVTOOLS: this is the first browser start of a CI run
+// (test_a11y_render sorts near the top); on a cold runner the first
+// Chrome launch took longer than the fixed 15 s poll (runs 46074274403
+// and 46079475413 attempt 1, about 35 s into the suite). The poll widens
+// 3x under AL_CI only, and stops at once if Chrome has failed.
+const ENDPOINT_POLLS = CI ? 450 : 150;
 let targets = null;
-for (let i = 0; i < 150 && !targets; i++) {
+for (let i = 0; i < ENDPOINT_POLLS && !targets && chromeExit === null; i++) {
   try { targets = await (await fetch(`http://127.0.0.1:${port}/json`)).json(); }
   catch { await sleep(100); }
 }
-if (!targets) { out({ error: "no DevTools endpoint" }); quit(2); }
+if (!targets) {
+  out({ error: "no DevTools endpoint" + (chromeExit === null
+    ? ` after ${ENDPOINT_POLLS} polls` : ` (browser exited: ${chromeExit})`) });
+  quit(2);
+}
 const page = targets.find((t) => t.type === "page");
 const ws = new WebSocket(page.webSocketDebuggerUrl);
 await new Promise((r) => ws.addEventListener("open", r));
