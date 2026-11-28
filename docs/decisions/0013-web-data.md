@@ -167,3 +167,31 @@ Ruled by the adjudicator agent (CLAUDE.md FLEET item 1).
   GGG terms bar the daily read, or the operator rules an earlier opt-in
   covers the update check.
 - Tests: tests/test_updates.py.
+
+## Amendment 2026-11-28 (UX-WEBDATA-SENTENCE-TRUE, review 2026-11-28 P1-2)
+
+- Decision: the opt-in sentence lists every request the switch allows,
+  including the game-data download (decision 0009), and the core picks it
+  by copy kind (server/al/text/webdata.py, Core.web_data_sentence from the
+  rates client's release gate, decision 0072): an installed copy says it
+  asks poe.ninja for nothing, a checkout names the poe.ninja cadence. GET
+  / POST /api/web-data publish it as "sentence"; web/index.html holds no
+  copy, Settings and the build link recovery show the core's text.
+  updates.WORDING_VERSION moves from 1 to 2, so an opt-in acknowledged
+  under the "three things only" words makes no update request until the
+  player ticks the switch beside the new sentence once (ruling Q-21). With
+  no sentence read yet, the link offer reads the setting once through the
+  web data panel and opens the sentence then; it never shows a list the
+  core did not give.
+- Alternatives: (b) keep one page constant with both variants and pick in
+  the page - rejected: the page cannot know the copy kind and the two
+  copies drift (the review's root cause); (c) leave the wording version -
+  rejected: earlier consent was given to a list that was wrong in both
+  directions.
+- Why: consent to a true list; zero-click (the core picks the wording).
+- Reverses if: RELEASE_POLLING turns on for releases (then both copies
+  read the checkout sentence, already handled by the gate), the snapshot
+  tool's hosts change, or the operator rules the re-acknowledgement
+  unwanted.
+- Tests: tests/test_webdata_sentence.py, app/test/tc_view.test.js,
+  app/test/updates.test.js, app/test/panels.test.js.

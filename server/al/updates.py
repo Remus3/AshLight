@@ -53,7 +53,9 @@ from pathlib import Path
 
 from . import VERSION, jsonfile, paths, webfetch
 
-WORDING_VERSION = 1          # the opt-in sentence that names the update check
+# the opt-in sentence that names the update check; 2 = UX-WEBDATA-SENTENCE-TRUE
+# (server/al/text/webdata.py: game data named, poe.ninja per copy kind)
+WORDING_VERSION = 2
 DAY_S = 24 * 3600
 WAIT_MAX_S = 7 * DAY_S       # a reset or Retry-After further out is not believed
 API_HOST = "api.github.com"

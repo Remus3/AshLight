@@ -69,7 +69,7 @@
   /* Links a panel fills on its wire, so the shell reaches a card it does
      not name: evalLink (web/panels/itemcheck.js: price), ratesLink
      (rates.js: getRatesDoc, renderRates, renderPrice, loadRates,
-     paintPricesList), webLink (webdata.js: fill, saved, state), readLink
+     paintPricesList), webLink (webdata.js: fill, saved, state, read), readLink
      (consent.js: show, the bar status word) and charLink (web/chars.js:
      view, the picked character's numbers). */
   var evalLink = {};
@@ -86,7 +86,8 @@
   }
 
   function webState() {
-    return typeof webLink.state === "function" ? webLink.state() : { on: false, busy: false, doc: null };
+    return typeof webLink.state === "function" ? webLink.state()
+      : { on: false, busy: false, doc: null, sentence: "" };
   }
 
   function webDataSaved(doc) {

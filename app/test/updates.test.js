@@ -197,7 +197,8 @@ test("ticking the web-data box sends the wording version", async () => {
   const doc = fakeDoc(ids);
   const calls = [];
   const reads = [];
-  const answers = { "GET /api/web-data": { web_data: false, contact_set: true, wording_version: 1 },
+  const answers = { "GET /api/web-data": { web_data: false, contact_set: true, wording_version: 1,
+                                           sentence: "The core's sentence." },
     "POST /api/web-data": { web_data: true, contact_set: true, wording_version: 1, acked: true } };
   const host = {
     $: (id) => doc.getElementById(id),
@@ -211,9 +212,11 @@ test("ticking the web-data box sends the wording version", async () => {
   sandbox.window = sandbox;
   vm.runInNewContext(web.source("webdata.js"), sandbox, { filename: "webdata.js" });
   reg.start();
-  assert.equal(doc.getElementById("webdata-sentence").textContent, TC.WEB_DATA_OPT_IN);
+  assert.equal(doc.getElementById("webdata-sentence").textContent, "");
   reads.forEach((f) => f());
   await tick();
+  // UX-WEBDATA-SENTENCE-TRUE: the core's sentence of that wording version
+  assert.equal(doc.getElementById("webdata-sentence").textContent, "The core's sentence.");
   doc.getElementById("webdata-on").checked = true;
   doc.getElementById("webdata-form").fire("change");
   assert.deepEqual(JSON.parse(JSON.stringify(calls[1])),
@@ -225,13 +228,15 @@ test("ticking the web-data box sends the wording version", async () => {
   assert.deepEqual(JSON.parse(JSON.stringify(calls[2])), ["POST", "/api/web-data", { enabled: false }]);
 });
 
-test("the opt-in sentence names the daily update check and the automatic apply", () => {
-  const s = TC.WEB_DATA_OPT_IN;
-  assert.match(s, /checks GitHub once a day for a new AshLight/);
-  assert.match(s,
-    /downloads by itself while the game is closed and installs the next time you open AshLight/);
-  assert.doesNotMatch(s, /later start/);
-  assert.match(s, /three things only/);
+test("the opt-in sentence is the core's, shown as it is", () => {
+  // UX-WEBDATA-SENTENCE-TRUE: the core holds both sentences (pinned exactly
+  // by tests/test_webdata_sentence.py); the page only shows what it gets
+  assert.equal(TC.optInSentence({ sentence: "Said." }), "Said.");
+  for (const d of [null, {}, { sentence: "" }, { sentence: " " }, { sentence: 3 }]) {
+    assert.equal(TC.optInSentence(d), "");
+  }
+  // UX-UPDATE-WORDS wording now lives in the core sentence; the page has no copy
+  assert.equal(TC.WEB_DATA_OPT_IN, undefined);
 });
 
 test("game data from <date>, the newest 3 versions, and no string over the design caps", () => {

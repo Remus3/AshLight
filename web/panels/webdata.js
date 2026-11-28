@@ -62,6 +62,9 @@
   var webDoc = null; // DATA-LEAGUE-PICKER-UI: the last full GET / POST /api/web-data answer
   // REL-UPDATE-NOTICE-UI: the opt-in wording version of the last answer that named one
   var wordingSeen = null;
+  // UX-WEBDATA-SENTENCE-TRUE: the opt-in sentence of the last answer that held one
+  var sentenceSeen = "";
+  var NO_SENTENCE = "Can't load what web data does. Open AshLight again from the tray.";
 
   /* The switch, the contact field (DATA-CONTACT-UI: never prefilled;
      DATA-CONTACT-CLEAR: it stays once a contact is set, with Clear and
@@ -71,8 +74,16 @@
     var v = P.webDataView(doc);
     var w = doc ? doc.wording_version : null;
     if (typeof w === "number" && w > 0 && Math.floor(w) === w) { wordingSeen = w; }
+    // UX-WEBDATA-SENTENCE-TRUE: the core's opt-in sentence for this copy
+    var said = T.optInSentence(doc);
+    if (said) {
+      sentenceSeen = said;
+      $("webdata-sentence").textContent = said;
+    }
     webOn = v.on;
     $("webdata-on").checked = v.on;
+    // never ticked on blind: with no sentence read the switch can only go off
+    $("webdata-on").disabled = !sentenceSeen && !v.on;
     if (v.contact.show !== null) {
       $("webdata-contact-row").hidden = !v.contact.show;
       // a page fixture that lacks the Clear button or the note leaves them
@@ -111,6 +122,12 @@
       renderPrice(getSnap() ? getSnap().price : null, true);
     }).catch(function () {
       $("webdata-status").textContent = "Can't load the web data setting. Is AshLight running?";
+      // UX-WEBDATA-SENTENCE-TRUE: no list was read, so none is shown and
+      // the switch cannot be ticked on beside an empty line
+      if (!sentenceSeen) {
+        $("webdata-sentence").textContent = NO_SENTENCE;
+        if (!webOn) { $("webdata-on").disabled = true; }
+      }
     });
   }
 
@@ -237,8 +254,11 @@
   }
 
   function wire() {
-    // TC-LINK-RECOVER: Settings shows the one opt-in sentence the confirm shows
-    $("webdata-sentence").textContent = T.WEB_DATA_OPT_IN;
+    // TC-LINK-RECOVER / UX-WEBDATA-SENTENCE-TRUE: Settings shows the core's
+    // opt-in sentence (fillWebData, from the first GET); the confirm shows
+    // the same text through webLink.state().sentence; until it is read the
+    // switch cannot be ticked on
+    $("webdata-on").disabled = true;
     $("webdata-form").addEventListener("change", saveWebData);
     // DATA-CONTACT-UI: Save (or Enter in the contact field) submits the form
     $("webdata-form").addEventListener("submit", function (e) { e.preventDefault(); saveContact(); });
@@ -249,7 +269,17 @@
     });
     webLink.fill = fillWebData;
     webLink.saved = webDataSaved;
-    webLink.state = function () { return { on: webOn, busy: webBusy, doc: webDoc }; };
+    webLink.state = function () {
+      return { on: webOn, busy: webBusy, doc: webDoc, sentence: sentenceSeen };
+    };
+    // UX-WEBDATA-SENTENCE-TRUE: the build link offer's one read of the
+    // setting when no sentence was read yet (the same GET as loadWebData)
+    webLink.read = function () {
+      return api("GET", "/api/web-data").then(function (doc) {
+        $("webdata-status").textContent = fillWebData(doc).status;
+        return doc;
+      });
+    };
     onConnect(loadWebData);
   }
 

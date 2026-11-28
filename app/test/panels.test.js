@@ -553,16 +553,21 @@ test("the graphics panel reads the hardware once, on the player's open", async (
 });
 
 test("the web data panel keeps the switch the player's and fills app.js's link", async () => {
-  const OFF = { web_data: false, contact_set: true };
+  const SAID = "Off unless you turn it on. (the core's sentence)";
+  const OFF = { web_data: false, contact_set: true, sentence: SAID };
   const ON = { web_data: true, contact_set: true };
   const p = settingsPage({ "GET /api/web-data": OFF, "POST /api/web-data": ON }, ["webdata.js"]);
   p.reg.start();
-  assert.equal(p.$("webdata-sentence").textContent, TC.WEB_DATA_OPT_IN);
+  // UX-WEBDATA-SENTENCE-TRUE: nothing is shown before the core's sentence
+  assert.equal(p.$("webdata-sentence").textContent, "");
+  assert.equal(p.$("webdata-on").disabled, true); // never ticked on beside an empty line
   const link = p.host.webLink;
-  assert.deepEqual(Object.keys(link).sort(), ["fill", "saved", "state"]);
-  assert.deepEqual({ ...link.state() }, { on: false, busy: false, doc: null });
+  assert.deepEqual(Object.keys(link).sort(), ["fill", "read", "saved", "state"]);
+  assert.deepEqual({ ...link.state() }, { on: false, busy: false, doc: null, sentence: "" });
   p.calls.reads[0]();
   await tickOver();
+  assert.equal(p.$("webdata-sentence").textContent, SAID);
+  assert.equal(p.$("webdata-on").disabled, false);
   assert.equal(p.$("webdata-on").checked, false);
   assert.equal(p.$("webdata-status").textContent, PR.webDataView(OFF).status);
   assert.deepEqual(p.calls.price, [[p.snap.price, true]]);
@@ -572,7 +577,9 @@ test("the web data panel keeps the switch the player's and fills app.js's link",
   assert.deepEqual(plain(p.calls.api[1]), ["POST", "/api/web-data", { enabled: true }]);
   assert.equal(link.state().busy, true);
   await tickOver();
-  assert.deepEqual({ ...link.state() }, { on: true, busy: false, doc: null });
+  // an answer with no sentence keeps the one shown
+  assert.deepEqual({ ...link.state() }, { on: true, busy: false, doc: null, sentence: SAID });
+  assert.equal(p.$("webdata-sentence").textContent, SAID);
   assert.equal(p.$("webdata-status").textContent, PR.savedText(true, ON));
   assert.equal(p.calls.rates, 1);
   // app.js's rates follow a switch saved elsewhere through the link

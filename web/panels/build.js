@@ -41,7 +41,7 @@
   /* the page's shared helpers (window.ALApp.host, set by web/app.js) */
   var $, api, token, getSnap, serverNow, el, linkOut, setLine, linkPager, textPager;
   var cardShown, cardHome, setCardHome, showCardPage, cardHeading, cardOpener;
-  var webDataSaved;
+  var webDataSaved, webState, webLink;
   var T = null; // web/tc.js: pure view helpers
   var bound = false;
 
@@ -56,6 +56,7 @@
     cardShown = host.cardShown; cardHome = host.cardHome; setCardHome = host.setCardHome;
     showCardPage = host.showCardPage; cardHeading = host.cardHeading;
     cardOpener = host.cardOpener; webDataSaved = host.webDataSaved;
+    webState = host.webState; webLink = host.webLink;
     T = window.ALTc;
     bound = true;
   }
@@ -283,7 +284,7 @@
      TC-LINK-RECOVER offer when the core refused a link for web data. */
   function showPaste(res, body, code) {
     setLine($("build-status"), res.text);
-    linkRecover = res.offer ? T.linkRecover(code, postJson) : null;
+    linkRecover = res.offer ? T.linkRecover(code, postJson, optInNow) : null;
     $("link-recover").hidden = !linkRecover;
     $("link-offer-row").hidden = false;
     $("link-confirm").hidden = true;
@@ -317,9 +318,35 @@
      opt-in and loads the same link once. */
   var linkRecover = null;
 
-  function linkOffer() {
-    var shown = linkRecover ? linkRecover.open() : null;
-    if (!shown) { return; }
+  /* UX-WEBDATA-SENTENCE-TRUE: the core's opt-in sentence, as the web data
+     panel last read it (webLink.state().sentence), or "". */
+  function optInNow() {
+    var s = typeof webState === "function" ? webState() : null;
+    return s && typeof s.sentence === "string" ? s.sentence : "";
+  }
+
+  /* With no sentence read yet (the first GET /api/web-data has not
+     answered), the offer click reads the setting once, lets the web data
+     panel take the answer, and opens the sentence then; it never shows a
+     list the core did not give. */
+  function linkOffer(retried) {
+    var rec = linkRecover;
+    var shown = rec ? rec.open() : null;
+    if (!shown) {
+      var said = "Can't load the web data setting. Open AshLight again from the tray.";
+      if (rec && rec.step() === "offer" && retried !== true &&
+          webLink && typeof webLink.read === "function") {
+        setLine($("build-status"), "Reading the web data setting...");
+        webLink.read().then(function () {
+          if (rec === linkRecover) { linkOffer(true); }
+        }).catch(function () {
+          if (rec === linkRecover) { setLine($("build-status"), said); }
+        });
+      } else if (rec && rec.step() === "offer") {
+        setLine($("build-status"), said);
+      }
+      return;
+    }
     $("link-sentence").textContent = shown.sentence;
     $("link-offer-row").hidden = true;
     $("link-confirm").hidden = false;

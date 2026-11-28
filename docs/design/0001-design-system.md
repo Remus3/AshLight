@@ -749,6 +749,7 @@ Generation rules:
    - gemadvice: [`docs/design/copy/gemadvice.md`](copy/gemadvice.md)
    - gemunlock: [`docs/design/copy/gemunlock.md`](copy/gemunlock.md)
    - buildsource: [`docs/design/copy/buildsource.md`](copy/buildsource.md)
+   - webdata: [`docs/design/copy/webdata.md`](copy/webdata.md)
 3. **Player text is quoted, never rewritten.** Whisper bodies and names
    are shown verbatim (textContent only, never innerHTML), clipped with
    "..." at the line limit.
