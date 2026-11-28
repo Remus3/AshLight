@@ -147,11 +147,27 @@ def test_install_names_the_verified_zip_route():
 
 def test_update_section():
     flat = _flat(_section(_text(README), "Update"))
-    assert flat.startswith("## Update Automatic update is not finished yet.")
+    # UX-46-P3 (P3-6): the shipped behaviour, not "not finished yet"
+    assert "not finished" not in flat and "When automatic update ships" not in flat
+    assert flat.startswith("## Update An installed copy updates itself while web data is on.")
     assert "once a day" in flat and "web data on" in flat
+    assert "while the game looks closed" in flat
     assert "24 hours" in flat and "SHA256SUMS.txt" in flat
+    assert "Update now" in flat and "About and data" in flat
+    assert "Update only when I click Update now" in flat
     assert "With web data off, AshLight checks nothing" in flat
     assert "paste the install line again" in flat
+
+
+def test_contact_and_uninstall_words_match_the_app():
+    # UX-46-P3 (P3-6): the contact is optional (DATA-CONTACT-DEFAULT) and
+    # the uninstall path names Windows Settings, not AshLight's Settings tab
+    text = _flat(_text(README))
+    assert "without it price fetches stay off" not in text
+    assert ("`contact` (optional; how poe.ninja can reach you, sent in the "
+            "User-Agent; without it AshLight sends its issues page)") in text
+    assert "open Windows Settings, then Apps, then Installed apps" in text
+    assert "open Settings, then Apps" not in text
 
 
 def test_uninstall_section():

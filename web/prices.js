@@ -57,7 +57,9 @@
   var NO_CONTACT = "contact not set";
   var RELEASE = "release build";
   var STEP_CONTACT = "add your contact for poe.ninja";
-  var RELEASE_TEXT = "This version of AshLight does not ask poe.ninja for prices.";
+  // UX-46-P3 (P3-1): says what the player gets instead
+  var RELEASE_TEXT = "This version of AshLight does not ask poe.ninja for prices. " +
+                     "Item checks give a trade link you can open.";
 
   function blockedOf(doc) {
     var b = doc && typeof doc.blocked === "string" ? doc.blocked : "";
@@ -79,15 +81,24 @@
   var CONTACT_NOTE_SET = "Your contact is saved on this computer and is not shown here. " +
                          "Type a new one and click Save to change it, or click Clear to remove it.";
 
+  /* UX-46-P3 (review P3-2): a release build asks poe.ninja nothing, so the
+     field, its label and Save go; a saved contact keeps Clear (and its
+     note) only, so the player can still remove it. `input` false hides
+     the label, the field and Save (web/panels/webdata.js). */
+  var CONTACT_NOTE_RELEASE = "A contact is saved on this computer. This version does not " +
+                             "send it anywhere. Click Clear to remove it.";
+
   function contactView(doc) {
     var known = !!doc && typeof doc.contact_set === "boolean";
     var set = known ? doc.contact_set === true : null;
+    var release = known && doc.blocked === RELEASE;
     return {
-      show: known ? true : null,
+      show: known ? (release ? set : true) : null,
+      input: known ? !release : null,
       set: set,
       clear: set,
       label: "Your contact for poe.ninja",
-      note: set ? CONTACT_NOTE_SET : CONTACT_NOTE
+      note: release ? CONTACT_NOTE_RELEASE : (set ? CONTACT_NOTE_SET : CONTACT_NOTE)
     };
   }
 

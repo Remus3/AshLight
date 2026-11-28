@@ -90,7 +90,9 @@ test("empty Recent list says what unlocks it", () => {
   assert.equal(v.emptyText(true),
     "Nothing yet. Zones, level-ups, deaths and whispers show up here as you play.");
   assert.equal(v.emptyText(false),
-    "Nothing yet. Allow reading Client.txt above, then zones, level-ups, deaths and whispers show up here.");
+    "Nothing yet. Once AshLight may read Client.txt, zones, level-ups, deaths and whispers show up here.");
+  // UX-46-P3 (P3-5): no direction word that a layout change can make wrong
+  [true, false].forEach((c) => assert.ok(!/\b(above|below)\b/.test(v.emptyText(c))));
 });
 
 test("session sub line: flags first, else says when the timer starts (UX-U9)", () => {

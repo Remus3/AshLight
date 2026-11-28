@@ -798,9 +798,11 @@
              contactView); Save submits the form. DATA-CONTACT-CLEAR: the
              row stays once a contact is set, Clear (shown only then) posts
              contact "" and the note says a contact is saved, never which.
-             Answers reuse #webdata-status (no new live region). -->
+             Answers reuse #webdata-status (no new live region). UX-46-P3:
+             a release build hides the label, field and Save; a saved
+             contact keeps Clear and its note only. -->
         <span id="webdata-contact-row" class="set-row" hidden>
-          <label for="webdata-contact">Your contact for poe.ninja</label>
+          <label id="webdata-contact-label" for="webdata-contact">Your contact for poe.ninja</label>
           <input id="webdata-contact" type="text" maxlength="120" autocomplete="off"
             spellcheck="false" aria-describedby="webdata-contact-note webdata-status">
           <button id="webdata-contact-save" type="submit" class="secondary btn-28">Save</button>

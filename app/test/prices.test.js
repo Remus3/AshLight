@@ -406,9 +406,29 @@ test("release build block: honest words, no promise", () => {
     p.contactSavedText(doc)
   ];
   for (const t of texts) { assert.ok(t && !ARRIVE.test(t), t); }
+  // UX-46-P3 (P3-1): the words say what the player gets instead
   assert.equal(p.webDataView(doc).status,
-    "Web data is on. This version of AshLight does not ask poe.ninja for prices.");
+    "Web data is on. This version of AshLight does not ask poe.ninja for prices. " +
+    "Item checks give a trade link you can open.");
   assert.equal(p.ratesView(with_({ blocked: "release build" })).pill.state, "idle");
+});
+
+test("release build: no contact field, a saved contact keeps Clear only (UX-46-P3 P3-2)", () => {
+  const none = p.contactView({ web_data: true, contact_set: false, blocked: "release build" });
+  assert.deepEqual([none.show, none.input, none.clear], [false, false, false]);
+  const saved = p.contactView({ web_data: true, contact_set: true, blocked: "release build" });
+  assert.deepEqual([saved.show, saved.input, saved.clear], [true, false, true]);
+  assert.equal(saved.note, "A contact is saved on this computer. This version does not " +
+    "send it anywhere. Click Clear to remove it.");
+  assert.ok(!/Type a new one/.test(saved.note));
+  // web data off, or a checkout: the field is there as before
+  for (const doc of [{ contact_set: false }, { web_data: false, contact_set: true, blocked: "web data off" },
+                     { web_data: true, contact_set: false, blocked: null }]) {
+    const v = p.contactView(doc);
+    assert.deepEqual([v.show, v.input], [true, true]);
+  }
+  assert.deepEqual(p.webDataView({ web_data: true, contact_set: false, blocked: "release build" }).contact,
+    none);
 });
 
 test("contact field view: write-only, shown with or without a contact", () => {
@@ -480,7 +500,7 @@ test("contact field markup: labelled, never prefilled, answer in #webdata-status
   const html = fs.readFileSync(path.join(__dirname, "..", "..", "web", "index.html"), "utf8");
   const start = html.indexOf('<form id="webdata-form"');
   const form = html.slice(start, html.indexOf("</form>", start));
-  assert.match(form, /<label for="webdata-contact">Your contact for poe\.ninja<\/label>/);
+  assert.match(form, /<label id="webdata-contact-label" for="webdata-contact">Your contact for poe\.ninja<\/label>/);
   const input = form.match(/<input id="webdata-contact"[^>]*>/)[0];
   assert.ok(!/\bvalue=/.test(input), "never prefilled");
   assert.match(input, /autocomplete="off"/);
@@ -642,4 +662,59 @@ test("Clear posts contact \"\" only, keeps the row and never echoes a value", as
   await tick();
   assert.equal(nodes["webdata-status"].textContent, p.CONTACT_REFUSED);
   assert.equal(polite.length, 2);
+});
+
+/* UX-46-P3 (P3-2): in a release build the panel hides the label, field and
+   Save; a saved contact keeps Clear, and after Clear the row goes and focus
+   moves to the switch, never to a hidden field. */
+test("release build panel: Clear only for a saved contact, then no row", async () => {
+  const vm = require("node:vm");
+  const R = web.load("registry.js");
+  const TC = web.load("tc.js");
+  const nodes = {};
+  let focused = null;
+  const node = (id) => {
+    const n = { id, hidden: false, textContent: "", value: "", checked: false, on: {} };
+    n.addEventListener = (ev, f) => { (n.on[ev] = n.on[ev] || []).push(f); };
+    n.fire = (ev, target) => (n.on[ev] || []).forEach((f) => f({ target: target || n, preventDefault() {} }));
+    n.focus = () => { focused = id; };
+    return n;
+  };
+  ["webdata-sentence", "webdata-form", "webdata-on", "webdata-status", "webdata-contact-row",
+   "webdata-contact-label", "webdata-contact", "webdata-contact-save", "webdata-contact-clear",
+   "webdata-contact-note", "webdata-league", "webdata-league-row", "webdata-league-note"]
+    .forEach((id) => { nodes[id] = node(id); });
+  nodes["webdata-contact-row"].hidden = true;
+  const SET = { web_data: true, contact_set: true, blocked: "release build" };
+  const CLEARED = { web_data: true, contact_set: false, blocked: "release build" };
+  const answers = { "GET /api/web-data": SET, "POST /api/web-data": CLEARED };
+  const reads = [];
+  const host = {
+    $: (id) => nodes[id] || null,
+    api: (method, path) => Promise.resolve(answers[method + " " + path]),
+    getSnap: () => null, getRatesDoc: () => null, renderRates() {}, renderPrice() {},
+    loadRates() {}, webLink: {}, onConnect: (f) => reads.push(f)
+  };
+  const reg = R.create({ warn: (t) => { throw new Error(t); } });
+  reg.host = host;
+  const page = {};
+  const sandbox = { ALApp: reg, ALTc: TC, ALPrices: p, console, document: page,
+    ALTabs: { say() {} } };
+  sandbox.window = sandbox;
+  vm.runInNewContext(web.source("webdata.js"), sandbox, { filename: "webdata.js" });
+  reg.start();
+  reads.forEach((f) => f());
+  const tick = () => new Promise((r) => setImmediate(r));
+  await tick();
+  assert.equal(nodes["webdata-contact-row"].hidden, false);
+  assert.equal(nodes["webdata-contact-clear"].hidden, false);
+  for (const id of ["webdata-contact-label", "webdata-contact", "webdata-contact-save"]) {
+    assert.equal(nodes[id].hidden, true, id);
+  }
+  assert.equal(nodes["webdata-contact-note"].textContent, p.contactView(SET).note);
+  nodes["webdata-form"].fire("click", nodes["webdata-contact-clear"]);
+  await tick();
+  assert.equal(nodes["webdata-contact-row"].hidden, true, "nothing left to show");
+  assert.equal(focused, "webdata-on");
+  assert.equal(nodes["webdata-status"].textContent, "Contact removed from this computer.");
 });
