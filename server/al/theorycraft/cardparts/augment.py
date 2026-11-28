@@ -1,20 +1,18 @@
 """TC-AUGMENT-WHATIF (research 0064 G4, decision 0093): the item check
-card's augment and quality what-if lines.
+card's augment what-if lines.
 
 A card part (TC-CARD-PARTS). The press's last stage, "augment"
 (theorycraft/augment.py, run from evaluate.stages() on the stage worker),
 puts result["augment"] on the result: the augment Path of Building ranks
-best for a free socket of the pressed item, and the item's DPS / EHP at 20
-percent quality. This part turns it into dashboard notes; it never changes
+best for a free socket of the pressed item. This part turns it into dashboard notes; it never changes
 the word, tone, head or overlay line, and never shows a price (decision
 0017).
 
 Value, or None:
-- {"state": "ready", "best": {"name", "dps", "ehp"} or None, "tried": n,
-  "socket": bool, "quality": {"to", "dps", "ehp"} or None}
+- {"state": "ready", "best": {"name", "dps", "ehp"} or None, "tried": n}
 - {"state": "failed"}: the calc failed during the stage.
-- {"state": "needs_calc"}: the calc is off and the item has augment or
-  quality room; one sentence says the calc is needed. Never guessed.
+- {"state": "needs_calc"}: the calc is off and the item may have a free
+  socket; one sentence says the calc is needed. Never guessed.
 While the stage is pending (state "pending") the stage part's note shows
 and this part adds nothing. With no pinned augment data nothing shows.
 
@@ -58,15 +56,11 @@ def compute(ctx):
         best = aug.get("best")
         name = words_mod._name(best.get("name")) if isinstance(best, dict) else None
         tried = aug.get("tried")
-        quality = _row(aug.get("quality"), ("dps", "ehp"))
-        if quality is not None:
-            quality["to"] = augment_mod.QUALITY_MAX
         return {"state": augment_mod.STATE_READY,
                 "best": (dict(_row(best, ("dps", "ehp")), name=name)
                          if name is not None else None),
                 "tried": tried if isinstance(tried, int) and not isinstance(tried, bool)
-                else 0,
-                "socket": aug.get("socket") is True, "quality": quality}
+                else 0}
     calc = result.get("calc") if isinstance(result.get("calc"), dict) else {}
     if calc.get("notice") != delta_mod.NOTICE_OFF:
         return None
@@ -87,18 +81,13 @@ def notes(value):
     out = []
     best = value.get("best")
     tried = value.get("tried") or 0
-    if value.get("socket") and isinstance(best, dict):
+    line = None
+    if isinstance(best, dict):
         line = words_mod.best_text(best.get("name"), best.get("dps"), best.get("ehp"))
-        if line:
-            out.append(line)
-    elif value.get("socket") and tried > 0:
-        out.append(words_mod.none_text(tried))
-    q = value.get("quality")
-    if isinstance(q, dict):
-        out.append(words_mod.quality_text(q.get("to") or augment_mod.QUALITY_MAX,
-                                          q.get("dps"), q.get("ehp")))
-    if value.get("socket") and tried > 0:
-        out.append(words_mod.CREDIT_TEXT)
+    if line is None and tried > 0:
+        line = words_mod.none_text(tried)
+    if line is not None:
+        out += [line, words_mod.CREDIT_TEXT]
     return out
 
 

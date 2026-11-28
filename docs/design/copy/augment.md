@@ -1,8 +1,8 @@
 # Copy sheet: augment
 
-Templates for the augment and quality what-if (TC-AUGMENT-WHATIF, research
+Templates for the augment what-if (TC-AUGMENT-WHATIF, research
 0064 G4, decision 0093): `server/al/text/augment.py` (`best_text`,
-`none_text`, `quality_text` and the constants beside them), used by the
+`none_text` and the constants beside them), used by the
 item check card part server/al/theorycraft/cardparts/augment.py. The rules
 that bind every template (one event, one sentence; missing fields read
 honestly; line limits; plurals; an exact-output test per template) stay
@@ -26,13 +26,11 @@ names a price (decision 0017).
   possible, never claimed.
 - No augment helps (`none_text`): `Path of Building tried <n> augment(s)
   for a free socket; none raises DPS or EHP.`
-- Quality (`quality_text`): `At 20% quality, Path of Building gives DPS
-  <+pct>%, EHP <+pct>%.`
 - Credit, after any augment line (decision 0091 point 5; CREDIT_TEXT):
   `Augment data: Path of Building (MIT), community-written, may be out of
   date.`
 - Calc failed during the stage (FAILED_TEXT): `Path of Building could not
   rank augments for this item.`
-- Calc off, item with augment or quality room (NEEDS_CALC_TEXT; the card's
+- Calc off, item with a possible free socket (NEEDS_CALC_TEXT; the card's
   calc sentence already names the Checks button): `Augment ranking for this
   item needs the Path of Building calc.`

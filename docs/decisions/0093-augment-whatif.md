@@ -1,4 +1,4 @@
-# 0093 - Augment and quality what-if on the item-check press
+# 0093 - Augment what-if on the item-check press
 
 Date: 2026-11-28. Status: decided by the TC-AUGMENT-WHATIF package
 (research 0064 G4, research 0065, decision 0091). Amends decision 0024
@@ -21,8 +21,7 @@ augment rows; keeps decisions 0017 and 0037 (no price, no trade call).
    - not corrupted, mirrored or unmodifiable;
    - a possible free socket (the Sockets line names more sockets than the
      item has rune lines; the game shows two equal runes as one line, so
-     the words say "for a free socket", never claim one), or quality below
-     20 (no Quality line reads 0).
+     the words say "for a free socket", never claim one).
    With no rows (no pin, a hash mismatch, the calc off) there is no stage.
 2. An augment applies as PoB applies it: the stat lines of its base-type
    row plus its specific-type row; "Bonded:" lines are left out (they need
@@ -30,14 +29,13 @@ augment rows; keeps decisions 0017 and 0037 (no price, no trade call).
    only in numbers are one family; only the highest rank (then the larger
    numbers) is measured.
 3. Each candidate is probed by appending its lines to the pressed item in
-   the headline slot (delta.with_line, as the per-mod probes do); the
-   quality probe sets the item's Quality line to +20%. The change is
+   the headline slot (delta.with_line, as the per-mod probes do). The change is
    measured against the build with the pressed item in that slot (stage
    "pob" already has it: no extra call) and ranked by the decision 0024
    blend (50/50 DPS / EHP). The best is named only when its blend is above
    0; otherwise the card says none raises DPS or EHP.
-4. Budget: at most delta.MAX_PROBES (24) calc calls for the whole stage,
-   the quality probe included, and at most 12 s (the R7 warm-check probe
+4. Budget: at most delta.MAX_PROBES (24) calc calls for the whole stage
+   and at most 12 s (the R7 warm-check probe
    ceiling, amendment 2026-11-18); past either the stage ranks what it
    measured and says how many it tried. The hand stat weights only choose
    which candidates are measured first (weighted above 0, then unweighted
@@ -50,10 +48,20 @@ augment rows; keeps decisions 0017 and 0037 (no price, no trade call).
    mods card's verdict and numbers.
 6. Words: dashboard notes only (server/al/text/augment.py, copy sheet
    docs/design/copy/augment.md): the best augment with its DPS / EHP
-   change, the 20 percent quality change, the decision 0091 credit line
-   after any augment line, and one sentence when the calc is off and the
-   item has room. No overlay line, word, tone or head changes; never a
-   price, never a trade link of its own.
+   change (or that none of the N tried raises either), the decision 0091
+   credit line after it, and one sentence when the calc is off and the
+   item may have a free socket. No overlay line, word, tone or head
+   changes; never a price, never a trade link of its own.
+7. No quality what-if (the row's "quality below 20" half): the bridge's
+   set_item calls PoB's Item:NormaliseQuality, which already scores every
+   modifiable item below its base's top quality at PoB's default quality.
+   Measured on the real bridge 2026-11-28 with the reference build: an
+   invented bow at Quality 0, +20% (augmented), 20 and with no Quality line
+   gave the same DPS and EHP to the last digit. A quality probe would
+   always read 0, so the card says nothing about quality; the item's own
+   PoB numbers already assume full quality. Live check of the stage on the
+   same bridge: 24 calls, 24 augments measured, 17.7 s for the whole first
+   press with every stage, 13.1 s warm (the stage stops itself at 12 s).
 
 ## Alternatives
 
@@ -66,6 +74,9 @@ augment rows; keeps decisions 0017 and 0037 (no price, no trade call).
 - Show the stage with the calc off (stat weights): rejected; the weights
   cannot value most augment lines, and the row asks for PoB's numbers.
 - Rank by a trade price or link per augment: rejected (decision 0017).
+- A quality probe that drops NormaliseQuality in the bridge: rejected;
+  bridge.lua's lockdown and item path stay as decision 0022 fixed them,
+  and every other item check would then change its numbers.
 
 ## Why
 
@@ -77,7 +88,8 @@ budget rule.
 
 ## Reverses if
 
-PoB changes GetSocketedAugmentTypes or the slot keys of ModRunes.lua; a
+PoB changes GetSocketedAugmentTypes or the slot keys of ModRunes.lua, or
+the bridge stops normalising quality (then add the quality probe); a
 real item shows the free-socket rule misleads in play; the stage breaches
 the R7 budgets on the real bridge; the game starts showing socketed rune
 names in copied text (then count sockets exactly); or decision 0091

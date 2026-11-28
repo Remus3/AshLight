@@ -1,4 +1,4 @@
-"""Augment and quality what-if words (TC-AUGMENT-WHATIF, research 0064 G4,
+"""Augment what-if words (TC-AUGMENT-WHATIF, research 0064 G4,
 decision 0093).
 
 The dashboard notes of the item check card's "augment" part
@@ -16,7 +16,6 @@ WORDS_MAX = 20  # design 0001 section 8 rule 1: words in a dashboard sentence
 
 BEST_TEXT = "Best augment for a free socket: {name}, DPS {dps}, EHP {ehp} (Path of Building)."
 NONE_TEXT = "Path of Building tried {tried} for a free socket; none raises DPS or EHP."
-QUALITY_TEXT = "At {to}% quality, Path of Building gives DPS {dps}, EHP {ehp}."
 FAILED_TEXT = "Path of Building could not rank augments for this item."
 NEEDS_CALC_TEXT = "Augment ranking for this item needs the Path of Building calc."
 # decision 0091 point 5: the credit wherever a ModRunes.lua row reaches the player
@@ -65,8 +64,3 @@ def none_text(tried):
     """No measured augment raised the blend: 'Path of Building tried 12
     augments for a free socket; none raises DPS or EHP.'"""
     return NONE_TEXT.format(tried=_plural(int(tried), "augment"))
-
-
-def quality_text(to, dps, ehp):
-    """'At 20% quality, Path of Building gives DPS +3%, EHP 0%.'"""
-    return QUALITY_TEXT.format(to=int(to), dps=_pct(dps), ehp=_pct(ehp))

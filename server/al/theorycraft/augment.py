@@ -1,11 +1,9 @@
-"""TC-AUGMENT-WHATIF (research 0064 G4, decision 0093): augment and quality
-what-if on the item-check press.
+"""TC-AUGMENT-WHATIF (research 0064 G4, decision 0093): augment what-if on
+the item-check press.
 
-For a pressed weapon or armour piece that may have a free augment socket
-or has quality below QUALITY_MAX, this module ranks the augments that fit
-its slot by Path of Building's DPS / EHP change for the loaded build
-(decision 0024 blend), and measures the item at QUALITY_MAX quality. It
-runs as the last stage of evaluate.stages() (stage "augment"), on the
+For a pressed weapon or armour piece that may have a free augment socket,
+this module ranks the augments that fit its slot by Path of Building's
+DPS / EHP change for the loaded build (decision 0024 blend). It runs as the last stage of evaluate.stages() (stage "augment"), on the
 LastEval stage worker, after the per-mod stage; it is never a price and
 never asks a trade site (decisions 0017, 0037).
 
@@ -24,14 +22,16 @@ never asks a trade site (decisions 0017, 0037).
   is possible, not sure; the card words it as "for a free socket", never
   "your free socket". With no rune line every socket is free.
 - Corrupted, mirrored or unmodifiable items get no what-if.
+- No quality what-if: the bridge's set_item calls PoB's
+  Item:NormaliseQuality, which scores every modifiable item below its
+  base's top quality at PoB's default quality already, so a quality probe
+  always reads 0 (measured on the real bridge 2026-11-28, decision 0093).
 - One tier per family: augments whose probe lines differ only in their
   numbers are one family; only its highest rank (PoB's rank field, then
   the larger numbers) is measured.
-- Budget: at most delta.MAX_PROBES calc calls for the stage (the quality
-  probe included) and at most TIME_S seconds (decision 0024 R7, the warm
-  check's probe ceiling); the stat weights that scored the item (PoB's
-  per-mod weights over the hand weights) only choose which candidates are
-  measured first; Path of Building's numbers rank them. A newer press
+- Budget: at most delta.MAX_PROBES calc calls for the stage and at most
+  TIME_S seconds (decision 0024 R7, the warm check's probe ceiling); the
+  hand stat weights only choose which candidates are measured first; Path of Building's numbers rank them. A newer press
   cancels the stage between two calc calls.
 
 Pure functions plus one calc loop; stdlib only; nothing here reads the
@@ -44,7 +44,6 @@ import time
 from . import delta as delta_mod
 from . import weights as weights_mod
 
-QUALITY_MAX = 20
 TIME_S = 12.0  # decision 0024 R7 (amendment 2026-11-18): warm check probes
 NAME_MAX = 40
 TOP_MAX = 3  # measured rows kept in the result, best first
@@ -86,7 +85,6 @@ CLASS_KEYS = {
     "foci": ("armour", "focus"),
 }
 
-_QUALITY_LINE = re.compile(r"^Quality(?: \([^()]*\))?:.*$", re.M)
 _NUMBER = re.compile(r"\d+(?:\.\d+)?")
 
 
@@ -109,24 +107,15 @@ def free_socket(parsed):
     return sockets > filled
 
 
-def quality_room(parsed):
-    """True when the item's quality is below QUALITY_MAX (no Quality line
-    reads 0)."""
-    q = getattr(parsed, "quality", None)
-    q = 0 if q is None else q
-    return isinstance(q, (int, float)) and q < QUALITY_MAX
-
-
 def room(parsed):
-    """{"socket": bool, "quality": bool} for an item the what-if covers
-    (a known class, not corrupted, mirrored or unmodifiable), else None."""
+    """True for an item the what-if covers: a known class, not corrupted,
+    mirrored or unmodifiable, with a possible free socket."""
     if parsed is None or not getattr(parsed, "is_item", False) or keys_for(parsed) is None:
-        return None
+        return False
     flags = getattr(parsed, "flags", None) or {}
     if any(flags.get(f) for f in BLOCKING_FLAGS):
-        return None
-    out = {"socket": free_socket(parsed), "quality": quality_room(parsed)}
-    return out if out["socket"] or out["quality"] else None
+        return False
+    return free_socket(parsed)
 
 
 def _shape(lines):
@@ -197,18 +186,6 @@ def pick(cands, table, limit):
     return [c for _s, _i, c in scored[:max(0, limit)]]
 
 
-def with_quality(text, value=QUALITY_MAX):
-    """The item text with its Quality line set to `value`, or a Quality line
-    added after the first separator; None when the text has neither."""
-    line = f"Quality: +{value}% (augmented)"
-    if _QUALITY_LINE.search(text or ""):
-        return _QUALITY_LINE.sub(line, text, count=1)
-    head, sep, rest = (text or "").partition("\n--------\n")
-    if not sep:
-        return None
-    return head + sep + line + "\n" + rest
-
-
 def _measure(calc, build, slot, text, base, blend):
     got = delta_mod.outputs(calc, build, {slot: text})
     delta_mod._swap_sane(base, got)
@@ -218,17 +195,12 @@ def _measure(calc, build, slot, text, base, blend):
 
 
 def plan(parsed, index, table):
-    """{"socket", "quality", "cands"} for an item the stage can answer, else
-    None (no room, no augment row for its slot and no quality room)."""
-    r = room(parsed)
-    if r is None:
+    """{"cands"} (at most delta.MAX_PROBES, see pick()) for an item the stage
+    can answer, else None (no room, or no augment row for its slot)."""
+    if not room(parsed):
         return None
-    cands = candidates(parsed, index) if r["socket"] else []
-    budget = delta_mod.MAX_PROBES - (1 if r["quality"] else 0)
-    chosen = pick(cands, table, budget)
-    if not chosen and not r["quality"]:
-        return None
-    return {"socket": bool(chosen), "quality": r["quality"], "cands": chosen}
+    chosen = pick(candidates(parsed, index), table, delta_mod.MAX_PROBES)
+    return {"cands": chosen} if chosen else None
 
 
 def run(calc, build, slot, item_text, base, the_plan, blend=None, cancelled=None,
@@ -241,29 +213,13 @@ def run(calc, build, slot, item_text, base, the_plan, blend=None, cancelled=None
     delta.CalcError when the calc fails."""
     start = clock()
     calls = 0
-
-    def go():
-        nonlocal calls
+    rows = []
+    for cand in the_plan["cands"]:
         if callable(cancelled) and cancelled():
             raise Cancelled()
         if calls >= delta_mod.MAX_PROBES or clock() - start > time_s:
-            return False
-        calls += 1
-        return True
-
-    quality = None
-    if the_plan["quality"]:
-        text = with_quality(item_text)
-        if text is not None and go():
-            try:
-                quality = dict(_measure(calc, build, slot, text, base, blend),
-                               to=QUALITY_MAX)
-            except delta_mod.CalcImplausible:
-                quality = None
-    rows = []
-    for cand in the_plan["cands"]:
-        if not go():
             break
+        calls += 1
         text = item_text
         for line in cand["lines"]:
             text = delta_mod.with_line(text, line)
@@ -274,6 +230,5 @@ def run(calc, build, slot, item_text, base, the_plan, blend=None, cancelled=None
         rows.append(dict(m, name=cand["name"], type=cand["type"]))
     rows.sort(key=lambda r: (-r["score"], r["name"]))
     best = rows[0] if rows and rows[0]["score"] > 0 else None
-    return {"state": STATE_READY, "slot": slot, "socket": the_plan["socket"],
-            "tried": len(rows), "calls": calls, "best": best, "top": rows[:TOP_MAX],
-            "quality": quality, "source": SOURCE_ID}
+    return {"state": STATE_READY, "slot": slot, "tried": len(rows), "calls": calls,
+            "best": best, "top": rows[:TOP_MAX], "source": SOURCE_ID}

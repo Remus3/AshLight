@@ -1,10 +1,10 @@
-"""TC-AUGMENT-WHATIF (research 0064 G4, decision 0093): augment and quality
-what-if on the item-check press.
+"""TC-AUGMENT-WHATIF (research 0064 G4, decision 0093): augment what-if on
+the item-check press.
 
 The augment rows come from a synthetic ModRunes.lua of PoB's line shape
 (own words and numbers, not PoB's text), parsed by the real
 pobtext.parse_augments. A fake calc stands in for Path of Building: DPS and
-EHP are linear in the gear's summed stats, and a weapon's quality adds DPS.
+EHP are linear in the gear's summed stats.
 Item texts are invented. tmp runtime only; nothing reads the clipboard.
 """
 
@@ -77,7 +77,6 @@ DPS_PER = {"adds # to # fire damage": 3.0, "#% increased attack speed": 3.0,
            "+# to accuracy rating": 0.1, "adds # to # lightning damage": 1.0}
 EHP_PER = {"+# to maximum life": 10.0, "+#% to fire resistance": 20.0,
            "+#% to cold resistance": 20.0}
-WEAPON_QUALITY_DPS = 2.0
 
 
 class FakeCalc:
@@ -106,8 +105,6 @@ class FakeCalc:
             for key, value in tc_evaluate.stats_of(parsed).items():
                 dps += DPS_PER.get(key.lower(), 0) * value
                 ehp += EHP_PER.get(key.lower(), 0) * value
-            if slot.startswith("Weapon") and parsed.quality:
-                dps += WEAPON_QUALITY_DPS * parsed.quality
         return {"dps": dps, "ehp": ehp}
 
 
@@ -130,11 +127,11 @@ def _bow(sockets="S S", runes=(), quality=10, corrupted=False, name="Ash Arc"):
 
 SOCKETED_BOW = _bow()                                    # 2 free sockets, quality 10
 FULL_BOW = _bow(runes=("6% increased Attack Speed", "+40 to Accuracy Rating"),
-                quality=20)                              # sockets full, quality full
+                quality=20)                              # sockets full
 FULL_LOW_QUALITY = _bow(runes=("6% increased Attack Speed", "+40 to Accuracy Rating"),
-                        quality=5)                       # sockets full, quality room
+                        quality=5)                       # sockets full, quality low
 ONE_RUNE_BOW = _bow(runes=("6% increased Attack Speed",), quality=20)
-NO_SOCKET_TOP_QUALITY = _bow(sockets=None, quality=20)
+NO_SOCKET_LOW_QUALITY = _bow(sockets=None, quality=0)
 CORRUPTED_BOW = _bow(corrupted=True)
 HELMET = ("Item Class: Helmets\nRarity: Rare\nDusk Crown\nExample Helmet\n--------\n"
           "Armour: 50\n--------\nSockets: S\n--------\nItem Level: 40\n--------\n"
@@ -155,17 +152,19 @@ def _stages(text, build, calc, index=INDEX, cancelled=None):
 
 def test_room_of_fixture_items():
     p = item_parser.parse
-    assert augment.room(p(SOCKETED_BOW)) == {"socket": True, "quality": True}
-    assert augment.room(p(FULL_BOW)) is None
-    assert augment.room(p(FULL_LOW_QUALITY)) == {"socket": False, "quality": True}
+    assert augment.room(p(SOCKETED_BOW)) is True
+    assert augment.room(p(FULL_BOW)) is False
     # one rune line in two sockets: a free socket is possible
-    assert augment.room(p(ONE_RUNE_BOW)) == {"socket": True, "quality": False}
-    assert augment.room(p(NO_SOCKET_TOP_QUALITY)) is None
+    assert augment.room(p(ONE_RUNE_BOW)) is True
+    # quality is no room: PoB scores every modifiable item at its default
+    # quality already (bridge set_item, Item:NormaliseQuality; decision 0093)
+    assert augment.room(p(FULL_LOW_QUALITY)) is False
+    assert augment.room(p(NO_SOCKET_LOW_QUALITY)) is False
     # a corrupted item cannot be changed; a ring has no augment keys
-    assert augment.room(p(CORRUPTED_BOW)) is None
-    assert augment.room(p(RARE_GLOVES)) is None
-    assert augment.room(p(ADVANCED_RING)) is None
-    assert augment.room(None) is None
+    assert augment.room(p(CORRUPTED_BOW)) is False
+    assert augment.room(p(RARE_GLOVES)) is False
+    assert augment.room(p(ADVANCED_RING)) is False
+    assert augment.room(None) is False
 
 
 def test_keys_follow_pob_augment_types():
@@ -187,15 +186,6 @@ def test_candidates_one_per_family_bonded_left_out():
     assert helm == ["Greater Ember Rune", "Heart Core"]
 
 
-def test_with_quality_sets_or_adds_the_line():
-    assert "Quality: +20% (augmented)" in augment.with_quality(SOCKETED_BOW)
-    assert "Quality: +10%" not in augment.with_quality(SOCKETED_BOW)
-    no_q = _bow(quality=None)
-    out = augment.with_quality(no_q)
-    assert item_parser.parse(out).quality == 20
-    assert augment.with_quality("no separator at all") is None
-
-
 # -- the stage ----------------------------------------------------------------
 
 def test_socketed_weapon_ranks_the_augments_by_pob(build):
@@ -207,34 +197,23 @@ def test_socketed_weapon_ranks_the_augments_by_pob(build):
     assert mods["augment"] == {"state": "pending"}
     assert tc_evaluate.pending_after("mods", mods) is True
     aug = got[-1][1]["augment"]
-    assert aug["state"] == "ready" and aug["slot"] == "Weapon 1" and aug["socket"] is True
+    assert aug["state"] == "ready" and aug["slot"] == "Weapon 1"
     assert aug["tried"] == 3
     # Greater Ember: +24 DPS (8 avg x 3) on the item's own base
     best = aug["best"]
     assert best["name"] == "Greater Ember Rune" and best["type"] == "Rune"
     assert [r["name"] for r in aug["top"]] == ["Greater Ember Rune", "Swift Rune",
                                                "Bowyer Rune"]
-    base_dps = 100.0 + 0 + WEAPON_QUALITY_DPS * 10
-    assert best["dps"] == round(24.0 / base_dps * 100, 4)
-    assert best["ehp"] == 0.0
-    q = aug["quality"]
-    assert q["to"] == 20 and q["dps"] == round(20.0 / base_dps * 100, 4)
+    assert best["dps"] == round(24.0 / 100.0 * 100, 4)
+    assert best["ehp"] == 0.0 and aug["calls"] == 3
     assert aug["source"] == pobtext.SOURCE_ID
     assert tc_evaluate.pending_after("augment", got[-1][1]) is False
     # the rest of the last result is the mods stage's
     assert got[-1][1]["verdict"] == mods["verdict"]
 
 
-def test_full_sockets_quality_room_measures_quality_only(build):
-    calc = FakeCalc()
-    got = _stages(FULL_LOW_QUALITY, build, calc)
-    aug = got[-1][1]["augment"]
-    assert aug["socket"] is False and aug["tried"] == 0 and aug["best"] is None
-    assert aug["quality"]["dps"] > 0 and aug["calls"] == 1
-
-
 def test_no_room_has_no_augment_stage(build):
-    for text in (FULL_BOW, CORRUPTED_BOW):
+    for text in (FULL_BOW, CORRUPTED_BOW, FULL_LOW_QUALITY, NO_SOCKET_LOW_QUALITY):
         got = _stages(text, build, FakeCalc())
         assert [n for n, _r in got] == ["weights", "pob", "mods"]
         assert "augment" not in got[-1][1]
@@ -251,8 +230,9 @@ def test_calc_off_has_no_stage_and_one_sentence():
     assert value == {"state": "needs_calc"}
     assert part.notes(value) == ["Augment ranking for this item needs the Path of "
                                  "Building calc."]
-    ctx["parsed"] = item_parser.parse(FULL_BOW)
-    assert part.compute(ctx) is None
+    for text in (FULL_BOW, FULL_LOW_QUALITY):
+        ctx["parsed"] = item_parser.parse(text)
+        assert part.compute(ctx) is None
 
 
 def test_pin_absent_gives_no_rows_and_no_stage(tmp_path, build):
@@ -309,21 +289,19 @@ def test_at_most_max_probes_calc_calls(build):
     got = _stages(SOCKETED_BOW, build, calc, index=index)
     aug = got[-1][1]["augment"]
     stage_calls = len(calc.calls) - len(probe.calls)
-    assert stage_calls == aug["calls"] == delta_mod.MAX_PROBES
-    # the quality probe takes one of the calls
-    assert aug["tried"] == delta_mod.MAX_PROBES - 1
+    assert stage_calls == aug["calls"] == aug["tried"] == delta_mod.MAX_PROBES
     # the weighted candidates are measured first
     assert aug["best"]["name"] == "Greater Ember Rune"
 
 
 def test_the_time_budget_stops_the_stage(build):
     the_plan = augment.plan(item_parser.parse(SOCKETED_BOW), INDEX, {})
-    ticks = iter([0.0, 0.0, 0.0, augment.TIME_S + 1, augment.TIME_S + 2, 99, 99])
+    ticks = iter([0.0, 0.0, 1.0, augment.TIME_S + 1, 99, 99])
     calc = FakeCalc()
-    out = augment.run(calc, build, "Weapon 1", SOCKETED_BOW, {"dps": 120.0, "ehp": 1000.0},
+    out = augment.run(calc, build, "Weapon 1", SOCKETED_BOW, {"dps": 100.0, "ehp": 1000.0},
                       the_plan, clock=lambda: next(ticks))
-    # quality and one augment fit in the time; the rest is left out
-    assert out["calls"] == 2 and out["tried"] == 1 and len(calc.calls) == 2
+    # two augments fit in the time; the third is left out
+    assert out["calls"] == 2 and out["tried"] == 2 and len(calc.calls) == 2
 
 
 # -- cancellation by a newer press --------------------------------------------
@@ -363,10 +341,9 @@ def test_core_publishes_the_augment_notes(core):
     value = snap["parts"][part.NAME]
     assert value["state"] == "ready" and value["best"]["name"] == "Greater Ember Rune"
     notes = snap["text"]["notes"]
-    assert notes[:3] == [
-        "Best augment for a free socket: Greater Ember Rune, DPS +20%, EHP 0% "
+    assert notes[:2] == [
+        "Best augment for a free socket: Greater Ember Rune, DPS +24%, EHP 0% "
         "(Path of Building).",
-        "At 20% quality, Path of Building gives DPS +16.7%, EHP 0%.",
         words.CREDIT_TEXT]
     assert stage_part.PENDING_NOTE not in notes
     assert len(json.dumps(value)) <= 2000
@@ -425,8 +402,6 @@ def test_words_exact():
                                   "none raises DPS or EHP.")
     assert words.none_text(12) == ("Path of Building tried 12 augments for a free socket; "
                                    "none raises DPS or EHP.")
-    assert words.quality_text(20, 3, 0.04) == (
-        "At 20% quality, Path of Building gives DPS +3%, EHP 0%.")
     assert words.FAILED_TEXT == "Path of Building could not rank augments for this item."
     assert words.NEEDS_CALC_TEXT == ("Augment ranking for this item needs the Path of "
                                      "Building calc.")
@@ -436,26 +411,25 @@ def test_words_exact():
     assert long_name == ("Best augment for a free socket: A B C D E F G..., DPS +10.5%, "
                          "EHP -2.5% (Path of Building).")
     for line in (long_name, words.best_text("Hayoxi's Soul Core of Heatproofing", 1, 1),
-                 words.none_text(23), words.quality_text(20, 1, 1), words.FAILED_TEXT,
+                 words.none_text(23), words.FAILED_TEXT,
                  words.NEEDS_CALC_TEXT, words.CREDIT_TEXT):
         assert len(line.split()) <= 20 and line.isascii() and "!" not in line
 
 
 def test_no_augment_helps_note():
-    value = {"state": "ready", "best": None, "tried": 3, "socket": True, "quality": None}
+    value = {"state": "ready", "best": None, "tried": 3}
     assert part.notes(value) == [words.none_text(3), words.CREDIT_TEXT]
+    assert part.notes({"state": "ready", "best": None, "tried": 0}) == []
 
 
 def test_card_text_keeps_the_part_contract():
     card = {"ok": True, "verdict": "upgrade", "slot": "Weapon 1", "score_delta": 5,
             "item": {"name": "Ash Arc"}, "calc": {"source": "pob", "notice": None},
             "comparisons": [],
-            "parts": {part.NAME: {"state": "ready", "tried": 2, "socket": True,
-                                  "best": {"name": "Swift Rune", "dps": 2.5, "ehp": 0},
-                                  "quality": {"to": 20, "dps": 1, "ehp": 0}}}}
+            "parts": {part.NAME: {"state": "ready", "tried": 2,
+                                  "best": {"name": "Swift Rune", "dps": 2.5, "ehp": 0}}}}
     out = eval_card_text(card)
-    assert out["notes"][:3] == [words.best_text("Swift Rune", 2.5, 0),
-                                words.quality_text(20, 1, 0), words.CREDIT_TEXT]
+    assert out["notes"][:2] == [words.best_text("Swift Rune", 2.5, 0), words.CREDIT_TEXT]
     assert out["word"] == eval_card_text(dict(card, parts={}))["word"]
 
 

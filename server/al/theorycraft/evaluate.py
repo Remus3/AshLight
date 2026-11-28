@@ -443,7 +443,7 @@ def stages(item_text, build, weights=None, slot=None, calc=None, blend=None,
     - "mods": PoB-derived per-mod weights (the probes).
     - "augment" (TC-AUGMENT-WHATIF, decision 0093): only with `augments`
       (a callable returning the pobtext.load_augments map, or the map) and
-      an item with augment or quality room (theorycraft/augment.py): the
+      an item that may have a free augment socket (theorycraft/augment.py): the
       "mods" result then carries "augment": {"state": "pending"} and this
       last stage adds the "augment" field (state "ready" or, after a calc
       error, "failed"; the rest of the result is the "mods" one). With
