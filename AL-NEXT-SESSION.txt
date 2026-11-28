@@ -1,10 +1,12 @@
 AL NEXT SESSION
 ---------------
-SESSION: 43   (FLEET item 13 counter; /done writes n+1)
+SESSION: 44   (FLEET item 13 counter; /done writes n+1)
 
 WAVE POINTER: wave 62 done (W62-PLAN 206094b; GP-15, GP-16 b027ee6, AUTO-20 93e40b5, TEST-A11Y-NEWEST-DEVTOOLS dcd49d1, TEST-PLAYFIT-LOAD-FLAKE 6ea915c; W62-CLOSE 3960390 pushed), next wave 63 (nothing dispatchable at session 33 /done: every open session row waits on an operator act, a gate or a watch; session 39: still nothing dispatchable)
 NOTE (session 41 lines, moved session 42): the session 41 NOTE (CI-RED-HANDOFF, five superseded loop records, LOOP-REDISPATCH and CI-WATCH-ELECTRON-45-5-0 rulings, lane driver start), the session 41 /done NOTE and the session 41 Do NOT redo: archive block "SESSION 42 /done" of AL-2026-11-28.txt.
 NOTE (session 42, 2026-11-28): loop record Hc25fb4 merged as-is 018f1832 (adjudicator ruling: the gate red test_dash_perf::test_dashboard_elements_task_time_and_heap was foreign load noise, passes on main alone, diff test-only, the calc-gated test asserts the 0093 budgets 12 s warm / 30 s first; alternatives: rework, park; reverses if it reds on a quiet machine with only that diff). REVIEW-GH-20261128 reworked and merged 98daa85c (README download-place line restored verbatim, the other review fixes stand; reverses if the F-126 one-place rule is dropped); row closed and archived. Both loop records read back merged (ops/loop/control/loop_items). Row LOOP-ADJUDICATE-MERGE filed (no merge / salvage command for adjudicate-parked records; sessions merge keep refs by hand and set records merged via Items.put). Progress file watch-hc25fb4.json marked done (superseded, record merged). Next free decision number: 0096.
+NOTE (session 43, 2026-11-28, interactive, all pushed to origin main): 1e083311 PROGRESSION-OFFER (Play item-check region gets a Next up button that opens the tree view; the Item check button always shows; root cause: the tree view was reachable only after a live level-up or via the far-right Progression sub-tab); 0804ff4a README and docs/guide/faq.md say Windows PC only (phone and Steam Deck mentions removed, one README line: Steam Deck and Linux not supported); 44548b55 ACTIVE-BUILD-PICK, decision 0096 (active build source per character: pasted build or Kindler plan, 'Use Kindler plan' / 'Use pasted build' on Play and the Build card, choice persists); 0a6c0002 ITEM-INFO-GEM-DETAIL (gem details in the item popover from repoe-fork poe2 skill_gems.json / skills.json / gem_tags.json with a gem_details/ split; gems snapshot 404 fixed (old gems.json URL); decision 0083 amendment 2026-11-28); 9258a6b0 GEM-LEVEL-WIRE (Progression gem buttons pass the pasted build's socket level; CLAUDE.md DATA-GEMS-SNAP and ITEM-INFO entries updated). Next free decision number: 0097.
+NOTE (session 43 /done): inbox: no new notes since session 42 (the three MAIN notes already recorded). roadmap_fold: LOOP-ADJUDICATE-MERGE flipped (loop merge 00008abf) and pruned to docs/roadmap/archive/2026-11.md, bdadc9e1. reap --apply: 0 removed, 3 kept (lane-0, lane-1, lane-2, fleet_lanes lane worktrees). Loop record README-STAMP-HIDDEN parked in adjudicate (gates_ok false; foreign red tests/test_loop_handoff.py::test_live_handoff_loop_bullets_are_counted_and_well_formed, keep ref refs/al/keep/README-STAMP-HIDDEN, commit de74dbe8).
 NOTE (session 42 /done): inbox scan: MAIN 2026-11-16-2109 and 2026-11-27-2239 INFORMATION TERMINAL (skip, no reply); MAIN 2026-11-27-1618 ORDER kit v33 already acted (154595f7). roadmap_fold: 4 row files applied (LOOP-ADJUDICATE-MERGE, README-SOURCE-FIRST, README-STAMP-HIDDEN added; REVIEW-GH-20261128 flipped and pruned to docs/roadmap/archive/2026-11.md) 853a3a7d. reap --apply: 0 removed, 3 kept (lane-0, lane-1, lane-2, fleet_lanes lane worktrees).
 NOTE (sessions 25-39 pointer lines and the session 38 WATCH suite-wall note, moved session 41): archive block "SESSION 41 /done" of AL-2026-11-28.txt (each line names its own archive block; the WATCH note: a 3-run gated soak median over 125 s applies decision 0060's split reverses-if via a filed row, never a budget move).
 NOTE (session 29, still open): DATA-GUIDE-ACTS-5-6 waits on GATE-POE2-10 (2026-12-11 or later). Operator answers 2026-11-26 recorded 19c775b (line OPERATOR ANSWERS).
@@ -29,8 +31,10 @@ closes the row (file the 0070 bump row with tools/roadmap.py new if
 missing; no watch_ci baseline move, there is none for electron). Also check
 the operator retry notes for act (m) in Checks > Tried in game via
 tools/live_verdicts.py (rows LIVE-SEARCHSTR-FIX, LIVE-FILTER-FIX,
-LIVE-FILTER-MERGE-FIX, TC-BUILDFILE-LIVE-FIX). Otherwise leave the loop
-to work README-STAMP-HIDDEN, README-SOURCE-FIRST and LOOP-ADJUDICATE-MERGE.
+LIVE-FILTER-MERGE-FIX, TC-BUILDFILE-LIVE-FIX). Also rule and settle the
+parked README-STAMP-HIDDEN loop record (bullet below; LOOP-ADJUDICATE-MERGE
+merged, so use its new loop_merge.py subcommand). Otherwise leave the loop
+to work README-SOURCE-FIRST and the open rows.
 If a session row unblocks, plan wave 63 in
 docs/plan/packages.json from it (PLAN / W<n> / CLOSE as sessions 25-28: one
 package agent per package, at most 2 at once, design-reviewer for web/ or
@@ -66,6 +70,12 @@ and 5 (step 4, OA-2). If a line is lost or edited, the Q-23 default holds:
 stay local, nothing is pushed.
 
 Carried forward (not acted on yet):
+- README-STAMP-HIDDEN (session 43): the loop record is parked in adjudicate (gate red outside the lane diff: tests/test_loop_handoff.py::test_live_handoff_loop_bullets_are_counted_and_well_formed, which reads the live hand-off; likely the mid-/done hand-off of session 42). Re-run that test on main; if green, rule the red foreign and merge the keep ref refs/al/keep/README-STAMP-HIDDEN with the loop_merge.py adjudicate subcommand (LOOP-ADJUDICATE-MERGE, 00008abf); README change gets the six-lens review before push.
+- PROGRESSION NEXT-UP ORDER (session 43): a pasted level-100 PoB tree has no per-level order, so Next up says nothing is due. Consider ordering by distance from the start or by PoB spec titles (decision 0089 title_band).
+- PROGRESSION ASCENDANCY EMPTY (session 43): the ascendancy box draws empty when the build has no ascendancy; show a short empty-state line.
+- DECISION 0096 REVIEW LEFTOVERS (session 43): a refused switch says only "The build didn't switch. Try again."; focus is lost when the button hides after a click.
+- GEM POPOVER GAPS (session 43): quality lines, attack speed multipliers, level and attribute requirements, granted skills, icons (no permitted source yet; decision 0083).
+- KINDLER GEM LEVEL (session 43, ruled): Kindler gem buttons send no level by adjudicator ruling (the templates author no gem levels); revisit only if templates gain gem levels.
 - CI-WATCH-ELECTRON-45-5-0 (session 41 ruling, row open and BLOCKED: session): due 2026-11-30 22:03 local, steps in Next action. Reverses if the operator or 0070 waives the wait or the release date shows the wait already elapsed.
 - OPERATOR ACTS (session 40, batched into the one ask): OA-4: upload assets/brand/social-preview.png in GitHub Settings > Social preview (checked 1280x640, 62 KB); send docs/ops/price-alt-ask-draft.md to poe2scout (DATA-PRICE-ALT-ASK); paste a real uncut gem item text so the synthetic fixtures of decision 0094 can be checked.
 - RES-MAP-CONTENT-LINES (session 40): re-check the ledger span on or after 2026-11-29. The ledger (ops/runtime/logshapes.json) has not been written since 2026-11-22: investigate whether the ledger consent and the writer are live.
@@ -229,12 +239,14 @@ Operator orders (sessions 5 and 6), live state notes: archive block "SESSION 20 
 
 Acceptance: the operator ask is out (or answered); any unblocked row is planned as wave 63 in packages.json (plan_check check green, waves --write applied) and closed as 08 section 7 says (open-row command prints "none open" or only DEFERRED / BLOCKED ids, status empty on main, leak sweep clean, last batch suite and npm test green, WAVE POINTER moved), every package merged or re-deferred with a reason.
 
+Do NOT redo (session 43, pushed): PROGRESSION-OFFER 1e083311; PC-only README / FAQ 0804ff4a; ACTIVE-BUILD-PICK decision 0096 44548b55; ITEM-INFO-GEM-DETAIL and the gems snapshot URL fix 0a6c0002; GEM-LEVEL-WIRE 9258a6b0; LOOP-ADJUDICATE-MERGE row folded and archived bdadc9e1.
+
 Do NOT redo (session 42, pushed): loop record Hc25fb4 (merged 018f1832, augment-stage timing test; its LOOP: bullet is dropped); REVIEW-GH-20261128 (merged 98daa85c, row closed and archived 853a3a7d); row LOOP-ADJUDICATE-MERGE is filed (853a3a7d), not to be filed again.
 
 Do NOT redo (sessions 6 to 34): docs/handoff-archive/ (closed blocks per session; 29 to 34 in block "SESSION 37 /done" of AL-2026-11-27.txt).
 
-In flight: lane driver (operator order: keep headless lanes running until stopped), pythonw pid 23540, script <AL sidecar>\Scratch\lane_driver\lane_driver.py, log <AL sidecar>\Logs\lane_driver.log, progress ops/loop/control/progress/lane-driver.json; ticks every 60 s busy / 15 min idle; stops on ops/runtime/STOP_DRIVER, HALT, a cap hit or a route refusal; runs 19/120 at 06:34 (pid 23540 alive, read back session 42 /done). Lane 0 build README-STAMP-HIDDEN dispatched 06:30, lane run finished, loop record state "ran" (review / merge step next; progress lane-0.json, ETA minutes). HALT absent, REG_OPEN absent.
+In flight: lane driver (operator order: keep headless lanes running until stopped), pythonw pid 23540 (alive, read back session 43 /done), script <AL sidecar>\Scratch\lane_driver\lane_driver.py, log <AL sidecar>\Logs\lane_driver.log, progress ops/loop/control/progress/lane-driver.json; ticks every 60 s busy / 15 min idle; stops on ops/runtime/STOP_DRIVER, HALT, a cap hit or a route refusal; runs 21/120 at 07:48, idle (tick 53, 0 dispatched). Lanes 0-2 idle (lane-0.json done). HALT absent, REG_OPEN absent.
 
-Status (session 42 /done, 2026-11-28, fresh): gated whole suite green (parallel 6181 passed / 8 skipped in 90.41 s, timing-calc 10 passed 51.84 s, timing-rest 12 passed 17.49 s); npm 892/892; leak sweep ARMED needles=44, no HALT. Session gate earlier: 6203 passed / 8 skipped 138 s, pushed origin/main 98daa85c. Fold 853a3a7d; this hand-off commit follows and both are pushed. Board skipped (opt-out).
+Status (session 43 /done, 2026-11-28, fresh): gated whole suite green (parallel 6237 passed / 8 skipped in 87.63 s, timing-calc 10 passed 51.07 s, timing-rest 12 passed 23.78 s); npm 894/894; leak sweep ARMED needles=44, no HALT. Session commits 1e083311..9258a6b0 already on origin/main; fold bdadc9e1 and this hand-off commit follow and are pushed. Board skipped (opt-out).
 
 Start with: read this file, then CLAUDE.md, ROADMAP.md, git log -10.
