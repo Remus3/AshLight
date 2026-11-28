@@ -30,7 +30,8 @@ never asks a trade site (decisions 0017, 0037).
   numbers are one family; only its highest rank (PoB's rank field, then
   the larger numbers) is measured.
 - Budget: at most delta.MAX_PROBES calc calls for the stage and at most
-  TIME_S seconds (decision 0024 R7, the warm check's probe ceiling); the
+  TIME_S seconds (decision 0024 R7: the whole warm check, every stage,
+  stays under its 12 s probe ceiling); the
   hand stat weights only choose which candidates are measured first; Path of Building's numbers rank them. A newer press
   cancels the stage between two calc calls.
 
@@ -44,7 +45,11 @@ import time
 from . import delta as delta_mod
 from . import weights as weights_mod
 
-TIME_S = 12.0  # decision 0024 R7 (amendment 2026-11-18): warm check probes
+# decision 0024 R7 (amendment 2026-11-18): the warm check's probes, every
+# stage, 12 s; the pob and mods stages take up to 5.5 s warm, so this stage
+# gets 5 s (one call may run past it: about 0.5 s) - decision 0093 amendment
+# 2026-11-28 (a 12 s stage measured 13.1 s for the whole warm press)
+TIME_S = 5.0
 NAME_MAX = 40
 TOP_MAX = 3  # measured rows kept in the result, best first
 SOURCE_ID = "path-of-building"  # pobtext.SOURCE_ID (decision 0091 point 5)

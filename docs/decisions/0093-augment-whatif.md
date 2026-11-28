@@ -35,7 +35,7 @@ augment rows; keeps decisions 0017 and 0037 (no price, no trade call).
    blend (50/50 DPS / EHP). The best is named only when its blend is above
    0; otherwise the card says none raises DPS or EHP.
 4. Budget: at most delta.MAX_PROBES (24) calc calls for the whole stage
-   and at most 12 s (the R7 warm-check probe
+   and at most 12 s, cut to 5 s by the 2026-11-28 amendment (the R7 warm-check probe
    ceiling, amendment 2026-11-18); past either the stage ranks what it
    measured and says how many it tried. The hand stat weights only choose
    which candidates are measured first (weighted above 0, then unweighted
@@ -94,3 +94,21 @@ real item shows the free-socket rule misleads in play; the stage breaches
 the R7 budgets on the real bridge; the game starts showing socketed rune
 names in copied text (then count sockets exactly); or decision 0091
 reverses.
+
+## Amendment 2026-11-28 (integrator R7 check)
+
+Decision: the stage's time bound (augment.TIME_S) is 5 s, not 12 s. The
+R7 ceilings (decision 0024 amendment 2026-11-18, tests/tc_live_util.py
+BUDGET) bound every probe of a press up to its last stage: a first press
+30 s, a warm press 12 s. The live check measured 17.7 s for a whole first
+press (inside 30 s) but 13.1 s for a whole warm press, over the 12 s warm
+ceiling, because the 12 s stage bound sat on top of the pob and mods
+stages. With those stages at up to 5.5 s warm (R7), 5 s plus one call
+past the bound (about 0.5 s) keeps a warm press at about 11 s at worst,
+and a first press at about 18 s. The staged-press rule is unchanged: the
+stat-weight card still shows at once and every PoB stage is an update.
+About 10 augments fit in 5 s; the hand weights choose which go first.
+
+Reverses if: a re-measure on the real bridge puts a warm press with the
+stage over 12 s again (cut further), or the calc gets fast enough that a
+longer bound fits.

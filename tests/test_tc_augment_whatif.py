@@ -461,6 +461,9 @@ def test_live_lasteval_without_augments_is_unchanged(build):
 
 
 def test_time_budget_constant_matches_r7():
-    # decision 0024 R7 amendment 2026-11-18: a warm check's probes 12 s
-    assert augment.TIME_S == 12.0
+    # decision 0024 R7 amendment 2026-11-18: a warm check's probes 12 s for
+    # every stage; pob + mods take up to 5.5 s warm, so the augment stage
+    # gets 5 s (decision 0093 amendment 2026-11-28)
+    assert augment.TIME_S == 5.0
+    assert 5.5 + augment.TIME_S + 0.5 <= 12.0
     assert time.monotonic() >= 0
