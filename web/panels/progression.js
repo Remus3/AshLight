@@ -435,7 +435,7 @@
     c2.appendChild(asc);
     var ascNone = el(doc, "p", "row-meta muted pg-asc-none");
     ascNone.id = "pg-asc-none";
-    ascNone.hidden = true;
+    show(ascNone, false);
     c2.appendChild(ascNone);
     c2.appendChild(h3(doc, WORDS.points));
     var pts = el(doc, "ul", "pg-list");
