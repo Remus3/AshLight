@@ -1781,3 +1781,15 @@ of the HALT check.
   a completion signal for the autostart script, the core gets its own
   click-only route, or the bounded re-reads prove too slow or too eager in
   use.
+- CodeQL default setup: GitHub-managed code scanning for python,
+  javascript-typescript and actions (query suite default, weekly), no
+  tracked workflow, no new token scope, not a required check;
+  secret-scanning non-provider patterns and validity checks stay off;
+  state in ops/github/security.json, asserted by
+  tests/test_repo_settings_files.py; alerts are fixed or filed as rows,
+  never dismissed unrecorded (decision 0087). Reverses if: default-setup
+  runs cost noise or minutes the operator rejects or false positives
+  flood, GitHub makes default setup need a workflow permission, custom
+  queries or pinned versions are needed (then one codeql.yml with amended
+  permission rules), or a real non-provider secret leaks past the leak
+  sweep (then turn the patterns on).
