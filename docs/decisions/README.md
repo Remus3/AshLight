@@ -3,11 +3,18 @@
 One file per decision: `NNNN-<topic>.md` (decision, alternatives, why,
 reverses if). Numbers 0047 to 0076 are reserved for the packages of
 docs/plan/packages.json (docs/plan/07, Reserved decision numbers); a
-package uses the number in its new_files entry. 0077 to 0087
-are taken. Numbers are reserved in the plan before a wave starts.
+package uses the number in its new_files entry. 0077 to 0090
+are taken; 0091 is reserved for DATA-AUGMENT-POB-TEXT. Numbers are
+reserved in the plan before a wave starts.
 Numbers are reserved per package in docs/plan/packages.json before a
 wave starts; the wave integrator adds the index line. 0035 stays unused.
 
+- 0090: Weekly GitHub page review row (REVIEW-GH) from the github-page
+  watcher source; six lenses, review lane, not BLOCKED.
+- 0089: TC-SPEC-FOLLOW: a pasted build's tree spec follows the
+  character level by a fixed spec-title band rule; only activeSpec moves.
+- 0088: UTIL-SALES-TALLY: the session summary card counts sales (trades
+  accepted that closed a trade card) and sums listed prices, an estimate.
 - 0087: CodeQL default setup on for python, javascript-typescript and
   actions; GitHub-managed, no workflow, not a required check.
 - 0086: RUN-DATAAGE-SHARED-PARSE: the data age watch shares the zone

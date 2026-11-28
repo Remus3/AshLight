@@ -1,0 +1,30 @@
+{
+ "kinds": {
+  "ghreview": {
+   "act": "row",
+   "id": "REVIEW-GH-<YYYYMMDD>",
+   "lane": "review",
+   "priority": false,
+   "blocked": null,
+   "text": "Review the GitHub page (decision 0090) for UI/UX, visual, readability, first-visit comprehension, ease of use, ease of setup (walk Quick start; each command and path must exist). Read README.md, docs/guide/, .github templates, SECURITY.md, CONTRIBUTING.md via the design-reviewer agent; fix within the README test facts. Page <why>: readme <readme> release <release> homepage <homepage> desc <desc> topics <topics> missing <missing>. ACCEPT: docs/reviews/github/<YYYY-MM-DD>.md has findings per lens, each fixed or filed. ZERO-CLICK: weekly watcher. SOURCE: watch github-page, filed <YYYY-MM-DD>.",
+   "tokens": {
+    "why": "first|weekly|(?:readme|release|homepage|community)(?:-(?:release|homepage|community)){0,3}",
+    "readme": "[0-9a-f]{12}|none|other",
+    "release": "v[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}(?:-[0-9A-Za-z.]{1,8})?|none|other",
+    "homepage": "set|empty",
+    "desc": "set|empty",
+    "topics": "[0-9]{1,2}",
+    "missing": "none|[a-z]+(?:\\.[a-z]+){0,5}"
+   },
+   "sample": {
+    "why": "readme-release-homepage-community",
+    "readme": "0123456789ab",
+    "release": "v100.100.100-rc.12345",
+    "homepage": "empty",
+    "desc": "empty",
+    "topics": "12",
+    "missing": "readme.license.contributing.conduct.issues.pr"
+   }
+  }
+ }
+}
