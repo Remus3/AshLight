@@ -23,11 +23,14 @@ rules. See [what AshLight never does](#what-ashlight-never-does) and the
 [FAQ](docs/guide/faq.md#is-it-allowed-can-i-be-banned).
 
 Status: no release yet. [Install from source](#quick-start-windows) needs
-Windows, Python 3.11 or newer (3.13 or newer for a new install) and about
+Python 3.11 or newer (3.13 or newer for a new install) and about
 400 MB of disk. The first setup downloads packages, so allow a few minutes.
 
-On a phone or in a hurry: skip to [Quick start](#quick-start-windows); the
-sections between are for the first release.
+AshLight runs on a Windows 10 or 11 PC. Steam Deck and Linux are not
+supported: the overlay needs a Windows desktop, and gamescope game mode shows
+no windows over the game.
+
+In a hurry: skip to [Quick start](#quick-start-windows).
 
 Links:
 
@@ -100,13 +103,7 @@ footage, no game art). They follow your light or dark setting.
   <img src="docs/shots/settings-light-1440.png" width="720" alt="Settings tab: the Checks list, one row per check with its state and the fix when one is needed">
 </picture>
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/shots/play-dark-360.png">
-  <img src="docs/shots/play-light-360.png" width="240" alt="Play tab at phone width: the same live numbers stacked in one column">
-</picture>
-
-The Play tab at phone width, then the overlay: a small box in the top-left
-corner of the screen.
+The overlay: a small box in the top-left corner of the screen.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/shots/overlay-dark-1440.png">

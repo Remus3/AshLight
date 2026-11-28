@@ -69,9 +69,9 @@ against it. For full build numbers, the optional calc component runs Path of
 Building PoE2 unmodified as a separate program. AshLight has no damage
 calculator of its own.
 
-## Does it run on Mac, Linux or the Steam Deck?
+## What does it run on?
 
-No. AshLight is for Windows 10 and 11 only, with Path of Exile 2 from Steam.
+A Windows 10 or 11 PC, with Path of Exile 2 from Steam in Windowed Fullscreen.
 It is not built or tested for any other system.
 
 ## Why Windowed Fullscreen?
