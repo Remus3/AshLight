@@ -294,6 +294,13 @@ function inspect(args) {
 
   // the controls a full Tab cycle must reach (roving tab rows show one)
   window.__a11y = { n: 0, ids: new WeakMap() };
+  // GATE-FIX-37: every Tab keydown the page has handled, so the walk reads
+  // the focus only after its own key was handled (one listener per page)
+  if (typeof window.__a11yKeys !== "number") {
+    window.__a11yKeys = 0;
+    window.addEventListener("keydown", (e) => { if (e.key === "Tab") { window.__a11yKeys++; } },
+      true);
+  }
   const reach = [];
   for (const el of doc.querySelectorAll(FOCUSABLE)) {
     if (!tabbable(el)) { continue; }
@@ -348,23 +355,47 @@ function stop() {
 
 async function tabKey() {
   const ev = { key: "Tab", code: "Tab", windowsVirtualKeyCode: 9, nativeVirtualKeyCode: 9 };
-  send("Input.dispatchKeyEvent", Object.assign({ type: "keyDown" }, ev));
+  await send("Input.dispatchKeyEvent", Object.assign({ type: "keyDown" }, ev));
   await send("Input.dispatchKeyEvent", Object.assign({ type: "keyUp" }, ev));
 }
 
-// A full Tab cycle: Tab until the first stop comes round again.
+// GATE-FIX-37: resolves once the page has handled `want` Tab keydowns (then
+// one frame, so the focus move is done), or false after the bound. A gated
+// whole suite showed walks that skipped controls and came round early: a
+// read that ran before its Tab was handled sampled the cycle out of step.
+function keysHandled(args) {
+  return new Promise((resolve) => {
+    const t0 = Date.now();
+    const poll = () => {
+      if (window.__a11yKeys >= args.want) { requestAnimationFrame(() => resolve(true)); return; }
+      if (Date.now() - t0 > args.ms) { resolve(false); return; }
+      setTimeout(poll, 5);
+    };
+    poll();
+  });
+}
+
+// A full Tab cycle: Tab until the first stop comes round again. Each stop
+// is read only after the page handled that Tab; `unsynced` counts Tabs the
+// page had not handled within the bound, `lost` reads with no focus after
+// the first stop (a control re-rendered under the focus).
 async function walk() {
   const stops = [];
   let first = null;
   let wrapped = false;
+  let unsynced = 0;
+  let lost = 0;
+  let want = await evaluate("window.__a11yKeys");
   for (let i = 0; i < MAX_STOPS; i++) {
     await tabKey();
+    want += 1;
+    if (!(await call(keysHandled, { want, ms: CI ? 6000 : 2000 }))) { unsynced++; }
     const s = await call(stop);
-    if (s.none) { continue; }
+    if (s.none) { if (first !== null) { lost++; } continue; }
     if (first === null) { first = s.id; } else if (s.id === first) { wrapped = true; break; }
     stops.push(s);
   }
-  return { stops, wrapped };
+  return { stops, wrapped, unsynced, lost };
 }
 
 // The accessibility tree: unnamed focusable nodes, the heading levels in

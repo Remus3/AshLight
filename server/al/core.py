@@ -529,14 +529,19 @@ class Core:
         if log is not None and self._tick_errors.log is not log:
             self._tick_errors.log = log
         self.loop_at = time.monotonic()
-        for name, fn in list(self.ticks):
-            t0 = time.monotonic()
-            try:
-                (fn if fn is not None else getattr(self, name))()
-            except Exception as exc:  # noqa: BLE001 - never stops the core loop
-                self._tick_errors.failed(name, exc,
-                                         now if now is not None else time.monotonic())
-            self.tick_ms[name] = round((time.monotonic() - t0) * 1000.0, 3)
+        # GATE-FIX-37 (B3): one stat of local.json per pass on this thread
+        self._config_pass = [threading.get_ident(), None]
+        try:
+            for name, fn in list(self.ticks):
+                t0 = time.monotonic()
+                try:
+                    (fn if fn is not None else getattr(self, name))()
+                except Exception as exc:  # noqa: BLE001 - never stops the core loop
+                    self._tick_errors.failed(name, exc,
+                                             now if now is not None else time.monotonic())
+                self.tick_ms[name] = round((time.monotonic() - t0) * 1000.0, 3)
+        finally:
+            self._config_pass = None
         self._apply_idle()
 
     def _apply_idle(self):
@@ -797,6 +802,9 @@ class Core:
             cfg = self._read_config_strict()
             cfg.update(update)
             jsonfile.write_json(self.config_path, cfg, indent=2, backup=True)
+            pass_ = getattr(self, "_config_pass", None)
+            if pass_ is not None:
+                pass_[1] = None  # GATE-FIX-37: the next read stats again
             self._private_config()
             return cfg
 
@@ -1158,13 +1166,25 @@ class Core:
         the last read was within CONFIG_COARSE_S of the file's mtime the
         bytes are re-read and compared (a hash); once a read lands later
         than that, any further write must move the mtime and the stat
-        alone decides again."""
-        try:
-            st = self.config_path.stat()
-            key = (st.st_mtime_ns, st.st_size)
-        except OSError:
+        alone decides again. GATE-FIX-37 (B3): inside one tick_all pass,
+        on the loop's own thread, the first call's stat is reused, so a
+        pass stats the file once; _write_config drops it, and any other
+        thread or a call outside a pass stats as before."""
+        pass_ = getattr(self, "_config_pass", None)
+        if pass_ is not None and pass_[0] != threading.get_ident():
+            pass_ = None
+        st = pass_[1] if pass_ is not None else None
+        if st is None:
+            try:
+                st = self.config_path.stat()
+            except OSError:
+                st = False
+            if pass_ is not None:
+                pass_[1] = st
+        if st is False:
             self._config_cache = None
             return {}
+        key = (st.st_mtime_ns, st.st_size)
         cache = getattr(self, "_config_cache", None)
         if cache is not None and cache[0] == key and cache[3]:
             return dict(cache[1])

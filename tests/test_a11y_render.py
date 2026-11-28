@@ -156,6 +156,11 @@ def walk_failures(tab, page):
     missed = Counter(page["reach"]) - Counter(s["el"] for s in walk["stops"])
     for el, n in sorted(missed.items()):
         out.append(("walk", el, f"{n} control(s) the Tab walk never reached"))
+    # GATE-FIX-37: a walk out of step with its keys says so (a11y.mjs walk)
+    if walk.get("unsynced"):
+        out.append(("walk", "-", f"{walk['unsynced']} Tab(s) not handled within the bound"))
+    if missed and walk.get("lost"):
+        out.append(("walk", "-", f"focus lost {walk['lost']} time(s) during the walk"))
     return out
 
 
@@ -454,6 +459,12 @@ def test_walk_verdicts():
                        "wrapped": False}, reach=["button#x", "a#z"])
     got = {(c, el) for c, el, _d in walk_failures("play", page)}
     assert got == {("walk", "-"), ("walk", "a#y"), ("walk", "a#z")}
+    # GATE-FIX-37: an unsynced Tab is a failure; lost focus is named with a miss
+    page = _page(walk={"stops": [_stop()], "wrapped": True, "unsynced": 2, "lost": 1},
+                 reach=["button#x", "a#z"])
+    details = [d for _c, _el, d in walk_failures("play", page)]
+    assert any("2 Tab(s) not handled" in d for d in details), details
+    assert any("focus lost 1 time(s)" in d for d in details), details
 
 
 def test_target_contrast_and_live_verdicts():

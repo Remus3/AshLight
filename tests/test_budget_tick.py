@@ -240,6 +240,8 @@ def test_idle_tick_at_most_20_stats_and_no_read(tmp_path, monkeypatch):
             shown = [str(p)[-60:] for p in paths]
             assert paths, f"{name}: the counter saw no stat (os.stat not used?)"
             assert len(paths) <= STAT_MAX, (name, len(paths), shown)
+            # GATE-FIX-37: one stat of local.json per pass (Core._config)
+            assert sum(str(p).endswith("local.json") for p in paths) == 1, (name, shown)
             assert _OPENS == [], (name, _OPENS)
         finally:
             core.close()
