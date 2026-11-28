@@ -339,3 +339,70 @@ def test_pinned_where_found_files_shape_and_hash():
     known = [z for z in zones if pobtext.key(z) in idx["areas"]]
     assert len(idx["areas"]) > 200 and len(known) >= 3, (
         f"PoB data drift: WorldAreas names {len(known)} Source zones. {WHERE_HINT}")
+
+
+# DATA-AUGMENT-POB-TEXT (decision 0091): augment effects, values and slot
+# rules read src/Data/ModRunes.lua as data. Its pob2_files entry is checked
+# against the pin's commit always, and against the checkout when present.
+AUGMENT_HINT = ("Re-read src/Data/ModRunes.lua in the new checkout, check its augment "
+                "and slot block shapes still match server/al/theorycraft/pobtext.py "
+                "parse_augments, and update pob2_files in config/tc_pins.json.")
+
+
+def augment_pin_problem(pins):
+    """None when pins carry a well-formed ModRunes.lua pob2_files entry on
+    the pinned commit, else what is wrong."""
+    import re
+    from server.al.theorycraft import pobtext
+    row = ((pins or {}).get("pob2_files") or {}).get(pobtext.AUGMENTS)
+    if not isinstance(row, dict):
+        return f"{pobtext.AUGMENTS} has no pob2_files entry"
+    if not re.fullmatch(r"[0-9a-f]{64}", str(row.get("sha256"))):
+        return f"{pobtext.AUGMENTS} sha256 is not a sha256"
+    size = row.get("size")
+    if not isinstance(size, int) or not 0 < size <= pobtext.AUGMENTS_MAX_BYTES:
+        return f"{pobtext.AUGMENTS} size {size!r} is outside the cap"
+    if row.get("commit") != ((pins.get("pob2") or {}).get("commit")):
+        return f"{pobtext.AUGMENTS} entry is not on the pinned commit"
+    return None
+
+
+def test_tracked_pins_carry_the_augment_entry():
+    problem = augment_pin_problem(bridge._load_pins())
+    assert problem is None, f"PoB data drift: {problem}. {AUGMENT_HINT}"
+
+
+def test_augment_pin_problem_names_each_failure():
+    import copy
+    from server.al.theorycraft import pobtext
+    good = bridge._load_pins()
+    assert augment_pin_problem(good) is None
+    cases = [
+        (lambda p: p["pob2_files"].pop(pobtext.AUGMENTS), "no pob2_files entry"),
+        (lambda p: p["pob2_files"][pobtext.AUGMENTS].update(sha256="x"), "not a sha256"),
+        (lambda p: p["pob2_files"][pobtext.AUGMENTS].update(size=2 * 1024 * 1024),
+         "outside the cap"),
+        (lambda p: p["pob2_files"][pobtext.AUGMENTS].update(commit="0" * 40),
+         "not on the pinned commit"),
+    ]
+    for change, words in cases:
+        pins = copy.deepcopy(good)
+        change(pins)
+        assert words in augment_pin_problem(pins)
+    assert "no pob2_files entry" in augment_pin_problem({})
+
+
+@STATIC
+def test_pinned_mod_runes_shape_and_hash():
+    import hashlib
+    from server.al.theorycraft import pobtext
+    pins = bridge._load_pins()
+    path = SRC.parent.joinpath(*pobtext.AUGMENTS.split("/"))
+    assert path.is_file(), f"PoB data drift: {pobtext.AUGMENTS} is gone. {AUGMENT_HINT}"
+    raw = path.read_bytes()
+    row = pins["pob2_files"][pobtext.AUGMENTS]
+    assert len(raw) == row["size"] and len(raw) <= pobtext.AUGMENTS_MAX_BYTES
+    assert hashlib.sha256(raw).hexdigest() == row["sha256"], (
+        f"PoB data drift: {pobtext.AUGMENTS} sha256 differs from the pin. {AUGMENT_HINT}")
+    idx = pobtext.load_augments(SRC.parent, pins)
+    assert len(idx) == 287, f"PoB data drift: {len(idx)} augments parsed. {AUGMENT_HINT}"
