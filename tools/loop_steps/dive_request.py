@@ -108,9 +108,11 @@ def budget_block(budget, share=BUDGET_SHARE):
     return None
 
 
-def requested_dive_prompt(root, date, max_plans, today_titles, topic, urls):
-    """The deep_dive_prompt wording for one requested topic and its URLs."""
-    rn = loop_base.next_number(root, "docs/research", "[0-9][0-9][0-9][0-9]-*.md", 4)
+def requested_dive_prompt(root, date, max_plans, today_titles, topic, urls,
+                          items_root=None, exclude=None):
+    """The deep_dive_prompt wording for one requested topic and its URLs; the
+    note number skips every open dive's claim (RES-DIVE-NUMBER-COLLISION)."""
+    rn = loop_base.next_research_number(root, items_root, exclude)
     titles = "; ".join(f"{k} {v}" for k, v in sorted(today_titles.items()))
     listed = " ".join(f"<{u}>" for u in urls)
     return ("You are the AshLight (AL) deep-dive lane (requested dive) in a detached "
@@ -150,7 +152,8 @@ def post_work(tick, rows, work, skipped):
         return f"dive request waits: {why}"
     main = Path(tick.d.main_tree)
     prompt = requested_dive_prompt(main, date, tick.cfg["max_new_plans_per_day"],
-                                   loop_roadmap.plan_titles(main), doc["topic"], doc["urls"])
+                                   loop_roadmap.plan_titles(main), doc["topic"], doc["urls"],
+                                   items_root=tick.root, exclude=f"DD-{date}")
     item = {"id": f"DD-{date}", "kind": "deep-dive", "date": date,
             "title": "requested deep-dive", "label": f"deep-dive {date} (requested)",
             "topic": doc["topic"], "urls": doc["urls"], "requested": True,

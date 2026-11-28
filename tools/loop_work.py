@@ -388,6 +388,7 @@ class WorkMixin:
             self.dive_backed_off = True
             return None
         prompt = deep_dive_prompt(self.d.main_tree, date, self.cfg["max_new_plans_per_day"],
-                                  plan_titles(self.d.main_tree))
+                                  plan_titles(self.d.main_tree), items_root=self.root,
+                                  exclude=iid)
         return {"id": iid, "kind": "deep-dive", "date": date, "title": "idle deep-dive",
                 "label": f"deep-dive {date}", "prompt": prompt}

@@ -318,6 +318,34 @@ def next_number(root, rel, pattern, width):
     return (max(nums) + 1) if nums else 1
 
 
+# RES-DIVE-NUMBER-COLLISION: the research file a dive prompt names
+DIVE_FILE_RX = re.compile(r"docs/research/(\d{4})-deep-dive-")
+RESEARCH_GLOB = "[0-9][0-9][0-9][0-9]-*.md"
+
+
+def claimed_research_numbers(items_root, exclude=None):
+    """Research numbers held by open deep-dive records (not merged, no-change
+    or superseded), read from the file name in each record's prompt; the
+    record `exclude` (the dive being built again) is skipped."""
+    out = []
+    for iid, rec in Items(items_root).all().items():
+        if iid == exclude or rec.get("kind") != "deep-dive" or rec.get("state") in DONE_STATES:
+            continue
+        m = DIVE_FILE_RX.search(str(rec.get("prompt") or ""))
+        if m:
+            out.append(int(m.group(1)))
+    return out
+
+
+def next_research_number(main_tree, items_root=None, exclude=None):
+    """The next free docs/research number: past every note in the main tree
+    and every number an open dive claimed (its note is not merged yet), so
+    two dives never claim one number."""
+    nums = [next_number(main_tree, "docs/research", RESEARCH_GLOB, 4)]
+    nums += [n + 1 for n in claimed_research_numbers(items_root or main_tree, exclude)]
+    return max(nums)
+
+
 # ---------------------------------------------------------------- item records
 
 class Items:

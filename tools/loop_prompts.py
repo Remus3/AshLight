@@ -1,7 +1,7 @@
 """AL loop lane prompts (plan 107 split of tools/al_loop.py, which
 re-exports every name here). Stdlib only."""
 
-from loop_base import MAX_ROUNDS, next_number
+from loop_base import MAX_ROUNDS, next_number, next_research_number  # noqa: F401
 
 
 # ---------------------------------------------------------------- prompts
@@ -88,10 +88,11 @@ DIVE_SOURCES = ("Sources, and no others: (1) text the operator pasted into the r
                 "the repo and say so. Never work around a refusal. ")
 
 
-def deep_dive_prompt(root, date, max_plans, today_titles):
+def deep_dive_prompt(root, date, max_plans, today_titles, items_root=None, exclude=None):
     """Idle mode: Path of Exile 2 research, read-only. New work is proposed as
-    ROADMAP.md rows (the one exception to NO_ROADMAP)."""
-    rn = next_number(root, "docs/research", "[0-9][0-9][0-9][0-9]-*.md", 4)
+    ROADMAP.md rows (the one exception to NO_ROADMAP). The note number skips
+    every open dive's claimed number (RES-DIVE-NUMBER-COLLISION)."""
+    rn = next_research_number(root, items_root, exclude)
     titles = "; ".join(f"{k} {v}" for k, v in sorted(today_titles.items()))
     return ("You are the AshLight (AL) deep-dive lane (idle mode) in a detached git "
             "worktree. Read CLAUDE.md and docs/research/0001-ggg-tool-policy.md first. "
