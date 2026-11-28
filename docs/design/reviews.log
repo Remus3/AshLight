@@ -232,3 +232,4 @@
 2026-11-28 | scope=web/ app/overlay/ app/client/ scripts/install.ps1 server/al/install/ | verdict=PASS WITH FINDINGS S1=0 S2=3 S3=9 S4=7 | UX-46-REVIEW six-lens (P1 x3, P2 x9, P3 x7 filed as rows) | audit=docs/reviews/ux/2026-11-28.md
 2026-11-28 | scope=server/ app/ .github/ .gitignore | verdict=PASS WITH FINDINGS S1=0 S2=0 S3=4 S4=8 | AUDIT-46-CODE code and repo audit (P2 x4, P3 x8 filed as rows) | audit=docs/reviews/audit/2026-11-28.md
 2026-11-28 | scope=web/prices.js web/panels/webdata.js web/index.html web/setupcard.js web/status.js server/al/text/explain.py server/al/playcards.py README.md | verdict=PASS WITH FINDINGS S1=0 S2=0 S3=3 S4=1 | UX-46-P3 (S3 timing claim and S4 focus comment fixed; S3 ask wording kept per review P3-4; S3 issues link left to a later row) | audit=docs/reviews/ux/2026-11-28.md
+2026-11-28 | scope=web/setupcard.js,app/test/setupcard.test.js | verdict=PASS WITH FINDINGS S1=0 S2=0 S3=0 S4=1 | UX-LOST-MODE-NO-DEADEND | audit=-
