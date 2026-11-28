@@ -267,7 +267,7 @@ one line:
 
 <!-- al-version-stamp: release.py bump writes the version into the line below -->
 ```powershell
-irm -UserAgent 'AshLight/0.2.0-rc.1 (installer)' https://github.com/Remus3/AshLight/releases/latest/download/install.ps1 | iex
+irm -UserAgent 'AshLight/0.2.0-rc.2 (installer)' https://github.com/Remus3/AshLight/releases/latest/download/install.ps1 | iex
 ```
 
 It downloads the small installer of the latest release and runs it. The
