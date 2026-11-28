@@ -34,7 +34,7 @@ from pathlib import Path
 
 from .. import jsonfile
 from . import (buildfile, codec, health, model, paste, providers, searchstr, skillsplit,
-               treeurl)
+               specfollow, treeurl)
 
 log = logging.getLogger("al.theorycraft")
 
@@ -48,6 +48,7 @@ MAX_LISTED = 64  # characters with a saved build, listed in the snapshot
 # rewrite, so a file whose mtime is this fresh has its bytes re-checked
 COARSE_S = 2.5
 _PLAIN = re.compile(r"[A-Za-z0-9_]{1,48}")
+_UNSET = object()
 
 
 def default_path(runtime_dir):
@@ -92,6 +93,9 @@ class BuildStore:
         # BUILD-LIVE: callable() -> the character being played (state), or
         # None; sync() follows it
         self.character_of = None
+        # TC-SPEC-FOLLOW (decision 0089): callable() -> the character level
+        # (state, decision 0038), or None; the tree spec follows it
+        self.level_of = None
         self.character = None
         self.source = None  # the provider name of the loaded build
         # MATH-NEXT-LOOK: callable(build, slot) -> {stat key: weight} that
@@ -216,7 +220,7 @@ class BuildStore:
     def _reload(self):
         build, err, key = self._read_file(self.active_path())
         self._file_key = key
-        self.build = build
+        self.build = self._follow(build)
         self.load_error = err
         self.source = "paste" if build is not None else None
         self.loaded_at = time.time() if build is not None else None
@@ -226,6 +230,32 @@ class BuildStore:
     # -- live
     def add_listener(self, fn):
         self._listeners.append(fn)
+
+    def _level(self):
+        """The character level for the spec pick (level_of(), decision
+        0038), or None: an int from 1 to 100 only."""
+        if not callable(self.level_of):
+            return None
+        try:
+            level = self.level_of()
+        except Exception:  # noqa: BLE001 - the tick must go on
+            return None
+        if isinstance(level, bool) or not isinstance(level, int):
+            return None
+        return level if specfollow.MIN_LEVEL <= level <= specfollow.MAX_LEVEL else None
+
+    def _follow(self, build, level=_UNSET):
+        """TC-SPEC-FOLLOW: `build` with its tree spec picked for the
+        character level (specfollow.follow); a failure keeps PoB's spec."""
+        if build is None:
+            return None
+        if level is _UNSET:
+            level = self._level()
+        try:
+            return specfollow.follow(build, level)
+        except Exception:  # must never cost the loaded build
+            log.exception("tree spec follow failed")
+            return build
 
     def _fire(self, build):
         for fn in list(self._listeners):
@@ -238,8 +268,9 @@ class BuildStore:
         """BUILD-LIVE (core loop tick): follow the character being played
         (`name`, else character_of()) and re-read the active build file
         when it changed on disk. An unknown character (None) keeps the
-        current build. Returns "switch", "reload" or None; the listeners
-        fire on either."""
+        current build. TC-SPEC-FOLLOW: a new character level (level_of())
+        re-picks the tree spec; a different spec is "spec". Returns
+        "switch", "reload", "spec" or None; the listeners fire on each."""
         if name is None and callable(self.character_of):
             try:
                 name = self.character_of()
@@ -255,6 +286,14 @@ class BuildStore:
                 what = "switch"
             elif self._changed_on_disk():
                 what = self._hot_reload()
+            if not what and self.build is not None:
+                level = self._level()
+                if level != self.build.follow_level:
+                    old = self.build.active_spec_index
+                    self.build = self._follow(self.build, level)
+                    if self.build.active_spec_index != old:
+                        log.info("tree spec follows the character level")
+                        what = "spec"
             build = self.build
         if what:
             self._fire(build)
@@ -284,7 +323,7 @@ class BuildStore:
                 self.load_error = err
                 log.warning("changed build file not loaded: %s", err)
             return None
-        self.build = build
+        self.build = self._follow(build)
         self.load_error = None
         self.source = "paste"
         self.loaded_at = time.time()
@@ -308,7 +347,7 @@ class BuildStore:
             jsonfile.write_bytes(path, data)
             self.replaced = replaced
             self._file_key = self._read_key(path)
-            self.build = build
+            self.build = build = self._follow(build)
             self.load_error = None
             self.source = source
             self.loaded_at = time.time()

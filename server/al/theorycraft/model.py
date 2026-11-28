@@ -156,6 +156,14 @@ class Build:
     items: dict = field(default_factory=dict)  # item id -> Item
     gear: dict = field(default_factory=dict)  # slot name -> Item
     notes: str = ""
+    # TC-SPEC-FOLLOW (decision 0089, specfollow.follow): when the character
+    # level picked another spec, raw_xml names it in <Tree activeSpec> and
+    # pasted_xml / pasted_spec_index keep the player's own XML and PoB's
+    # active spec; spec_by_level says a title band held follow_level
+    pasted_xml: str = None
+    pasted_spec_index: int = None
+    spec_by_level: bool = False
+    follow_level: int = None
 
     @property
     def active_spec(self):
@@ -163,8 +171,17 @@ class Build:
             return None
         return self.specs[self.active_spec_index]
 
+    @property
+    def pob_spec_index(self):
+        """PoB's own active spec (0-based), whatever the level picked."""
+        if self.pasted_xml is not None:
+            return self.pasted_spec_index
+        return self.active_spec_index
+
     def to_code(self):
-        return codec.encode(self.raw_xml)
+        """The share code of the player's own XML (TC-SPEC-FOLLOW keeps the
+        pasted activeSpec)."""
+        return codec.encode(self.pasted_xml if self.pasted_xml is not None else self.raw_xml)
 
     def equipped(self, slot):
         """The Item in a gear slot (case-insensitive name), or None."""
@@ -184,9 +201,21 @@ class Build:
                 "stats": dict(self.stats),
                 "tree": tree.to_dict(tree_data) if tree else None,
                 "spec_titles": [s.title for s in self.specs],
+                # TC-SPEC-FOLLOW: the spec in use (1-based), whether the
+                # character level picked it, and PoB's own active spec
+                "spec_follow": _follow_view(self),
                 "gear": {slot: it.to_dict() for slot, it in self.gear.items()},
                 "skills": [s.to_dict() for s in self.skills],
                 "notes": self.notes}
+
+
+def _follow_view(b):
+    def one(i):
+        return None if i is None else i + 1
+    tree = b.active_spec
+    return {"index": one(b.active_spec_index), "title": tree.title if tree else None,
+            "by_level": bool(b.spec_by_level), "level": b.follow_level,
+            "pob_index": one(b.pob_spec_index)}
 
 
 def _root(xml):

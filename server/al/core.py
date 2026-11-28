@@ -222,6 +222,9 @@ class Core:
                                              tree=treedata.TreeCache(tree_path),
                                              per_character=True)
         self.builds.character_of = lambda: self.state.character
+        # TC-SPEC-FOLLOW (decision 0089): the tree spec follows the level of
+        # the character being played, re-picked by tick_build on a level-up
+        self.builds.level_of = lambda: self.state.level
         # HUD-ACT: zone levels from the cached world areas export when the
         # build-time snapshot fetched it (decision 0020); read only, no fetch.
         zones_path = (acts.default_path() if runtime is None
