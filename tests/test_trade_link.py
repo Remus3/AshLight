@@ -118,6 +118,21 @@ def _server_modules():
     return out
 
 
+def _is_ggg_host(h):
+    """True for pathofexile.com and its subdomains only (exact or dotted
+    suffix, never a substring: look-alikes are other hosts)."""
+    host = str(h).lower().rstrip(".")
+    return host == "pathofexile.com" or host.endswith(".pathofexile.com")
+
+
+def test_ggg_host_check_is_exact():
+    for h in ("pathofexile.com", "www.pathofexile.com", "API.pathofexile.com."):
+        assert _is_ggg_host(h), h
+    for h in ("notpathofexile.com", "evil-pathofexile.com.example",
+              "pathofexile.com.example", "pathofexile.co", "poe.ninja"):
+        assert not _is_ggg_host(h), h
+
+
 def test_no_pathofexile_host_in_any_webfetch_allowlist():
     found = {}
     for mod in _server_modules():
@@ -134,8 +149,7 @@ def test_no_pathofexile_host_in_any_webfetch_allowlist():
         if where == ggg:
             continue
         for h in hosts:
-            labels = str(h).lower().rstrip(".").split(".")
-            assert labels[-2:] != ["pathofexile", "com"], (where, h)
+            assert not _is_ggg_host(h), (where, h)
     # trade paths stay refused on both hosts, by webfetch and by gggapi
     from server.al import gggapi, webfetch
     client = gggapi.Client("ashlight-test", "contact placeholder",
