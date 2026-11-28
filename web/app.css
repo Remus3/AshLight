@@ -658,6 +658,12 @@ button.bar-word:hover { background: var(--fk-surface); }
   background: var(--fk-surface-2);
   padding: var(--region-pad) var(--al-space-3);
 }
+/* BSC-6: a region heading is visually hidden, so its own ring can't show.
+   Focus reaches one only by script (tabindex -1, set when the switch it
+   replaced hid), so the region it names draws the 3px accent ring inside
+   its edge while the heading holds focus, for a mouse click too. */
+.region:has(> .region-h:focus) { outline: 3px solid var(--fk-accent); outline-offset: -3px; }
+.region > .region-h:focus { outline: none; }
 #play-g { --region-pad: var(--al-space-1); }
 #play-c, #play-i { --region-pad: var(--al-space-3); }
 #play-t { --region-pad: var(--al-space-1); }
