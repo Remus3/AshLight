@@ -266,6 +266,7 @@ function createClient(opts) {
   let saveTimer = null;
   let starting = null;
   let ses = null;
+  const handedOut = new Set();
   let shownToken = "";
   let closedNoteShown = false;
   let opened = []; // times of the links opened in the last minute (rate limit)
@@ -374,13 +375,10 @@ function createClient(opts) {
         return;
       }
       const name = Link.safeFileName(item.getFilename()) || "ashlight-download";
-      const dir = app.getPath("downloads");
-      const ext = path.extname(name);
-      const stem = name.slice(0, name.length - ext.length);
-      let target = path.join(dir, name);
-      for (let i = 1; fs.existsSync(target) && i < 100; i++) {
-        target = path.join(dir, stem + " (" + i + ")" + ext);
-      }
+      // Never overwrite; never one name for two downloads in flight
+      // (AUDIT-DOWNLOAD-NAMES). handedOut lives for the client session.
+      const target = Link.pickDownloadPath(app.getPath("downloads"), name, fs.existsSync,
+                                           handedOut, Date.now);
       item.setSavePath(target);
       log("client: download saved as " + path.basename(target));
     });
