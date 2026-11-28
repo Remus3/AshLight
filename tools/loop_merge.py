@@ -11,10 +11,25 @@ lock with
     python tools/loop_merge.py hold [--root DIR] [--wait-s N] -- <command>
 
 which waits for the lock (exit 3 when it stays busy past --wait-s), runs the
-command under it and exits with the command's code."""
+command under it and exits with the command's code.
+
+LOOP-ADJUDICATE-MERGE: a record parked in state adjudicate (refute rounds
+spent, gate-unknown, foreign red) is merged by a session, once ruled, with
+
+    python tools/loop_merge.py adjudicate <ID> --ruling "<text>" [--root DIR]
+
+which refuses a missing or blank ruling (exit 2), records the ruling on the
+item, runs the loop's gates (gate verdict cache included) on the kept commit
+in a temporary detached worktree under the AL sidecar Temp folder, and on
+green merges it into main exactly as the loop does (merge lock, wave hold,
+done file, kit git lock on the commit, `ruling:` line in the merge body).
+Exit 0 merged, 1 red gates or a deferred / refused merge (the record stays
+parked or moves to the loop's own merge state), 2 refused."""
 
 import datetime as _dt
+import importlib
 import json
+import re
 import subprocess
 import sys
 import time
@@ -318,6 +333,10 @@ class MergeMixin:
             # PUBREPO 1b: `merge: <topic>`, never the lane / worktree name
             msg = (f"{merge_subject(rec)}{commit_body(rec)}"
                    f"refute-rounds: {rec.get('rounds', 0)}/{MAX_ROUNDS}\n")
+            ruling = rec.get("ruling")
+            if isinstance(ruling, dict) and ruling.get("text"):
+                # LOOP-ADJUDICATE-MERGE: a session's ruling rides in the merge
+                msg += f"ruling: {ascii_text(ruling['text'], RULING_MAX)}\n"
             c = g(["commit", "-q", "-F", "-"], main, input=msg)
             if c.returncode != 0:
                 # main's own hook (leak sweep) refused clean merged content: a
@@ -427,13 +446,108 @@ class MergeMixin:
         return True
 
 
+# ---------------------------------------------------------------- adjudicate
+
+RULING_MAX = 300
+ADJUDICATE_STATE = "adjudicate"
+_SAFE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$")
+
+
+def _gate_worktree(g, main, path, commit):
+    """A fresh detached worktree of commit at path (a leftover from a crashed
+    run at the same path is removed first). True when it was made."""
+    path = Path(path)
+    if path.exists():
+        g(["worktree", "remove", "--force", str(path)], main)
+    g(["worktree", "prune"], main)
+    if path.exists():
+        return False
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return g(["worktree", "add", "-q", "--detach", str(path), commit],
+             main).returncode == 0
+
+
+def adjudicate_merge(t, iid, ruling, gate_dir=None):
+    """LOOP-ADJUDICATE-MERGE: merge the kept commit of the adjudicate record
+    iid on the session's ruling, through the Tick t (al_loop.Tick: its deps,
+    items, gate cache and merge). Returns (rc, message): 0 merged, 1 red
+    gates or a merge the loop deferred / refused, 2 refused before anything
+    ran."""
+    import al_lane
+    text = ascii_text(ruling, RULING_MAX).strip() if isinstance(ruling, str) else ""
+    if not text:
+        return 2, f"{iid}: no ruling given (--ruling TEXT): refused"
+    if not isinstance(iid, str) or not _SAFE_ID.match(iid):
+        return 2, f"{ascii_text(str(iid), 80)}: not a loop item id: refused"
+    d = t.d
+    rec = t.items.get(iid)
+    if not isinstance(rec, dict):
+        return 2, f"{iid}: no loop record: refused"
+    if rec.get("state") != ADJUDICATE_STATE:
+        return 2, f"{iid}: state {rec.get('state')!r}, not adjudicate: refused"
+    g, main = d.git, d.main_tree
+    commit = rec.get("commit")
+    if not commit or g(["cat-file", "-e", f"{commit}^{{commit}}"], main).returncode != 0:
+        ref = rec.get("keep_ref")
+        r = g(["rev-parse", "--verify", "-q", f"{ref}^{{commit}}"], main) if ref else None
+        if r is None or r.returncode != 0 or not r.stdout.strip():
+            return 2, f"{iid}: no kept commit to merge: refused"
+        commit = rec["commit"] = r.stdout.strip()
+    if gate_dir is None:
+        tmp = al_lane.sidecar_temp()
+        if tmp is None:
+            return 2, f"{iid}: no AL sidecar Temp folder for the gate worktree: refused"
+        gate_dir = tmp / f"adjudicate-{iid}"
+    now = d.clock()
+    rec["ruling"] = {"text": text, "at": iso(now)}
+    t.items.put(rec)
+    if not _gate_worktree(g, main, gate_dir, commit):
+        rec["ruling"]["gates"] = "unknown: gate worktree not made"
+        t.items.put(rec)
+        return 1, f"{iid}: gate worktree not made, record stays adjudicate"
+    try:
+        al_lane.seed_config(gate_dir, root=main)
+        ok, detail = t.gate(gate_dir)
+    finally:
+        g(["worktree", "remove", "--force", str(gate_dir)], main)
+        g(["worktree", "prune"], main)
+    rec = t.items.get(iid) or rec
+    word = "green" if ok else "red"
+    rec.setdefault("ruling", {"text": text, "at": iso(now)})
+    rec["ruling"]["gates"] = keep_ids(ascii_text(f"{word}: {detail or ''}"), RULING_MAX)
+    if not ok:
+        t.items.put(rec)
+        return 1, f"{iid}: gates red, record stays adjudicate: {ascii_text(detail, 200)}"
+    rec["verdict"] = "RULED"
+    t.items.put(rec)
+    t.merge(rec)
+    cur = t.items.get(iid) or rec
+    state = cur.get("state")
+    tail = "; ".join(t.log[-3:])
+    if state == "merged":
+        return 0, f"{iid}: merged on the ruling ({tail})"
+    return 1, f"{iid}: not merged, state {state} ({tail})"
+
+
+def _cli_tick(root):
+    """The real Tick for the command line. Only this process's entry point
+    reaches it (loop_merge.py runs as __main__, al_loop is not loaded yet),
+    so no second copy of al_loop can diverge from a running tick's."""
+    mod = importlib.import_module("al_loop")
+    return mod.Tick(mod.Deps(Path(root)) if root else mod.Deps())
+
+
 # ---------------------------------------------------------------- CLI
 
 def main(argv=None):
-    """`hold [--root DIR] [--wait-s N] [--poll-s N] -- <command...>`."""
+    """`hold [--root DIR] [--wait-s N] [--poll-s N] -- <command...>` or
+    `adjudicate <ID> --ruling TEXT [--root DIR]`."""
     args = list(sys.argv[1:] if argv is None else argv)
     usage = ("usage: loop_merge.py hold [--root DIR] [--wait-s N] [--poll-s N] "
-             "-- <command...>")
+             "-- <command...>\n"
+             "       loop_merge.py adjudicate <ID> --ruling TEXT [--root DIR]")
+    if args and args[0] == "adjudicate":
+        return _main_adjudicate(args[1:], usage)
     if not args or args[0] != "hold" or "--" not in args:
         print(usage, file=sys.stderr)
         return 2
@@ -459,6 +573,33 @@ def main(argv=None):
         return 2
     return hold(cmd, root, wait_s=wait_s, poll_s=poll_s,
                 say=lambda s: print(f"loop_merge hold: {s}", file=sys.stderr))
+
+
+def _main_adjudicate(args, usage):
+    """`adjudicate <ID> --ruling TEXT [--root DIR]`: one command per ruled
+    record (ZERO-CLICK)."""
+    if not args or args[0].startswith("--"):
+        print(usage, file=sys.stderr)
+        return 2
+    iid, opts, ruling, root = args[0], args[1:], None, None
+    try:
+        while opts:
+            key, val = opts.pop(0), opts.pop(0)
+            if key == "--ruling":
+                ruling = val
+            elif key == "--root":
+                root = val
+            else:
+                raise ValueError(key)
+    except (IndexError, ValueError):
+        print(usage, file=sys.stderr)
+        return 2
+    if ruling is None:
+        print(usage, file=sys.stderr)
+        return 2
+    rc, msg = adjudicate_merge(_cli_tick(root), iid, ruling)
+    print(ascii_text(msg, 600), file=sys.stdout if rc == 0 else sys.stderr)
+    return rc
 
 
 if __name__ == "__main__":
