@@ -100,6 +100,7 @@ TIMING_TESTS = {
     # amulet and bow delta checks run in the parallel phase
     "tests/test_math_e2e_live.py": {"test_item_check_deltas_come_from_pob",
                                     "test_repeat_press_uses_cached_probes",
+                                    "test_augment_stage_within_press_budget",
                                     "test_killed_calc_falls_back_then_recovers"},
 }
 # TEST-CALC-GROUP-SPLIT (research 0063 section 5): the heaviest three calc

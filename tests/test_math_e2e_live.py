@@ -28,7 +28,7 @@ from tc_live_util import (BUDGET, CALC_GROUP_B, LIVE_CALC, LIVE_REF, keep_warm, 
 
 from server.al.core import Core
 from server.al.http import serve
-from server.al.theorycraft import bridge, codec, delta
+from server.al.theorycraft import augment, bridge, codec, delta
 
 ROOT = Path(__file__).resolve().parents[1]
 TOKEN = "m" * 48
@@ -200,6 +200,47 @@ def test_repeat_press_uses_cached_probes(live):
     assert took <= BUDGET["repeat_press_s"], took
     assert again["calc"]["source"] == "pob", again["calc"]
     assert _best(again)["dps"]["pct"] > 0
+
+
+def _socketed_bow(inc):
+    """TC-AUGMENT-WHATIF-LIVE: the bow of items.BOW_DOWNGRADE with two free
+    rune sockets (a Sockets line, no rune line) and its own physical damage
+    number, so no earlier press of this module has its probes cached."""
+    text = items.BOW_DOWNGRADE.replace("62% increased", f"{inc}% increased")
+    text = text.replace("Item Level: 79", "Sockets: S S\n--------\nItem Level: 79")
+    assert text.count("Sockets: S S") == 1 and f"{inc}% increased" in text
+    return text
+
+
+def _check_augment(live, result):
+    """The press reached the "augment" stage and it is Path of Building's."""
+    assert result["ok"] and result["calc"]["source"] == "pob", result["calc"]
+    aug = result.get("augment")
+    assert isinstance(aug, dict), "no augment stage on a free-socket bow"
+    assert aug["state"] == augment.STATE_READY, aug
+    assert aug["slot"] == result["slot"] and aug["source"] == augment.SOURCE_ID, aug
+    assert 1 <= aug["calls"] <= delta.MAX_PROBES and aug["tried"] <= aug["calls"], aug
+    assert len(aug["top"]) <= augment.TOP_MAX, aug
+    _, snap = _req(live["port"], "GET", "/api/state")
+    assert snap["eval"]["calc"]["source"] == "pob"
+
+
+@LIVE_CALC
+@pytest.mark.timing
+def test_augment_stage_within_press_budget(live):
+    """TC-AUGMENT-WHATIF-LIVE (decision 0093 and its 2026-11-28 amendment):
+    a bow with a free socket gets the augment stage after the pob and mods
+    stages; the first press of the item stays within the first-press budget
+    and a warm press of a fresh variant (bridge warm, its probes not cached)
+    within the 12 s warm budget, every stage included (manual 2026-11-28:
+    11.21 s first, 5.97 / 6.35 s warm)."""
+    assert live["core"].augments.get(), "no pinned augment rows (decision 0091)"
+    first, took = _press(live, _socketed_bow(66), "augment_first")
+    _check_augment(live, first)
+    assert took <= BUDGET["first_press_s"], took
+    warm, took = _press(live, _socketed_bow(67), "augment_warm")
+    _check_augment(live, warm)
+    assert took <= BUDGET["press_s"], took
 
 
 @LIVE_CALC
