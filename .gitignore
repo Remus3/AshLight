@@ -3,6 +3,8 @@
 config/local.json
 # RUN-DURABLE-STORE-FILES: the .bak of local.json (layout.save, F-014)
 config/local.json.bak
+# AUDIT-GITIGNORE-TMP: crash-left jsonfile temp copies (<name>.<tag>.tmp)
+config/local.json.*
 config/leak_needles.json
 .env
 .env.*
