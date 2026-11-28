@@ -225,3 +225,5 @@
 2026-11-28 | scope=server/al/text/gemadvice.py,docs/design/copy/gemadvice.md,server/al/theorycraft/cardparts/uncut.py | verdict=PASS WITH FINDINGS S1=0 S2=0 S3=3 S4=2 | TC-UNCUT-GEM | audit=-
 2026-11-28 | scope=server/al/text/gemunlock.py,docs/design/copy/gemunlock.md,server/al/overlayview.py,app/shared/render_gate.js,docs/design/0001-design-system.md | verdict=PASS WITH FINDINGS S1=0 S2=0 S3=2 S4=3 | TC-GEM-UNLOCK | audit=-
 2026-11-28 | scope=README.md | verdict=PASS WITH FINDINGS S1=0 S2=0 S3=2 S4=2 | README-SOURCE-FIRST (R-1..R-4 fixed) | audit=docs/reviews/github/2026-11-28.md
+2026-11-28 | scope=web/buildline.js web/kindler.js web/app.js server/al/text/buildsource.py docs/design/copy/buildsource.md | verdict=PASS WITH FINDINGS S1=0 S2=1 S3=3 S4=2 | BUILD-SWITCH-COPY (BSC-1..BSC-5 fixed in f09d8070, BSC-6 informational) | audit=-
+2026-11-28 | scope=web/panels/progression.js server/al/text/progression.py server/al/theorycraft/progression.py docs/design/copy/progression.md docs/decisions/0097-one-tree-no-order.md | verdict=PASS WITH FINDINGS S1=0 S2=0 S3=1 S4=2 | PROGRESSION-ASC-EMPTY, PROGRESSION-NEXTUP-ORDER (PG-16..PG-18) | audit=-

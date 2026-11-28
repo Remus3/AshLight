@@ -1972,3 +1972,13 @@ of the HALT check.
   players want both builds side by side, a composed no-items build
   misleads the item check in play, a restored summary differs from a
   fresh result, or the operator rules plans must not feed the item check.
+- PROGRESSION-NEXTUP-ORDER: a pasted PoB build with one tree spec gets no
+  node order by level; its nodes stay planned and the Next up empty line
+  reads 'Your build has one tree, with no order by level.'
+  (text/progression.py ONE_TREE); AshLight never orders nodes itself (no
+  breadth-first order from the class start); level-banded trees (decision
+  0089) and Kindler plans keep their order; point books stay out of the
+  budget (decision 0097, amends the wording of 0092). Reverses if: PoB
+  exports gain a per-node allocation order, players ask for a nearest-first
+  hint shown not to read as a plan, or the operator rules an
+  AshLight-authored order acceptable.
