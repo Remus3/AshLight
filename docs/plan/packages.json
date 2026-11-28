@@ -992,6 +992,18 @@
    "milestones": [
     "the recorded in-game verdicts are in the research notes and every refusal has a fix row"
    ]
+  },
+  {
+   "n": 18,
+   "title": "Session 18: wave 62",
+   "waves": [
+    62
+   ],
+   "est_wall_min": 150,
+   "session_packages": 5,
+   "milestones": [
+    "release settings read back, Dependabot rows flow, and both flakes have a named cause"
+   ]
   }
  ],
  "reserved_decisions": [
@@ -2080,6 +2092,19 @@
    "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
   },
   {
+   "n": 62,
+   "title": "Wave 62: post-flip settings, tidy, Dependabot watch and two flake fixes",
+   "goal": "With the repository public (GP-12, 2e801d3), GP-15 sets immutable releases and the tag ruleset, GP-16 tidies the public surface and AUTO-20 turns Dependabot alerts and pull requests into rows; TEST-A11Y-NEWEST-DEVTOOLS and TEST-PLAYFIT-LOAD-FLAKE fix the two flakes seen at the flip.",
+   "merge_order": [
+    "GP-15",
+    "GP-16",
+    "AUTO-20",
+    "TEST-A11Y-NEWEST-DEVTOOLS",
+    "TEST-PLAYFIT-LOAD-FLAKE"
+   ],
+   "gate": "per package: its named tests as a file-named run; main-checkout acts one at a time in merge order; per merge batch of 4 on the integration worktree: merge, then the integrator's edits for the batch as one commit, then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python tools/suite_run.py and npm test --prefix app, green, then main moves; then python tools/plan_check.py check; the wave closes when every session row is flipped and main is clean"
+  },
+  {
    "n": 99,
    "title": "Parked",
    "goal": "Blocked packages with their unblock conditions; a package joins the next open wave once its condition reads true.",
@@ -2099,10 +2124,8 @@
     "PLAY-MAP-MODE-ON",
     "DATA-GUIDE-ACTS-5-6",
     "TC-PRESS-FIXTURES",
-    "AUTO-20",
     "DATA-GUIDE-GAP-TUNE",
     "TC-AFFIX-LINE",
-    "GP-16",
     "PLAY-F-204B-SR-RUN",
     "GP-12",
     "RUN-LIVE-CLICKS-CLOSE",
@@ -2110,7 +2133,6 @@
     "RUN-OVL-BUDGET-CLOSE",
     "TC-OAUTH-REG",
     "OVL-FPS",
-    "GP-15",
     "LOOP-KIT-REPORT-SEND"
    ],
    "gate": "none: parked; re-run plan_check after a package moves into an open wave"
@@ -20878,7 +20900,6 @@
    "deps": [
     "AUTO-19",
     "LOOP-CI-ISSUES",
-    "GP-12",
     "GP-08",
     "GP-14"
    ],
@@ -20887,14 +20908,10 @@
    "isolation": "worktree",
    "lane": "build",
    "design_review": false,
-   "blocked": {
-    "on": "Dependabot alerts and pull requests exist only after the public flip",
-    "who": "package GP-12",
-    "unblock": "the repository is public (GP-12 done) and .github/dependabot.yml and tools/dependabot_reapply.py are on main"
-   },
+   "blocked": null,
    "operator_act": "",
-   "notes": "Source contract (AUTO-05): a module tools/watch_sources/<name>.py exposes SOURCE = {name, home, cadence_s, window, needs_web_data, hosts, urls, check}; check(state, now, fetch, ctx) returns findings {source, kind, key, tokens}; ctx is the dict the caller passes ({} by default: the tick's docs_watch and drift seams, and 'live', true only when the tick runs on the main checkout), and a source starts a subprocess or reads a runtime file outside its root only when ctx.get('live') is true, so loop tests on scratch roots stay hermetic; urls lists the exact https URLs the source may request beside GitHub repository metadata (checked by watch_gate.check_url, LOOP-WATCH-GATE); its templates live in ops/loop/watch_rows/<name>.json (LOOP-WATCH-ROWS). New files only: never edit tools/upstream_watch.py, another source or another template file. Every network behaviour is proven with an injected transport and fixtures; no test makes a real request. W9 and AUTO-20 of docs/plan/06. docs/plan/06 adds the two read permissions to the job of AUTO-19; this plan gives the Dependabot read its own workflow file, .github/workflows/watch-dependabot.yml (same schedule shape, standard runner, actions pinned by full commit id, no secret; permissions contents: read, issues: write, vulnerability-alerts: read, pull-requests: read and no other write), so the two parked packages share no file and the main watch job keeps the smaller permission set. It runs `python tools/watch_ci.py --sources dependabot` (the entry AUTO-19 builds takes source names; it is not edited here). Templates DEPBOT-<PACKAGE>-<GHSA> (lane data, '(priority)', never held by the soft budget gate) and DEPBOT-PR-<n> (lane data) with the tokens of 06 W9: <GHSA> upper-cased and matching GHSA(-[0-9A-Z]{4}){3}; <package> must be a name in the tracked lockfile; <n> must be a pull request whose author is the Dependabot app (the CI key carries the number only). Each row's lane runs `python tools/dependabot_reapply.py apply <n>` (the go-public cluster's tool, unit F-081).",
-   "wave": 99,
+   "notes": "Source contract (AUTO-05): a module tools/watch_sources/<name>.py exposes SOURCE = {name, home, cadence_s, window, needs_web_data, hosts, urls, check}; check(state, now, fetch, ctx) returns findings {source, kind, key, tokens}; ctx is the dict the caller passes ({} by default: the tick's docs_watch and drift seams, and 'live', true only when the tick runs on the main checkout), and a source starts a subprocess or reads a runtime file outside its root only when ctx.get('live') is true, so loop tests on scratch roots stay hermetic; urls lists the exact https URLs the source may request beside GitHub repository metadata (checked by watch_gate.check_url, LOOP-WATCH-GATE); its templates live in ops/loop/watch_rows/<name>.json (LOOP-WATCH-ROWS). New files only: never edit tools/upstream_watch.py, another source or another template file. Every network behaviour is proven with an injected transport and fixtures; no test makes a real request. W9 and AUTO-20 of docs/plan/06. docs/plan/06 adds the two read permissions to the job of AUTO-19; this plan gives the Dependabot read its own workflow file, .github/workflows/watch-dependabot.yml (same schedule shape, standard runner, actions pinned by full commit id, no secret; permissions contents: read, issues: write, vulnerability-alerts: read, pull-requests: read and no other write), so the two parked packages share no file and the main watch job keeps the smaller permission set. It runs `python tools/watch_ci.py --sources dependabot` (the entry AUTO-19 builds takes source names; it is not edited here). Templates DEPBOT-<PACKAGE>-<GHSA> (lane data, '(priority)', never held by the soft budget gate) and DEPBOT-PR-<n> (lane data) with the tokens of 06 W9: <GHSA> upper-cased and matching GHSA(-[0-9A-Z]{4}){3}; <package> must be a name in the tracked lockfile; <n> must be a pull request whose author is the Dependabot app (the CI key carries the number only). Each row's lane runs `python tools/dependabot_reapply.py apply <n>` (the go-public cluster's tool, unit F-081). Unblocked 2026-11-27 (session 33, wave 62 plan): the repository is public (GP-12 done 2026-11-27 in 2e801d3, record docs/ops/public-flip-2026-11-27.md; visibility read back PUBLIC). The deps edge on GP-12 is dropped because GP-12 was run as a session act and stays listed in the parked wave 99, where an edge from wave 62 cannot point; integrator ruling, session 33.",
+   "wave": 62,
    "owner": "session",
    "tier": "P2",
    "cluster": "LOOP"
@@ -21450,22 +21467,16 @@
    "zero_click": "Agent step; nothing for the operator beyond the one batched settings edit.",
    "size": "S",
    "est_min": 25,
-   "deps": [
-    "GP-12"
-   ],
+   "deps": [],
    "serial_group": "",
    "agent": "general-purpose",
    "isolation": "worktree",
    "lane": "build",
    "design_review": false,
-   "blocked": {
-    "on": "ordered after the public flip (plan 04 order, step 7)",
-    "who": "package GP-12",
-    "unblock": "`gh repo view \"$R\" --json visibility --jq .visibility` prints PUBLIC"
-   },
+   "blocked": null,
    "operator_act": "OA-6 (batched with F-057 in docs/plan/09-operator-acts.md): remove the stale line \"Bash(python tools/ash_lane.py:*)\" from .claude/settings.json (line 17). Default in force: the line stays; it grants nothing because the file does not exist.",
-   "notes": "Tier P3. (a) Fixture: the file under tests/fixtures/inbox_p164/ keeps its name (the router tests key on it) but its bytes become a synthetic note of the same shape (seven repo items, four '## ' sections, one lead-in sentence naming 'kit v26 ORDER (2200)'); in tests/test_loop_inbox_p164.py replace test_order_2215_fixture_is_the_real_note (the sha256 prefix assert) with a shape assert and reword the comment above ORDER_FIXTURE; every other test in the file must pass unchanged. The old bytes are replaced by a normal edit (git keeps history), no file is deleted. (b) .gitkeep: read ops/fleet_kit/fleet_inbox.py and tools/loop_inbox.py (InboxMixin.inbox returns early when the inbox folder is missing; deliver_note and write_note create parents) first; untrack moon_sync_inbox/.gitkeep and moon_sync_outbox/.gitkeep with `git rm --cached` and drop the two '!' lines from .gitignore only if every reader tolerates a missing folder, otherwise leave them and say so in the commit message; then `git ls-files \"moon_sync_*\"` is empty if moved. (c) The settings line is the operator act above, never an agent edit. Verifier fix: the two .gitkeep files are listed in files because (b) may untrack them (git rm --cached; the folders stay on disk); if a reader needs the folders they stay tracked and untouched.",
-   "wave": 99,
+   "notes": "Tier P3. (a) Fixture: the file under tests/fixtures/inbox_p164/ keeps its name (the router tests key on it) but its bytes become a synthetic note of the same shape (seven repo items, four '## ' sections, one lead-in sentence naming 'kit v26 ORDER (2200)'); in tests/test_loop_inbox_p164.py replace test_order_2215_fixture_is_the_real_note (the sha256 prefix assert) with a shape assert and reword the comment above ORDER_FIXTURE; every other test in the file must pass unchanged. The old bytes are replaced by a normal edit (git keeps history), no file is deleted. (b) .gitkeep: read ops/fleet_kit/fleet_inbox.py and tools/loop_inbox.py (InboxMixin.inbox returns early when the inbox folder is missing; deliver_note and write_note create parents) first; untrack moon_sync_inbox/.gitkeep and moon_sync_outbox/.gitkeep with `git rm --cached` and drop the two '!' lines from .gitignore only if every reader tolerates a missing folder, otherwise leave them and say so in the commit message; then `git ls-files \"moon_sync_*\"` is empty if moved. (c) The settings line is the operator act above, never an agent edit. Verifier fix: the two .gitkeep files are listed in files because (b) may untrack them (git rm --cached; the folders stay on disk); if a reader needs the folders they stay tracked and untouched. Unblocked 2026-11-27 (session 33, wave 62 plan): the repository is public (GP-12 done 2026-11-27 in 2e801d3, record docs/ops/public-flip-2026-11-27.md; visibility read back PUBLIC). The deps edge on GP-12 is dropped because GP-12 was run as a session act and stays listed in the parked wave 99, where an edge from wave 62 cannot point; integrator ruling, session 33.",
+   "wave": 62,
    "owner": "session",
    "tier": "P3",
    "cluster": "PUB"
@@ -21879,7 +21890,6 @@
    "size": "S",
    "est_min": 10,
    "deps": [
-    "GP-12",
     "PUB-SETTINGS-FILES"
    ],
    "serial_group": "",
@@ -21887,14 +21897,10 @@
    "isolation": "none",
    "lane": "review",
    "design_review": false,
-   "blocked": {
-    "on": "the public flip",
-    "who": "package GP-12",
-    "unblock": "`gh repo view \"$R\" --json visibility --jq .visibility` prints PUBLIC"
-   },
+   "blocked": null,
    "operator_act": "OA-3 only if the immutable-releases call answers 404: switch on immutable releases in the repository's settings page (no working command); default in force until then: no v* tag is pushed (plan 05 gates on it).",
-   "notes": "Tier P1. No tracked file; isolation none. Commands: `gh api -X PUT \"repos/$R/immutable-releases\"`, then POST ops/github/ruleset-release-tags.json. The immutable-releases endpoint is UNVERIFIED in the plan; a 404 gates only the first v* tag (OA-3), neither the push nor the flip. The release workflow, SHA256SUMS, SBOM, attestation and changelog are plan 05 (REL cluster); plan 05's config/release.json `immutable_confirmed` reads this read-back.",
-   "wave": 99,
+   "notes": "Tier P1. No tracked file; isolation none. Commands: `gh api -X PUT \"repos/$R/immutable-releases\"`, then POST ops/github/ruleset-release-tags.json. The immutable-releases endpoint is UNVERIFIED in the plan; a 404 gates only the first v* tag (OA-3), neither the push nor the flip. The release workflow, SHA256SUMS, SBOM, attestation and changelog are plan 05 (REL cluster); plan 05's config/release.json `immutable_confirmed` reads this read-back. Unblocked 2026-11-27 (session 33, wave 62 plan): the repository is public (GP-12 done 2026-11-27 in 2e801d3, record docs/ops/public-flip-2026-11-27.md; visibility read back PUBLIC). The deps edge on GP-12 is dropped because GP-12 was run as a session act and stays listed in the parked wave 99, where an edge from wave 62 cannot point; integrator ruling, session 33.",
+   "wave": 62,
    "owner": "session",
    "tier": "P1",
    "cluster": "PUB"
@@ -24814,6 +24820,76 @@
    "operator_act": "",
    "notes": "Session 26 follow-up (ROADMAP row PLAY-FIT-SR-COUNT). Wave 59 behind PLAY-FIT-B-WORDS: both may edit tests/test_play_fit.py and play-fit-figures.md (serial_group play-fit). Those two files only if the counter changes (re-measured figures). The ruling goes through the design-reviewer agent; a blocked choice goes to the adjudicator.",
    "wave": 59,
+   "owner": "session"
+  },
+  {
+   "id": "TEST-A11Y-NEWEST-DEVTOOLS",
+   "title": "Fix the missing DevTools endpoint of the a11y harness on ci test-newest",
+   "goal": "ci job test-newest (Python 3.14, Node 24, continue-on-error) went red on run 46079475413 attempt 1 with 6 errors in tests/test_a11y_render.py, \"a11y.mjs: no DevTools endpoint\"; attempt 2 was green. Find why the headless browser gave no DevTools endpoint (cold start, port file wait) and fix it at the cause in app/test/cdp/a11y.mjs.",
+   "units": [],
+   "files": [
+    "app/test/cdp/a11y.mjs"
+   ],
+   "new_files": [],
+   "integrator_edits": [
+    {
+     "file": "ROADMAP.md",
+     "change": "Flip this package's row when it merges (its ROADMAP row already exists; PLAN W62 retagged it BLOCKED: session wave 62 (watch))."
+    }
+   ],
+   "tests": [
+    "tests/test_a11y_render.py (existing, must stay green)",
+    "npm test --prefix app"
+   ],
+   "accept": "The cause is named and 3 later ci runs have test-newest green on tests/test_a11y_render.py.",
+   "zero_click": "Test-side only; CI reruns by itself.",
+   "size": "S",
+   "est_min": 40,
+   "deps": [],
+   "serial_group": "",
+   "agent": "general-purpose",
+   "isolation": "worktree",
+   "lane": "build",
+   "design_review": false,
+   "blocked": null,
+   "operator_act": "",
+   "notes": "Session 32 flake row (filed with the public flip, 2e801d3). Decision 0080: only the CI wait may widen (the 3x AL_CI scale or one bounded retry of the DevTools endpoint wait); no rerun plugin, no budget or cap widened, no server/ or web/ change. Name the cause in the commit message.",
+   "wave": 62,
+   "owner": "session"
+  },
+  {
+   "id": "TEST-PLAYFIT-LOAD-FLAKE",
+   "title": "Fix the play-fit harness under parallel suite load",
+   "goal": "Session 32: 2 of 3 gated whole suites were red in tests/test_play_fit.py only (state a2 at 1280x760 measured as 1920x950; state f 320x640 sr-only count 0 of 6; a budgets miss); all 29 pass alone and the next whole suite went green, with no web/ change in those runs. Find why the srcdoc iframe size is not applied under the parallel phase load and fix the cause.",
+   "units": [],
+   "files": [
+    "tests/test_play_fit.py",
+    "app/test/cdp/play_fit.mjs"
+   ],
+   "new_files": [],
+   "integrator_edits": [
+    {
+     "file": "ROADMAP.md",
+     "change": "Flip this package's row when it merges (its ROADMAP row already exists; PLAN W62 retagged it BLOCKED: session wave 62 (watch))."
+    }
+   ],
+   "tests": [
+    "tests/test_play_fit.py (through the suite gate: timing and load)"
+   ],
+   "accept": "The cause is named and 5 later gated whole suites are green on tests/test_play_fit.py.",
+   "zero_click": "Test-side only; the gated suites run by themselves.",
+   "size": "M",
+   "est_min": 60,
+   "deps": [],
+   "serial_group": "",
+   "agent": "general-purpose",
+   "isolation": "worktree",
+   "lane": "build",
+   "design_review": false,
+   "blocked": null,
+   "operator_act": "",
+   "notes": "Session 32 flake row (filed with the public flip, 2e801d3). Test-side only: tests/test_play_fit.py and its static-page harness app/test/cdp/play_fit.mjs; never widen a cap, a budget or a timeout, no rerun plugin (decision 0080), no web/ change. Name the cause in the commit message.",
+   "wave": 62,
    "owner": "session"
   }
  ],

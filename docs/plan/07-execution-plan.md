@@ -2469,6 +2469,30 @@ clicks carry no note.
 - RUN-VERDICTS-CLOSE [session, S 25m, review, P2] Record the three remaining in-game tries (search string, filter, merged filter). Files: docs/research/0025-search-box-and-filter-syntax.md, docs/research/0022-loot-filters.md. Deps: RUN-VERDICTS-CORE, RUN-VERDICTS-UI.
 - RUN-BUILDFILE-LIVE-CLOSE [session, S 20m, review, P1] Record the in-game result of an AshLight-made .build. Files: docs/research/0027-build-file-passive-ids.md. Deps: RUN-VERDICTS-CORE, RUN-VERDICTS-UI.
 
+### Wave 62: post-flip settings, tidy, Dependabot watch and two flake fixes
+
+With the repository public (GP-12, 2e801d3), GP-15 sets immutable releases
+and the tag ruleset, GP-16 tidies the public surface and AUTO-20 turns
+Dependabot alerts and pull requests into rows; TEST-A11Y-NEWEST-DEVTOOLS and
+TEST-PLAYFIT-LOAD-FLAKE fix the two flakes seen at the flip.
+
+- Session 18; width 4 worktree + 1 main-checkout, 0 loop rows released.
+- Hotspots: none.
+- Integrator: ROADMAP.md rows of all 5 packages.
+- Gate: per package: its named tests as a file-named run; main-checkout acts
+  one at a time in merge order; per merge batch of 4 on the integration
+  worktree: merge, then the integrator's edits for the batch as one commit,
+  then python ops/fleet_kit/fleet_suite_gate.py run --owner <id> -- python
+  tools/suite_run.py and npm test --prefix app, green, then main moves; then
+  python tools/plan_check.py check; the wave closes when every session row
+  is flipped and main is clean.
+
+- GP-15 [session, S 10m, review, P1] Release settings: immutable releases and the tag ruleset. Files: none (an act or a read-back). Deps: PUB-SETTINGS-FILES.
+- GP-16 [session, S 25m, build, P3] Public-surface tidy. Files: tests/test_loop_inbox_p164.py, .gitignore, tests/fixtures/inbox_p164/2026-10-31-2215-from-MAIN-ORDER-to-AL-public-view-w44-sweep-uiux-batched-ONE-ANSWER.md, moon_sync_inbox/.gitkeep, moon_sync_outbox/.gitkeep. Deps: none.
+- AUTO-20 [session, M 55m, build, P2] DEPBOT-WATCH: Dependabot alerts and pull requests become rows. Files: .github/workflows/watch-dependabot.yml, tools/watch_sources/dependabot.py, ops/loop/watch_rows/dependabot.json, tests/test_watch_dependabot.py. Deps: AUTO-19, LOOP-CI-ISSUES, GP-08, GP-14.
+- TEST-A11Y-NEWEST-DEVTOOLS [session, S 40m, build] Fix the missing DevTools endpoint of the a11y harness on ci test-newest. Files: app/test/cdp/a11y.mjs. Deps: none.
+- TEST-PLAYFIT-LOAD-FLAKE [session, M 60m, build] Fix the play-fit harness under parallel suite load. Files: tests/test_play_fit.py, app/test/cdp/play_fit.mjs. Deps: none.
+
 <!-- plan_check waves end -->
 
 ## Hotspot schedule

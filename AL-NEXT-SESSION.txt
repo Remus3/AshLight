@@ -1,6 +1,6 @@
 AL NEXT SESSION
 ---------------
-SESSION: 32   (FLEET item 13 counter; /done writes n+1)
+SESSION: 33   (FLEET item 13 counter; /done writes n+1)
 
 WAVE POINTER: wave 61 done (RUN-VERDICTS-CLOSE merged f7fa26a, RUN-BUILDFILE-LIVE-CLOSE merged b1ed431; four fix rows filed BLOCKED: operator act), next wave 62 (nothing dispatchable at sessions 29 and 30 /done: every open session row waits on an operator act, a gate or a watch)
 NOTE (session 32, operator order "public flip" 2026-11-27): ci fixed 307d5da (root causes in its message). Gate 12: ci 46079475413 attempts 1 and 2 green, identity guard 46079475566 green. Gate 6 amended (adjudicator): README may show docs/shots/* demo renders. Flipped PUBLIC; GP-13 settings read back; record docs/ops/public-flip-2026-11-27.md. Unblocked: GP-14, GP-15, GP-16 and rows BLOCKED on the flip. Filed TEST-A11Y-NEWEST-DEVTOOLS, TEST-PLAYFIT-LOAD-FLAKE.
