@@ -104,7 +104,13 @@ in design 0001.
   `Played <m:ss|h:mm:ss> and reached level <n>.` (no levels gained: `at
   level <n>`; no level known: `Played <t>.`), `Levels: <a> to <b>, at
   <x.x> an hour.` (pace from 10 minutes of play), `Maps: <n>.`,
-  `Deaths: <n>.`, `Price movers: <name> up|down <n>%, ...` (top 3 by
+  `Deaths: <n>.`, `Sales: <n>, about <amount> <currency>[, ...] and
+  <amount> <currency> (an estimate).` (UTIL-SALES-TALLY,
+  `server/al/text/events.py` `sales_line`, decision 0088: trades accepted
+  that closed a trade card, listed prices added up per currency, at most
+  4; some not added: `(an estimate; <n> not in the sum)`; none added:
+  `Sales: <n> (no listed prices to add up).` (one sale: `price`); no sale: no line),
+  `Price movers: <name> up|down <n>%, ...` (top 3 by
   size); then `Session ended at <HH:MM> after 20 minutes with no game
   activity.` / `... when the game closed.` (date added for an older
   card); not a live region (not urgent, never announced; reachable via

@@ -15,15 +15,30 @@ maps opened, deaths, and the biggest poe.ninja price movers the dashboard
 had at the end (from the cached overviews; no request). It is built from
 counters the state already keeps; the core saves the last MAX_SAVED cards
 under the runtime dir (ops/runtime, gitignored) and nowhere else.
+
+UTIL-SALES-TALLY (research 0064 G8, decision 0088): the stretch also counts
+its sales, a "Trade accepted." line that closed an open trade card (decision
+0019 pairing), and adds up the listed prices of those cards per currency.
+The tally lives in memory on the Tracker; the card keeps only the count,
+the per-currency sums and the unsummed count, never an item, a sender or
+whisper text, inside the existing MAX_SAVED bound.
 """
+
+import math
+import re
 
 from . import jsonfile, paths
 from .runs import clock_text
+from .text.events import sales_line
 
 IDLE_S = 1200.0  # 20 minutes with no game activity ends the stretch
 MAX_SAVED = 20
 MOVERS_SHOWN = 3
 MIN_PACE_S = 600.0  # the hourly pace needs 10 minutes of play
+SALE_CURRENCIES = 4  # currencies summed per stretch; more go unsummed
+# A currency word as the whisper template gives it ("exalted", "Divine
+# Orb"): letters, digits, spaces, ' and -, at most 32 characters.
+CURRENCY_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9' -]{0,31}$")
 
 REASON_TEXT = {"idle": f"after {int(IDLE_S // 60)} minutes with no game activity",
                "game_closed": "when the game closed"}
@@ -67,9 +82,43 @@ def mover_parts(movers, n=MOVERS_SHOWN):
     return [f"{name} {'up' if ch > 0 else 'down'} {_pct(ch)}%" for name, ch in rows[:n]]
 
 
-def build(start, end, played_s, ended_at, reason, movers=None):
+def _currency(text):
+    if not isinstance(text, str):
+        return None
+    word = " ".join(text.split())
+    return word if CURRENCY_RE.match(word) else None
+
+
+class Sales:
+    """UTIL-SALES-TALLY: one stretch's sales, in memory. Keeps counts and
+    per-currency sums only."""
+
+    def __init__(self):
+        self.count = 0
+        self.unsummed = 0
+        self.sums = {}  # currency -> amount, first-seen order
+
+    def add(self, amount, currency):
+        """One sale at the closed card's listed price (None when the card
+        had none)."""
+        self.count += 1
+        cur = _currency(currency)
+        ok = (isinstance(amount, (int, float)) and not isinstance(amount, bool)
+              and math.isfinite(amount) and amount > 0 and cur is not None)
+        if ok and (cur in self.sums or len(self.sums) < SALE_CURRENCIES):
+            self.sums[cur] = self.sums.get(cur, 0) + amount
+        else:
+            self.unsummed += 1
+
+    def view(self):
+        return {"count": self.count, "unsummed": self.unsummed,
+                "sums": [[c, a] for c, a in self.sums.items()]}
+
+
+def build(start, end, played_s, ended_at, reason, movers=None, sales=None):
     """The card for one stretch. start / end: counters {level, level_ups,
-    deaths, maps} at its first and last activity."""
+    deaths, maps} at its first and last activity; sales: Sales.view() or
+    None."""
     lv_from = start.get("level") if isinstance(start.get("level"), int) else None
     lv_to = end.get("level") if isinstance(end.get("level"), int) else None
     levels = (lv_to - lv_from) if lv_from is not None and lv_to is not None else 0
@@ -93,13 +142,22 @@ def build(start, end, played_s, ended_at, reason, movers=None):
         lines.append(text + ".")
     lines.append(f"Maps: {maps}.")
     lines.append(f"Deaths: {deaths}.")
+    sales = sales if isinstance(sales, dict) else {}
+    n_sales = sales.get("count") if isinstance(sales.get("count"), int) else 0
+    sums = [(c, a) for c, a in sales.get("sums") or ()]
+    unsummed = sales.get("unsummed") if isinstance(sales.get("unsummed"), int) else 0
+    line = sales_line(n_sales, sums, unsummed)
+    if line:
+        lines.append(line)
     parts = mover_parts(movers)
     if parts:
         lines.append("Price movers: " + ", ".join(parts) + ".")
     return {"reason": reason, "reason_text": REASON_TEXT.get(reason, ""),
             "ended_at": float(ended_at), "played_s": played_s,
             "level_from": lv_from, "level_to": lv_to, "levels": levels,
-            "per_hour": per_hour, "maps": maps, "deaths": deaths, "lines": lines}
+            "per_hour": per_hour, "maps": maps, "deaths": deaths,
+            "sales": n_sales, "sales_unsummed": unsummed,
+            "sales_sums": [[c, a] for c, a in sums], "lines": lines}
 
 
 class Tracker:
@@ -112,6 +170,7 @@ class Tracker:
         self.last = None
         self.last_at = None
         self.played_s = 0.0
+        self.sales = Sales()
 
     def begin(self, counters):
         """Before an activity event changes the counters: open a stretch
@@ -120,6 +179,13 @@ class Tracker:
             self.start = dict(counters)
             self.last_at = None
             self.played_s = 0.0
+            self.sales = Sales()
+
+    def sale(self, amount, currency):
+        """UTIL-SALES-TALLY: a trade accepted that closed a card with this
+        listed price, inside the open stretch (begin runs first)."""
+        if self.start is not None:
+            self.sales.add(amount, currency)
 
     def touch(self, at, counters):
         """After an activity event: count the time since the last one
@@ -146,11 +212,12 @@ class Tracker:
             self.start = None
             return None
         card = build(self.start, self.last, self.played_s, self.last_at,
-                     reason, movers)
+                     reason, movers, self.sales.view())
         self.start = None
         self.last = None
         self.last_at = None
         self.played_s = 0.0
+        self.sales = Sales()
         return card
 
 
