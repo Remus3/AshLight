@@ -25,6 +25,79 @@ from loop_roadmap import (
 )
 
 
+# ---------------------------------------------------------------- offline dive skip
+
+# LOOP-DIVE-OFFLINE-SKIP: the folder where the operator drops pasted text for
+# a dive (decision 0050 source 1). Any file under it counts, tracked or not.
+PASTED_REL = Path("docs") / "research" / "pasted"
+DIVE_OFFLINE_REASON = "web data off, no pasted text since last dive"
+_DIVE_FILE_RX = re.compile(r"^\d{4}-deep-dive-(\d{8})\.md$")
+
+
+def _web_data_on(root):
+    """The dev host's web_data opt-in, strictly True in <root>/config/local.json
+    (the rule of watch_gate.web_data_on and Core.web_data_enabled); a missing,
+    unreadable or non-dict file is off."""
+    import json
+    try:
+        doc = json.loads((Path(root) / "config" / "local.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    return isinstance(doc, dict) and doc.get("web_data") is True
+
+
+def _last_dive_date(root, history):
+    """The newest dive date (YYYYMMDD) from the git history or the research
+    folder's NNNN-deep-dive-<date>.md names; None when there was none."""
+    dates = [str(d) for d, _n in history or () if re.fullmatch(r"\d{8}", str(d))]
+    try:
+        for p in (Path(root) / "docs" / "research").iterdir():
+            m = _DIVE_FILE_RX.match(p.name)
+            if m:
+                dates.append(m.group(1))
+    except OSError:
+        pass
+    return max(dates) if dates else None
+
+
+def pasted_newer(root, last_date):
+    """True when a file under docs/research/pasted/ was modified on or after
+    the start (local midnight) of the last dive's day, or when there was no
+    dive and any pasted file exists. A same-day paste counts: one extra dive
+    is cheaper than missing operator text."""
+    folder = Path(root) / PASTED_REL
+    try:
+        files = [p for p in folder.rglob("*") if p.is_file()]
+    except OSError:
+        return False
+    if not files:
+        return False
+    if last_date is None:
+        return True
+    try:
+        since = _dt.datetime.strptime(last_date, "%Y%m%d").timestamp()
+    except ValueError:
+        return True
+    for p in files:
+        try:
+            if p.stat().st_mtime >= since:
+                return True
+        except OSError:
+            continue
+    return False
+
+
+def dive_offline_reason(root, history):
+    """None when the idle dive has something to read (web data on, or pasted
+    text newer than the last dive), else the one-line skip reason. Four
+    offline dives (DD-20261124..27) were null results."""
+    if _web_data_on(root):
+        return None
+    if pasted_newer(root, _last_dive_date(root, history)):
+        return None
+    return DIVE_OFFLINE_REASON
+
+
 # ---------------------------------------------------------------- BLOCKED reasons
 
 BLOCKED_REASON_RX = re.compile(r"\bBLOCKED\b:?([^.]*)")
@@ -375,6 +448,22 @@ class WorkMixin:
             self.step(f"{item['id']}: dispatched to lane {lane}")
 
     # -- e. idle mode
+    def dive_idle_note(self):
+        """The tick log line when an idle tick dispatched no dive."""
+        if getattr(self, "dive_backed_off", False):
+            return "idle: deep-dive backed off to weekly (3 dives, 0 plans)"
+        if getattr(self, "dive_skipped", None):
+            return f"idle: deep-dive skipped: {self.dive_skipped[1]}"
+        return "idle: deep-dive already done today"
+
+    def dive_skip_rows(self, listed):
+        """LOOP-DIVE-OFFLINE-SKIP: the one checklist row (id, title, state,
+        eta) naming why the idle dive was skipped; [] when it was not."""
+        dive = getattr(self, "dive_skipped", None)
+        if not dive or dive[0] in listed:
+            return []
+        return [(dive[0], f"idle deep-dive: {dive[1]}", "skipped", None)]
+
     def deep_dive_item(self):
         date = _dt.datetime.fromtimestamp(self.d.clock()).strftime("%Y%m%d")
         iid = f"DD-{date}"
@@ -384,8 +473,14 @@ class WorkMixin:
             return None
         # W44: weekly after 3 dives in a row proposed 0 plans; any plan resets
         today = _dt.datetime.fromtimestamp(self.d.clock()).date()
-        if dive_backoff(dive_history(self.d.main_tree, self.d.git), today):
+        history = dive_history(self.d.main_tree, self.d.git)
+        if dive_backoff(history, today):
             self.dive_backed_off = True
+            return None
+        # LOOP-DIVE-OFFLINE-SKIP: nothing to read offline means a null result
+        why = dive_offline_reason(self.d.main_tree, history)
+        if why:
+            self.dive_skipped = (iid, why)
             return None
         prompt = deep_dive_prompt(self.d.main_tree, date, self.cfg["max_new_plans_per_day"],
                                   plan_titles(self.d.main_tree))

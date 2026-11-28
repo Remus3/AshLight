@@ -37,7 +37,7 @@ def test_idle_dive_runs_at_most_once_in_7_days(tmp_path):
     next one does."""
     rm = ROADMAP.replace("- [ ] ", "- [x] ")
     root = make_root(tmp_path, roadmap=rm, handoff="",
-                     local={"loop": {"max_new_plans_per_day": 1}})
+                     local={"loop": {"max_new_plans_per_day": 1}, "web_data": True})
     now = {"t": T0}
     history = []  # dive dates the fake git log reports, oldest first
 
@@ -72,6 +72,99 @@ def test_idle_dive_runs_at_most_once_in_7_days(tmp_path):
     now["t"] = T0 + 7 * DAY_S
     al_loop.tick(deps=d, no_push=True)
     assert d.seen["launch"][1:] == [f"DD-{_day(T0 + 7 * DAY_S)}"]
+
+
+def _dive_git(history):
+    """A fake git runner whose log lists the given dive dates (oldest first)."""
+    def git(args, cwd, input=None, lock=None):
+        import subprocess
+        if args and args[0] == "log" and "docs/research/" in args:
+            out = "".join(f"@\ndocs/research/{i + 1:04d}-deep-dive-{d}.md\n"
+                          for i, d in enumerate(reversed(history)))
+            return subprocess.CompletedProcess(["git", *args], 0, out, "")
+        if args and args[0] == "config":
+            return subprocess.CompletedProcess(["git", *args], 1, "", "")
+        return subprocess.CompletedProcess(["git", *args], 128, "", "not a repo")
+    return git
+
+
+def _offline_root(tmp_path, web_data):
+    rm = ROADMAP.replace("- [ ] ", "- [x] ")
+    local = {"loop": {"max_new_plans_per_day": 1}}
+    if web_data is not None:
+        local["web_data"] = web_data
+    return make_root(tmp_path, roadmap=rm, handoff="", local=local)
+
+
+def _paste(root, mtime):
+    import os
+    p = root / "docs" / "research" / "pasted" / "client-lines.txt"
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text("pasted text\n", newline="\n")
+    os.utime(p, (mtime, mtime))
+    return p
+
+
+def test_offline_dive_with_no_newer_paste_dispatches_nothing(tmp_path):
+    """LOOP-DIVE-OFFLINE-SKIP: web_data off (absent or False) and no pasted
+    file newer than the last dive: no dive is dispatched, and the checklist
+    names the reason on one line."""
+    last = T0 - 8 * DAY_S  # past the weekly backoff
+    for n, web in enumerate((None, False)):
+        root = _offline_root(tmp_path / f"r{n}", web)
+        _paste(root, last - DAY_S)  # older than the last dive
+        d = deps(root, clock=lambda: T0, git=_dive_git([_day(last)]))
+        doc = al_loop.tick(deps=d, no_push=True)
+        assert d.seen["launch"] == []
+        assert al_loop.Items(root).get(f"DD-{_day(T0)}") is None
+        lines = [str(x) for x in doc["checklist"]]
+        hits = [x for x in lines if "deep-dive" in x]
+        assert len(hits) == 1, lines
+        assert "web data off" in hits[0] and "pasted" in hits[0] and "skipped" in hits[0]
+        assert any("deep-dive skipped: web data off" in s for s in doc["log"])
+
+
+def test_offline_dive_with_no_paste_and_no_history_dispatches_nothing(tmp_path):
+    root = _offline_root(tmp_path, False)
+    d = deps(root, clock=lambda: T0, git=_dive_git([]))
+    al_loop.tick(deps=d, no_push=True)
+    assert d.seen["launch"] == []
+
+
+def test_newer_paste_or_web_data_on_still_dispatches(tmp_path):
+    """A pasted file newer than the last dive, or web_data on, dispatches the
+    idle dive as before."""
+    last = T0 - 8 * DAY_S
+    root = _offline_root(tmp_path / "paste", False)
+    _paste(root, last + DAY_S)
+    d = deps(root, clock=lambda: T0, git=_dive_git([_day(last)]))
+    al_loop.tick(deps=d, no_push=True)
+    assert d.seen["launch"] == [f"DD-{_day(T0)}"]
+
+    root = _offline_root(tmp_path / "first", False)  # no dive yet, a paste exists
+    _paste(root, last)
+    d = deps(root, clock=lambda: T0, git=_dive_git([]))
+    al_loop.tick(deps=d, no_push=True)
+    assert d.seen["launch"] == [f"DD-{_day(T0)}"]
+
+    root = _offline_root(tmp_path / "web", True)
+    d = deps(root, clock=lambda: T0, git=_dive_git([_day(last)]))
+    doc = al_loop.tick(deps=d, no_push=True)
+    assert d.seen["launch"] == [f"DD-{_day(T0)}"]
+    assert not any("skipped" in str(x) and "deep-dive" in str(x) for x in doc["checklist"])
+
+
+def test_dive_offline_reason_reads_research_names(tmp_path):
+    """The last dive date also comes from the research folder's
+    NNNN-deep-dive-<date>.md names when git has no history."""
+    import loop_work
+    root = _offline_root(tmp_path, False)
+    (root / "docs" / "research" / "0062-deep-dive-20261121.md").write_text("x\n")
+    import datetime as dt
+    _paste(root, dt.datetime(2026, 11, 20, 12).timestamp())
+    assert loop_work.dive_offline_reason(root, []) == loop_work.DIVE_OFFLINE_REASON
+    _paste(root, dt.datetime(2026, 11, 21, 9).timestamp())  # same day as the dive
+    assert loop_work.dive_offline_reason(root, []) is None
 
 
 def test_dive_backoff_is_weekly_whatever_was_proposed():
