@@ -562,7 +562,7 @@ function openClient() {
     const electron = require("electron");
     client = require("./client/window.js").createClient({
       electron: electron, http: http, repo: REPO, port: port, readToken: verifiedToken,
-      runtimeDir: path.dirname(TOKEN_FILE), log: log, devTools: DEV_TOOLS,
+      runtimeDir: path.dirname(TOKEN_FILE), log: log, devTools: DEV_TOOLS, copyKind: HOME.mode,
       toggleOverlay: toggle, overlayVisible: () => (gate ? gate.userWants() : userOn),
       restartOverlay: restartOverlay, overlayBounds: ctx.overlayBounds,
       onWindow: (w, s) => runParts("clientWindow", w, s)
