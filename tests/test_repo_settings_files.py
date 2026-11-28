@@ -116,6 +116,24 @@ def test_security_settings_enabled():
     sa = _load("security.json")["security_and_analysis"]
     assert sa["secret_scanning"]["status"] == "enabled"
     assert sa["secret_scanning_push_protection"]["status"] == "enabled"
+    # Decision 0087: non-provider patterns and validity checks stay off.
+    assert sa["secret_scanning_non_provider_patterns"]["status"] == "disabled"
+    assert sa["secret_scanning_validity_checks"]["status"] == "disabled"
+
+
+def test_code_scanning_default_setup():
+    """Decision 0087: GitHub-managed CodeQL default setup, no workflow."""
+    cs = _load("security.json")["code_scanning_default_setup"]
+    assert cs["state"] == "configured"
+    assert cs["query_suite"] == "default"
+    assert sorted(cs["languages"]) == [
+        "actions", "javascript-typescript", "python"]
+    assert cs["required_check"] is False
+    assert cs["workflow_file"] is False
+    wf = ROOT / ".github" / "workflows"
+    assert not any("codeql" in p.name.lower() for p in wf.iterdir())
+    checks = json.dumps(_load("ruleset-main-checks.json")).lower()
+    assert "codeql" not in checks
 
 
 def test_files_name_no_owner_or_repository():

@@ -3,11 +3,13 @@
 One file per decision: `NNNN-<topic>.md` (decision, alternatives, why,
 reverses if). Numbers 0047 to 0076 are reserved for the packages of
 docs/plan/packages.json (docs/plan/07, Reserved decision numbers); a
-package uses the number in its new_files entry. 0077 to 0086
+package uses the number in its new_files entry. 0077 to 0087
 are taken. Numbers are reserved in the plan before a wave starts.
 Numbers are reserved per package in docs/plan/packages.json before a
 wave starts; the wave integrator adds the index line. 0035 stays unused.
 
+- 0087: CodeQL default setup on for python, javascript-typescript and
+  actions; GitHub-managed, no workflow, not a required check.
 - 0086: RUN-DATAAGE-SHARED-PARSE: the data age watch shares the zone
   table's parse; its refute-round timing gate failures stand as load.
 - 0085: PLAY-TD-21C-HISTORY-MOVE: its budget gate failures are load

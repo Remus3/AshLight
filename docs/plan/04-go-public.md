@@ -995,9 +995,10 @@ gh release list --repo "$R"                                               # empt
    `python ops/fleet_kit/fleet_gitlock.py run --owner <ID> -- git push
    origin v<version>`.
 
-Not in this plan: CodeQL default setup (5 of 7 public peers run it, but
-no adopted finding asks for it). A later finding may add it; nothing
-here depends on it.
+CodeQL default setup is on since 2026-11-27 (decision 0087): GitHub-
+managed for python, javascript-typescript and actions, no tracked
+workflow, no new token scope, not a required check; recorded in
+ops/github/security.json. No gate here depends on it.
 
 ## pre-push hook
 
@@ -1525,7 +1526,8 @@ Corrected (17):
     confirmed after applying, not before.
 15. GP-12 gate 1 listed F-006 among the P0s it gates; F-006 is the gate.
     GP-12 now also depends on GP-06 and GP-07 (its gate 4).
-16. CodeQL was an option outside any adopted finding; now out of scope.
+16. CodeQL was an option outside any adopted finding; default setup is
+    on since 2026-11-27 (decision 0087), outside the gates.
 17. Stale numbers and paths: decision counts (416 / 430), README
     quick-start lines (60-114), al_loop docstring lines (1284-1285),
     docs/plan/09 named as `09-operator-acts.md`, hook test case 4 adds
