@@ -17,7 +17,7 @@
     "verified": "2026-11-17"
   },
   "pob2_files": {
-    "_doc": "Decision 0037 amendment (MATH-TRADESTAT-POB) and decision 0083 point 3 (ITEM-INFO-POB-TEXT). sha256 of single files inside the pinned pob2 checkout that AshLight reads as data (never runs): TradeSiteStats.lua for trade stat ids, WorldAreas.lua and every src/Data/Uniques/<slot>.lua holding a Source line for the item info popover's where-found rows (server/al/theorycraft/pobtext.py), and Gems.lua for Kindler's per-variant skill ids (KINDLER-GEM-VARIANT, pobtext.load_gem_variants). Outside the setup pin digest. Re-read and update with every pob2 pin move (tools/tc_drift.py re-hashes each entry); tests/test_tc_pob_drift_guard.py fails on a mismatch and when a Uniques slot file with a Source line has no entry.",
+    "_doc": "Decision 0037 amendment (MATH-TRADESTAT-POB) and decision 0083 point 3 (ITEM-INFO-POB-TEXT). sha256 of single files inside the pinned pob2 checkout that AshLight reads as data (never runs): TradeSiteStats.lua for trade stat ids, WorldAreas.lua and every src/Data/Uniques/<slot>.lua holding a Source line for the item info popover's where-found rows (server/al/theorycraft/pobtext.py), and Gems.lua for Kindler's per-variant skill ids (KINDLER-GEM-VARIANT, pobtext.load_gem_variants), and ModRunes.lua for augment effects, values and slot rules (decision 0091, DATA-AUGMENT-POB-TEXT, pobtext.load_augments). Outside the setup pin digest. Re-read and update with every pob2 pin move (tools/tc_drift.py re-hashes each entry); tests/test_tc_pob_drift_guard.py fails on a mismatch and when a Uniques slot file with a Source line has no entry.",
     "src/Data/TradeSiteStats.lua": {
       "sha256": "00f5f45376a726ac93e5c129933c681a63e9fcaa368db17c4c15cb0cbc8cac53",
       "size": 1139860,
@@ -31,6 +31,11 @@
     "src/Data/Gems.lua": {
       "sha256": "1ccea00a77c66dded39ee6c5d477d705c0e2602348d752982d075ac56136ffe1",
       "size": 513395,
+      "commit": "7d6f530cbdab20389ff8bc6ba97a37ac27f74e41"
+    },
+    "src/Data/ModRunes.lua": {
+      "sha256": "85d5f1d2d9e559fc62b79f46c8f9e7e0bfad4f666914dd2919570e558a6fb387",
+      "size": 188915,
       "commit": "7d6f530cbdab20389ff8bc6ba97a37ac27f74e41"
     },
     "src/Data/Uniques/amulet.lua": {

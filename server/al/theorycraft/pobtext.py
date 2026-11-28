@@ -28,6 +28,21 @@ into the sidecar Cache (the optional calc component, decision 0018):
   the template's weapon class picks (theorycraft.archetypes.skill_id). It is
   read by load_gem_variants / GemVariants only; pinned_files() leaves it out.
 
+- src/Data/ModRunes.lua (DATA-AUGMENT-POB-TEXT, decision 0091, for augment
+  effect, value and slot lookup, not the popover): one top-level
+  `\t["<augment name>"] = {` block per rune, soul core, idol or other
+  augment, holding one `\t\t["<slot key>"] = {` block per slot key with
+  its `type`, stat line strings, `statOrder`, `tradeHashes`,
+  `isSocketBound` and `rank` lines. A slot block with any other line or a
+  missing field is left out, and an augment left with no slot, or named
+  twice, is left out: nothing is guessed. Capped at AUGMENTS_MAX_BYTES.
+  The tradeHashes numbers are used only as the rune.stat_<n> trade ids of
+  decision 0037; no price, no trade2 call (decision 0017). Read by
+  load_augments / Augments only; pinned_files() leaves it out. repoe-fork
+  wins any conflict (a caller takes names, classes and trade ids from the
+  repoe-fork snapshots first and uses these rows only where they agree or
+  repoe-fork is silent).
+
 Conditions (decision 0083 point 3): a file is read only when it has a
 config/tc_pins.json "pob2_files" entry, the checkout marker names the
 pinned archive sha256 and the file's sha256 equals its entry; a file
@@ -72,6 +87,26 @@ _GEM_OPEN = re.compile(r'^\t\["[^"\\]+"\]\s*=\s*\{\s*$')
 _GEM_CLOSE = re.compile(r"^\t\}\s*,?\s*$")
 _GEM_FIELD = re.compile(r'^\t\t(name|grantedEffectId|weaponRequirements)\s*=\s*"([^"\\]*)",\s*$')
 _SKILL_ID = re.compile(r"^[A-Za-z0-9_]{1,80}$")
+AUGMENTS = "src/Data/ModRunes.lua"
+AUGMENTS_MAX_BYTES = 1024 * 1024    # decision 0091: a 1 MB cap
+LINE_MAX = 300                      # one stat line, printable ASCII
+_STR = r'"([^"\\]*)"'
+_AUG_OPEN = re.compile(r"^\t\[" + _STR + r"\]\s*=\s*\{\s*$")
+_AUG_CLOSE = re.compile(r"^\t\}\s*,?\s*$")
+_SLOT_OPEN = re.compile(r"^\t\t\[" + _STR + r"\]\s*=\s*\{\s*$")
+_SLOT_CLOSE = re.compile(r"^\t\t\}\s*,?\s*$")
+_SLOT_KEY = re.compile(r"^[a-z][a-z ]{0,39}$")
+_AUG_TYPE = re.compile(r'^\t{3,}type\s*=\s*"([A-Za-z]{1,40})",\s*$')
+_AUG_LINE = re.compile(r"^\t{3,}" + _STR + r",\s*$")
+# statOrder numbers may carry a line part (6448.1: the second line of stat 6448)
+_NUM = r"\d{1,9}(?:\.\d{1,3})?"
+_AUG_INTS = re.compile(r"^\t{3,}(statOrder|rank)\s*=\s*\{\s*"
+                       r"(" + _NUM + r"(?:\s*,\s*" + _NUM + r")*)\s*,?\s*\},\s*$")
+_AUG_BOUND = re.compile(r"^\t{3,}isSocketBound\s*=\s*(true|false),\s*$")
+_AUG_HASHES = re.compile(r"^\t{3,}tradeHashes\s*=\s*\{(.*)\},\s*$")
+_HASH_ITEM = re.compile(r'\s*\[(\d{1,12})\]\s*=\s*\{\s*'
+                        r'("[^"\\]*"(?:\s*,\s*"[^"\\]*")*)\s*,?\s*\}\s*,')
+_HASH_STR = re.compile(r'"([^"\\]*)"')
 
 
 def key(value):
@@ -205,6 +240,143 @@ def parse_gem_variants(text):
     return out
 
 
+def _stat_line(value):
+    """A one-line stat text of at most LINE_MAX printable ASCII characters,
+    kept as written; None otherwise."""
+    if not isinstance(value, str) or not value or len(value) > LINE_MAX:
+        return None
+    return value if all(" " <= c <= "~" for c in value) else None
+
+
+def _trade_hashes(body):
+    """[{"hash": n, "lines": [text]}] from the inside of one tradeHashes
+    table, or None when any part of it is not that shape. PoB writes "" for
+    a hash it has no text for; that row keeps its hash with no line."""
+    out, pos, body = [], 0, body.rstrip()
+    while pos < len(body):
+        m = _HASH_ITEM.match(body, pos)
+        if not m:
+            return None
+        lines = [_stat_line(s) for s in _HASH_STR.findall(m.group(2)) if s != ""]
+        if None in lines:
+            return None
+        out.append({"hash": int(m.group(1)), "lines": lines})
+        pos = m.end()
+    return out
+
+
+def _number(text):
+    """An int for a whole number, a float for one with a line part."""
+    text = text.strip()
+    return float(text) if "." in text else int(text)
+
+
+_SLOT_FIELDS = ("type", "statOrder", "tradeHashes", "isSocketBound", "rank")
+
+
+def _slot_line(cur, line):
+    """Fold one line into the open slot block; any other shape, a bad
+    value, or a field given twice marks the block bad."""
+    value = None
+    m = _AUG_TYPE.match(line)
+    if m:
+        name, value = "type", m.group(1)
+    elif _AUG_INTS.match(line):
+        m = _AUG_INTS.match(line)
+        name, value = m.group(1), [_number(x) for x in m.group(2).split(",")]
+    elif _AUG_BOUND.match(line):
+        name, value = "isSocketBound", _AUG_BOUND.match(line).group(1) == "true"
+    elif _AUG_HASHES.match(line):
+        name, value = "tradeHashes", _trade_hashes(_AUG_HASHES.match(line).group(1))
+    elif _AUG_LINE.match(line):
+        text = _stat_line(_AUG_LINE.match(line).group(1))
+        if text is None:
+            cur["bad"] = True
+        else:
+            cur["lines"].append(text)
+        return
+    else:
+        cur["bad"] = True
+        return
+    if value is None or name in cur:
+        cur["bad"] = True
+        return
+    cur[name] = value
+
+
+def _slot_row(cur):
+    """The finished slot dict of a slot block, or None when it is bad, has
+    no stat line or misses a field."""
+    if cur.get("bad") or not cur["lines"] or any(k not in cur for k in _SLOT_FIELDS):
+        return None
+    row = {"type": cur["type"], "lines": cur["lines"]}
+    row.update((k, cur[k]) for k in _SLOT_FIELDS[1:])
+    return row
+
+
+def parse_augments(text):
+    """{name key: {"name", "slots": {slot key: {"type", "lines",
+    "statOrder", "tradeHashes": [{"hash", "lines"}], "isSocketBound",
+    "rank"}}}} from the text of PoB's ModRunes.lua, slots in file order.
+    "lines" are the slot's stat line strings as PoB writes them. A slot
+    block that is not exactly the known shape is dropped; an augment with a
+    stray line, a block that never closed, no slot left, or a name given
+    twice is dropped (a slot key given twice drops that slot). Over
+    MAX_LINES lines, or not a string, gives {}. A line scanner: nothing is
+    run."""
+    out = {}
+    if not isinstance(text, str):
+        return out
+    lines = text.replace("\r\n", "\n").split("\n")
+    if len(lines) > MAX_LINES:
+        return {}
+    twice = set()
+    aug = slot = None
+    for line in lines:
+        if slot is not None:
+            if _SLOT_CLOSE.match(line):
+                row = _slot_row(slot)
+                if row is None or slot["key"] in aug["slots"] or slot["key"] in aug["drop"]:
+                    aug["drop"].add(slot["key"])
+                else:
+                    aug["slots"][slot["key"]] = row
+                slot = None
+                continue
+            if not (_AUG_CLOSE.match(line) or _AUG_OPEN.match(line)
+                    or _SLOT_OPEN.match(line)):
+                _slot_line(slot, line)
+                continue
+            aug["bad"], slot = True, None   # the slot block never closed
+        if aug is not None and _AUG_OPEN.match(line):
+            aug = None                      # the augment block never closed
+        if aug is not None:
+            m = _SLOT_OPEN.match(line)
+            if m:
+                slot = {"key": m.group(1), "lines": []}
+                if not _SLOT_KEY.match(slot["key"]):
+                    slot["bad"] = True
+                continue
+            if _AUG_CLOSE.match(line):
+                for k in aug["drop"]:
+                    aug["slots"].pop(k, None)
+                name = aug["name"]
+                if not aug.get("bad") and name is not None and aug["slots"]:
+                    nk = key(name)
+                    if nk in out or nk in twice:
+                        out.pop(nk, None)
+                        twice.add(nk)
+                    else:
+                        out[nk] = {"name": name, "slots": aug["slots"]}
+                aug = None
+            elif line.strip():
+                aug["bad"] = True
+            continue
+        m = _AUG_OPEN.match(line)
+        if m:
+            aug = {"name": _name(m.group(1)), "slots": {}, "drop": set()}
+    return out
+
+
 def pinned_files(pins):
     """[(rel, sha256)] of the pob2_files entries this module reads (the
     Uniques slot files and WorldAreas.lua), sorted; bad entries skipped."""
@@ -233,14 +405,14 @@ def checkout_root(pins, environ=None):
     return paths.all_runtime_paths(environ)["pob2_cache"] / top
 
 
-def _read_pinned(root, rel, want):
-    """The file's text when its size and sha256 hold, else None."""
+def _read_pinned(root, rel, want, cap=MAX_BYTES):
+    """The file's text when its size (at most cap) and sha256 hold, else None."""
     try:
         p = Path(root, *rel.split("/"))
-        if p.stat().st_size > MAX_BYTES:
+        if p.stat().st_size > cap:
             return None
         raw = p.read_bytes()
-        if len(raw) > MAX_BYTES or hashlib.sha256(raw).hexdigest() != want:
+        if len(raw) > cap or hashlib.sha256(raw).hexdigest() != want:
             return None
         return raw.decode("utf-8")
     except (OSError, ValueError, UnicodeDecodeError):
@@ -270,6 +442,20 @@ def load_gem_variants(root, pins):
         return {}
     text = _read_pinned(root, GEMS, want)
     return parse_gem_variants(text) if text is not None else {}
+
+
+def load_augments(root, pins):
+    """parse_augments of the pinned checkout's ModRunes.lua (decision 0091);
+    {} unless the marker names the pinned archive and the file, at most
+    AUGMENTS_MAX_BYTES, matches its pob2_files sha256. Never raises."""
+    try:
+        want = pins["pob2_files"][AUGMENTS]["sha256"]
+    except (KeyError, TypeError):
+        return {}
+    if not (isinstance(want, str) and _HEX64.match(want)) or not _marker_ok(root, pins):
+        return {}
+    text = _read_pinned(root, AUGMENTS, want, AUGMENTS_MAX_BYTES)
+    return parse_augments(text) if text is not None else {}
 
 
 def load(root, pins):
@@ -365,7 +551,11 @@ class WhereFound:
 class GemVariants:
     """KINDLER-GEM-VARIANT: load_gem_variants of the pinned checkout, read
     once per pin (the pins file re-read only when its mtime changes), {}
-    while it cannot be read. Same arguments as WhereFound."""
+    while it cannot be read. Same arguments as WhereFound. REL is the
+    pob2_files entry whose pin keys the cache, LOAD its loader."""
+
+    REL = GEMS
+    LOAD = staticmethod(load_gem_variants)
 
     def __init__(self, pins_path=None, root=None, environ=None):
         self.pins_path = Path(pins_path) if pins_path else paths.tc_pins_file(environ)
@@ -394,10 +584,18 @@ class GemVariants:
                 return self._index
             files = pins.get("pob2_files")
             pin_key = (json.dumps(pins.get("pob2"), sort_keys=True),
-                       json.dumps(files.get(GEMS) if isinstance(files, dict) else None,
+                       json.dumps(files.get(self.REL) if isinstance(files, dict) else None,
                                   sort_keys=True))
             if pin_key != self._pin_key:
                 root = self.root or checkout_root(pins, self.environ)
-                self._index = load_gem_variants(root, pins) if root else {}
+                self._index = self.LOAD(root, pins) if root else {}
                 self._pin_key = pin_key
             return self._index
+
+
+class Augments(GemVariants):
+    """DATA-AUGMENT-POB-TEXT (decision 0091): load_augments of the pinned
+    checkout, read once per pin the same way, {} while it cannot be read."""
+
+    REL = AUGMENTS
+    LOAD = staticmethod(load_augments)
