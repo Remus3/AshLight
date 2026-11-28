@@ -104,6 +104,9 @@ def _sweep(st, tmp_path, node, browser):
                        capture_output=True, text=True, timeout=ci_scale(90))
     assert r.returncode == 0, (r.returncode, r.stdout[-2000:], r.stderr[-2000:])
     out = json.loads(r.stdout.strip().splitlines()[-1])
+    # TEST-DASHCONSOLE-NOBUFFER-CI: views re-run once on ERR_NO_BUFFER_SPACE
+    if out.get("retried"):
+        print("dash_console retried on ERR_NO_BUFFER_SPACE:", out["retried"])
     assert out["issues"] == [], out["issues"]
     for tag, v in out["views"].items():
         assert v["live"], (tag, v)  # the feed came up, so the cards painted

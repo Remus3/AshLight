@@ -5,7 +5,8 @@
 //
 //   node dash_console.mjs <chrome.exe> <profile dir> <dashboard url>
 //
-// Prints one JSON line {"issues": [[tag, kind, text], ...], "views": {...}}.
+// Prints one JSON line {"issues": [[tag, kind, text], ...], "views": {...},
+// "retried": [tag, ...]}.
 // Node's global WebSocket (Node 22+) is the only client; no npm package.
 import { spawn } from "node:child_process";
 
@@ -82,7 +83,15 @@ const PROBE = `(function () {
   }, 400); });
 })()`;
 const views = {};
-for (const v of VIEWS) {
+// TEST-DASHCONSOLE-NOBUFFER-CI: Windows answers a loopback connect() with
+// WSAENOBUFS (Chrome: net::ERR_NO_BUFFER_SPACE) when the runner's socket
+// table runs short late in the serial CI suite; each view opens about 57
+// one-request HTTP/1.0 connections at once. A view whose only issues are
+// that error is run once more after a short pause; anything else, or the
+// same error again, is reported. No wait is widened.
+const NOBUF = "net::ERR_NO_BUFFER_SPACE";
+const retried = [];
+async function runView(v) {
   tag = v.tag;
   await send("Emulation.setDeviceMetricsOverride", { width: v.w, height: 900, deviceScaleFactor: 1, mobile: false });
   await send("Emulation.setEmulatedMedia", { features: [
@@ -104,9 +113,20 @@ for (const v of VIEWS) {
   const r = await send("Runtime.evaluate", { expression: PROBE, returnByValue: true, awaitPromise: true });
   views[v.tag] = Object.assign({ live }, (r.result && r.result.result && r.result.result.value) || {});
 }
+for (const v of VIEWS) {
+  const mark = issues.length;
+  await runView(v);
+  const mine = issues.slice(mark);
+  if (mine.length && mine.every((i) => i[1] === "log.network" && i[2].includes(NOBUF))) {
+    issues.length = mark;
+    retried.push(v.tag);
+    await sleep(1000);
+    await runView(v);
+  }
+}
 tag = "end";
 await sleep(200);
-console.log(JSON.stringify({ issues, views }));
+console.log(JSON.stringify({ issues, views, retried }));
 clearTimeout(killer);
 ws.close();
 chrome.kill();
