@@ -99,6 +99,38 @@ def test_allow_list_passes_reference_and_data_pages():
                           out=out) == divefetch.EXIT_REFUSED
 
 
+def test_github_wiki_and_raw_docs_pass_and_everything_else_on_them_is_refused():
+    # decision 0050 addendum 2026-11-27: repository wikis and raw .md / .txt only
+    raw = "https://raw.githubusercontent.com"
+    for url in ("https://github.com/o/r/wiki", "https://github.com/o/r/wiki/Page",
+                raw + "/o/r/main/docs/x.md", raw + "/o/r/v1.2/notes.txt"):
+        assert divefetch.allowed(url) == (True, "ok"), url
+    refused = {
+        "https://github.com/o/r": "only repository wiki pages",
+        "https://github.com/o/r/issues": "only repository wiki pages",
+        "https://github.com/o/r/wiki/Page/history": "only repository wiki pages",
+        "https://github.com/o/r/wiki?x=1": "query",
+        "https://github.com/o/r/wiki/%2e%2e": "encoded or dot",
+        "https://github.com/o/r/wiki/../issues": "",
+        "https://github.com/grindinggear/r/wiki": "GGG",
+        raw + "/GrindingGear/r/main/README.md": "GGG",
+        raw + "/o/r/main/logo.png": ".md or .txt",
+        raw + "/o/r/main/app.js": ".md or .txt",
+        raw + "/o/r/x.md": ".md or .txt",
+        raw + "/o/r/main/x.md?token=1": "query",
+        "https://www.poe2wiki.net/wiki/Path_of_Exile_2": "wiki hosts",
+        "https://gist.github.com/o/abc": "host not allowed",
+    }
+    for url, word in refused.items():
+        ok, reason = divefetch.allowed(url)
+        assert not ok, url
+        assert word in reason, (url, reason)
+    out = io.StringIO()
+    assert divefetch.main(["hosts"], out=out) == divefetch.EXIT_OK
+    assert "github.com/<owner>/<repo>/wiki" in out.getvalue()
+    assert "raw.githubusercontent.com" in out.getvalue()
+
+
 def test_every_fetch_is_logged_with_the_ashlight_user_agent(tmp_path):
     fake = FakeFetch()
     for url in (REFERENCE, DATA, REPO):

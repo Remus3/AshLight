@@ -236,3 +236,14 @@ that the last sentence is the written skip of the message to poe.ninja
 wording. The copy of the brief read for this check is stamped the evening
 of 2026-11-17; 2026-11-18, the date in the hand-off lines, is the day the
 words were recorded.
+
+## Follow-up 2026-11-27 - repository homepage (adjudicator ruling)
+
+The repository homepage field points at the player quick-start guide on
+main (docs/guide/quick-start.md, served by github.com, the repository's
+own address plus the blob path). It replaces the plan-04 GP-11 line "No
+homepage until a release page exists": the guide is the page a new
+player needs first, and it adds no host. Read back with
+`gh repo view <repo> --json homepageUrl` on 2026-11-27. Reverses if: a
+release page or project site exists (then it becomes the homepage), or
+the guide moves.

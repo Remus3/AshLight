@@ -7,12 +7,22 @@ body:
       value: |
         Thanks for the report. Please never attach Client.txt, game files, memory dumps or screenshots of the game.
         The redacted Checks report below has everything needed to start.
+        Do not paste a full Client.txt, your account or character names, or chat lines anywhere in this form.
   - type: input
     id: version
     attributes:
       label: AshLight version
       description: Shown in the dashboard footer and at the top of the Checks report.
       placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install AshLight?
+      options:
+        - From source
+        - From a release
     validations:
       required: true
   - type: input

@@ -14,6 +14,11 @@ The allow-list (one function, `allowed`):
   A01_OTHER_DOCS_PAGES is False (operator decision A-01, default no).
 - Public non-GGG repositories through the documented GitHub API:
   https://api.github.com/repos/<owner>/<repo>... only.
+- Public non-GGG repository wikis and plain docs (decision 0050 addendum
+  2026-11-27): https://github.com/<owner>/<repo>/wiki[/<page>] only (every
+  other github.com path is refused), and
+  https://raw.githubusercontent.com/<owner>/<repo>/<ref>/<path> ending in
+  .md or .txt. Both GET only, no query string, GGG owners refused.
 - Nothing else: poe2db and every wiki host are refused by name, every other
   host by the list.
 
@@ -59,9 +64,12 @@ A01_OTHER_DOCS_PAGES = False
 GGG_OTHER_DOCS = ("/developer/docs", "/developer/docs/authorization",
                   "/developer/docs/changelog", "/developer/docs/game")
 GITHUB_API = "api.github.com"
+GITHUB_WEB = "github.com"
+GITHUB_RAW = "raw.githubusercontent.com"
+RAW_SUFFIXES = (".md", ".txt")
 GGG_GITHUB_OWNERS = ("grindinggear", "grindinggeargames", "ggg", "pathofexile")
 REFUSED_WORDS = ("poe2db", "wiki", "fandom")
-HOSTS = (GGG_HOST, GITHUB_API)  # the transport's host list; allowed() narrows it
+HOSTS = (GGG_HOST, GITHUB_API, GITHUB_WEB, GITHUB_RAW)  # the transport's host list; allowed() narrows it
 MAX_BYTES = 2 * 1024 * 1024
 RATE_MIN_S = 3600  # a 429 / 503 without a usable Retry-After waits this long
 LOG_DIR = "dive_fetch"
@@ -113,6 +121,19 @@ def allowed(url):
         if len(seg) < 3 or seg[0] != "repos":
             return False, "only /repos/<owner>/<repo> paths of the GitHub API are read"
         if seg[1].lower() in GGG_GITHUB_OWNERS:
+            return False, "GGG's own repositories are not a dive source (decision 0050)"
+        return True, "ok"
+    if host in (GITHUB_WEB, GITHUB_RAW):
+        seg = [s for s in path.split("/") if s]
+        if host == GITHUB_WEB:
+            if len(seg) not in (3, 4) or seg[2] != "wiki":
+                return False, "only repository wiki pages are read"
+        elif len(seg) < 4 or not seg[-1].lower().endswith(RAW_SUFFIXES):
+            return False, ("only raw /<owner>/<repo>/<ref>/<path> files ending in "
+                           ".md or .txt are read")
+        if parts.query:
+            return False, "a query on a GitHub page is not fetched"
+        if seg[0].lower() in GGG_GITHUB_OWNERS:
             return False, "GGG's own repositories are not a dive source (decision 0050)"
         return True, "ok"
     return False, f"host not allowed: {host}"
@@ -300,8 +321,11 @@ def _config():
 def describe():
     pages = ", ".join("https://" + GGG_HOST + p for p in GGG_PAGES)
     return ("allowed: " + pages + "; https://" + GITHUB_API + "/repos/<owner>/<repo>... "
-            "(public non-GGG repositories)\nrefused: GGG's forum, the trade site, every "
-            "other GGG path (A-01 off), poe2db, wiki hosts, every other host\n")
+            "(public non-GGG repositories); https://" + GITHUB_WEB
+            + "/<owner>/<repo>/wiki[/<page>] and https://" + GITHUB_RAW
+            + "/<owner>/<repo>/<ref>/<path> ending in .md or .txt (non-GGG, no query)"
+            "\nrefused: GGG's forum, the trade site, every other GGG path (A-01 off), "
+            "every other github.com path, poe2db, wiki hosts, every other host\n")
 
 
 def main(argv=None, fetch=None, logs=None, config=None, out=None):

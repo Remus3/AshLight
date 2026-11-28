@@ -2,16 +2,16 @@
 
 Thanks for your interest in AshLight.
 
-- Read the README's "What AshLight never does" first. A change that reads
+- Read the README's
+  ["What AshLight never does"](README.md#what-ashlight-never-does) first. A change that reads
   game memory, sends input to the game, or watches the clipboard will not be
   accepted.
 - The core (`server/`) uses the Python standard library only. The overlay
   (`app/`) pins every npm package to an exact version.
 - Every text file is ASCII with LF line endings.
 - Run the tests before sending a change:
-  `python -m pytest -q` and `npm test --prefix app`. The suite needs
-  pytest 9.0 or newer (pytest.ini sets faulthandler_exit_on_timeout). The
-  test tools are hash pinned:
+  `python -m pytest -q` and `npm test --prefix app`. The tests need
+  pytest 9 or newer; the hash-pinned install line below sets it up:
   `python -m pip install --require-hashes -r requirements-dev.txt`.
 - `powershell -ExecutionPolicy Bypass -File scripts\build.ps1` runs the
   test suite and writes a build stamp. It is the dev gate, not a player

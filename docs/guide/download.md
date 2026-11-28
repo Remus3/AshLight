@@ -23,9 +23,11 @@ AshLight releases appear at github.com/Remus3/AshLight/releases.
 
 ## Install from source
 
-1. Get a copy of the AshLight source code onto your computer (clone the
-   repository with git, or download its source archive and unpack it).
-2. Open PowerShell in that folder and run the one setup command from the
+1. Get a copy of the AshLight source code onto your computer: on the
+   repository page, use the green Code button (Download ZIP) and unpack it,
+   or clone the repository with git if you have it.
+2. Open PowerShell in that folder (in File Explorer, click the address bar,
+   type `powershell`, press Enter) and run the one setup command from the
    [Quick start](quick-start.md).
 3. Start AshLight from the "AshLight" shortcut that setup puts in the Start
    Menu and on the desktop.
@@ -39,6 +41,8 @@ and start it from the shortcut.
 - No game account login, password or session cookie. AshLight never asks.
 - No internet connection for the live log features. Prices and game data need
   the "Use web data" switch, which is off until you turn it on.
+
+Next: [Quick start](quick-start.md).
 
 ---
 

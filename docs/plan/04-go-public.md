@@ -844,8 +844,12 @@ gh repo view "$R" --json repositoryTopics --jq '[.repositoryTopics[].name] | sor
 
    Expected topics line:
    `companion-app,dashboard,electron,loot-filter,overlay,path-of-building,path-of-exile-2,poe2,python,windows`.
-   No homepage until a release page exists. Social preview: no write
-   command is known for it; see OA-4.
+   Homepage (amended 2026-11-27, adjudicator ruling): the player
+   quick-start guide on main, set with
+   `gh repo edit "$R" --homepage "https://github.com/$R/blob/main/docs/guide/quick-start.md"`
+   and read back with `gh repo view "$R" --json homepageUrl`; it was
+   "no homepage until a release page exists" before. Social preview: no
+   write command is known for it; see OA-4.
 
 C. Visibility (GP-12) and security features (GP-13):
 
