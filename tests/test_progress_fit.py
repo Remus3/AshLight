@@ -379,10 +379,10 @@ def test_every_size_and_kind_was_measured(measures):
             assert sv["kids"] <= 10, (key, sv)
         if not key.endswith(" build"):
             assert m["heading"] == "Next up", key
-        if key.endswith(" play-eval"):
+        # PROGRESSION-OFFER: the way back to the item card shows with or
+        # without an item check (the empty card teaches the item key)
+        if key.endswith(" play-eval") or key.endswith(" play"):
             assert m["button"], key
-        elif key.endswith(" play"):
-            assert not m["button"], key
 
 
 def test_the_progression_view_fits_every_size(measures):

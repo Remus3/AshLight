@@ -96,7 +96,11 @@ TC-UNCUT-GEM and TC-GEM-UNLOCK add next-up steps with
   strip in 20 px rows, the mini-tree framed on the due nodes and each
   one's nearest planned node within 500 units, with larger node floors
   and a 3 px due ring, the legend and, with an item check present, one
-  "Item check" button). The first paint shows the item card; the view
+  "Item check" button). The first paint shows the item card; while it
+  shows and the progression has something to draw, one "Next up" button
+  at the region's top right opens the view at once (PROGRESSION-OFFER,
+  operator report 2026-11-28: the view was not found while it waited for
+  a level-up; the item head keeps 6.5rem for it). Otherwise the view
   takes the region when the progression moves on (a level-up between two
   known levels, a change between two known builds or trees) and no newer
   check came in, held while an item check is under 20 s old until the

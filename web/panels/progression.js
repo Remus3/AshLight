@@ -17,8 +17,11 @@
      item check came in; an item check under HOLD_S old holds the swap
      until the first push after the hold (no timer). A new item check
      gives the region back to the item card (web/itemcard.js keeps painting
-     its own slot). While the view shows and an item check exists, one
-     "Item check" button gives the card back. The swap is decided in the
+     its own slot). While the view shows, one "Item check" button gives
+     the card back. While the item card shows and the progression has
+     something to draw, one "Next up" button at the region's top right
+     opens the view at once (PROGRESSION-OFFER: the view must not wait
+     for a level-up to be found). The swap is decided in the
      page's push hook, before the regions paint, so the item card's live
      region is shown again before it changes (decision 0092, design review
      PG-8); region I's heading reads "Next up" or "Item check". The region
@@ -78,6 +81,8 @@
     levelUnknown: "Level unknown",
     legend: "Filled: planned. Dashed: next. Thin: later.",
     itemCheck: "Item check",
+    offer: "Next up",
+    offerLabel: "Next up and passive tree",
     open: "Progression",
     title: "Progression",
     back: "Back to build",
@@ -257,6 +262,8 @@
       S.pending = false;
       flip(doc);
       paintRegion(doc, S.ctx && S.ctx.getSnap ? S.ctx.getSnap() : null);
+      var o = doc.getElementById("pg-offer");
+      if (o && !o.hidden && o.focus) { o.focus(); }
     });
     foot.appendChild(back);
     box.appendChild(foot);
@@ -311,6 +318,36 @@
     return S.boxes[node.id];
   }
 
+  /* PROGRESSION-OFFER: the item card's way to the view, so Play shows
+     the tree is there before any level-up moves it. One button, made
+     once, absolute at the region's top right (the region's track never
+     changes); the item card's head keeps room for it while it shows. */
+  function paintOffer(doc, region, want) {
+    var b = doc.getElementById("pg-offer");
+    if (want && !b) {
+      b = el(doc, "button", "secondary btn-24 pg-offer", WORDS.offer);
+      b.type = "button";
+      b.id = "pg-offer";
+      b.setAttribute("aria-label", WORDS.offerLabel);
+      b.setAttribute("title", WORDS.offerLabel);
+      b.addEventListener("click", function () {
+        S.mode = "progress";
+        S.pending = false;
+        flip(doc);
+        paintRegion(doc, S.ctx && S.ctx.getSnap ? S.ctx.getSnap() : null);
+        var m = doc.getElementById("pg-mini-item");
+        if (m && m.focus) { m.focus(); }
+      });
+      /* first in the region: read and reached where it is seen, at the
+         top, before the item card (design review F2) */
+      region.insertBefore(b, region.firstChild);
+    }
+    show(b, want);
+    if (region.getAttribute("data-pg-offer") !== (want ? "on" : "off")) {
+      region.setAttribute("data-pg-offer", want ? "on" : "off");
+    }
+  }
+
   function paintRegion(doc, snap) {
     var region = doc.getElementById("play-i");
     if (!region) { return; }
@@ -318,11 +355,12 @@
     var on = S.mode === "progress" && hasContent(sum);
     var box = on ? buildMini(doc) : doc.getElementById("pg-mini");
     show(box, on);
+    paintOffer(doc, region, !on && hasContent(sum));
     if (!on || !box) { return; }
     setText(doc.getElementById("pg-mini-sub"), levelWord(sum.level));
     fillSteps(doc, doc.getElementById("pg-mini-next"), sum.next || [], sum.empty, STEPS,
       "row-title one-line pg-step");
-    show(doc.getElementById("pg-mini-item"), !!evalOf(snap));
+    show(doc.getElementById("pg-mini-item"), true);
     var t = doc.getElementById("pg-mini-tree");
     /* the last model's tree stays drawn while a new key loads (PG-2) */
     var view = S.model && S.model.tree ? S.model.tree : null;

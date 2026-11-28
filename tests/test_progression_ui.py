@@ -172,3 +172,84 @@ def test_the_view_files_keep_the_page_rules():
     assert not re.search(r"#[0-9a-fA-F]{3,8}\b|rgb\(|hsl\(", css)
     # the page reads the model only through the token-gated route
     assert '"/api/progression"' in VIEW.read_text(encoding="ascii")
+
+
+OFFER_JS = r"""
+const P = require("./web/panels/progression.js");
+// a small fake document: elements by id, attributes, children, clicks
+function mk(tag) {
+  const n = { tagName: tag, id: "", hidden: false, children: [], attrs: {}, on: {},
+    textContent: "", className: "", parentNode: null,
+    setAttribute(k, v) { this.attrs[k] = String(v); if (k === "id") { this.id = v; } },
+    getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; },
+    removeAttribute(k) { delete this.attrs[k]; },
+    appendChild(c) { c.parentNode = this; this.children.push(c); return c; },
+    removeChild(c) { this.children.splice(this.children.indexOf(c), 1); return c; },
+    insertBefore(c, ref) { c.parentNode = this; const i = ref ? this.children.indexOf(ref) : -1;
+      if (i < 0) { this.children.push(c); } else { this.children.splice(i, 0, c); } return c; },
+    get firstChild() { return this.children[0] || null; },
+    get lastChild() { return this.children[this.children.length - 1]; },
+    addEventListener(t, f) { this.on[t] = f; },
+    focus() { doc.activeElement = this; },
+    getBoundingClientRect() { return { width: 0, height: 0 }; } };
+  return n;
+}
+function find(n, id) {
+  if (n.id === id) { return n; }
+  for (const c of n.children) { const f = find(c, id); if (f) { return f; } }
+  return null;
+}
+const body = mk("body");
+const region = body.appendChild(mk("section")); region.id = "play-i";
+const head = body.appendChild(mk("h2")); head.id = "play-i-h";
+const doc = { hidden: false, activeElement: null,
+  createElement: mk, createElementNS: (ns, t) => mk(t),
+  getElementById: (id) => find(body, id) };
+let snap = null;
+P.reset(); P.wire(doc, { api: () => new Promise(() => {}), getSnap: () => snap });
+const out = {};
+const push = (s) => { snap = s; P.paint(doc, s); };
+// no progression: no offer
+push({ now: 1 });
+out.none = doc.getElementById("pg-offer") ? !doc.getElementById("pg-offer").hidden : false;
+// a progression with a tree, nothing checked, no level-up yet: the item card
+// shows and the offer is there
+push({ now: 2, progression: { key: "a", level: 5, tree: true, next: [] } });
+const offer = doc.getElementById("pg-offer");
+out.mode1 = region.getAttribute("data-pg");
+out.offer1 = !!offer && !offer.hidden;
+out.flag1 = region.getAttribute("data-pg-offer");
+out.first1 = region.children[0] === offer;
+out.name1 = offer.getAttribute("aria-label");
+// one click opens the view at once, with its way back, focus on it
+offer.on.click();
+out.mode2 = region.getAttribute("data-pg");
+out.head2 = head.textContent;
+out.offer2 = !offer.hidden;
+out.back2 = !doc.getElementById("pg-mini-item").hidden;
+out.focus2 = doc.activeElement && doc.activeElement.id;
+// it stays on the next push of the same state
+push({ now: 3, progression: { key: "a", level: 5, tree: true, next: [] } });
+out.mode3 = region.getAttribute("data-pg");
+// Item check gives the card back and the offer returns, focused
+doc.getElementById("pg-mini-item").on.click();
+out.mode4 = region.getAttribute("data-pg");
+out.offer4 = !offer.hidden;
+out.focus4 = doc.activeElement && doc.activeElement.id;
+// a progression with nothing to draw offers nothing
+push({ now: 4, progression: { key: "b", level: 5, tree: false, next: [] } });
+out.offer5 = !offer.hidden;
+process.stdout.write(JSON.stringify(out));
+"""
+
+
+def test_region_i_offers_the_view_before_any_level_up():
+    """PROGRESSION-OFFER: the item card carries a 'Next up' button while the
+    progression has something to draw, so Play shows the view exists without
+    waiting for a level-up (operator report 2026-11-28)."""
+    got = run(OFFER_JS, {})
+    assert got == {"none": False, "mode1": "off", "offer1": True, "flag1": "on",
+                   "first1": True, "name1": "Next up and passive tree",
+                   "mode2": "on", "head2": "Next up", "offer2": False, "back2": True,
+                   "focus2": "pg-mini-item", "mode3": "on", "mode4": "off", "offer4": True,
+                   "focus4": "pg-offer", "offer5": False}

@@ -60,6 +60,14 @@
     right: var(--al-space-3); bottom: calc(var(--region-pad) + 1.25rem); }
   #play-i > .pg-mini .pg-mini-tree { flex: 1 1 0; height: auto; min-height: 0; }
 }
+/* PROGRESSION-OFFER: the item card's "Next up" button, top right of the
+   region on the head's 28 px row; the head keeps room for it */
+#play-i > .pg-offer { position: absolute; top: var(--region-pad); right: var(--al-space-3);
+  white-space: nowrap; }
+#play-i > .pg-offer[hidden] { display: none; }
+#play-i[data-pg-offer="on"] .ic-head { padding-right: 6.5rem; }
+[data-text-spacing="user"] #play-i > .pg-offer { position: static; margin-top: var(--al-space-1); }
+[data-text-spacing="user"] #play-i[data-pg-offer="on"] .ic-head { padding-right: 0; }
 [data-text-spacing="user"] #play-i > .pg-mini { position: static; }
 [data-text-spacing="user"] #play-i > .pg-mini .pg-mini-tree { flex: none; height: 12rem; }
 

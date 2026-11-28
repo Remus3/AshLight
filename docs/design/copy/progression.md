@@ -57,7 +57,12 @@ test_the_copy_sheet_lists_every_template).
 
 - Head: `Next up`, then `Level {n}` or `Level unknown`. The steps are 20 px rows. The region's screen-reader heading reads `Next up` while the view shows, else `Item check`.
 - Legend: `Filled: planned. Dashed: next. Thin: later.`
-- Button: `Item check` (shows the item card again).
+- Button: `Item check` (shows the item card again; with no check made yet
+  that is the empty card that teaches the item key).
+- Item card button: `Next up`, accessible name and title `Next up and
+  passive tree` (first in the region, drawn at its top right while the
+  item card shows and the progression has something to draw; opens the
+  view at once, PROGRESSION-OFFER).
 - Tree label: `Passive tree`.
 
 ## Build and items card (page)
